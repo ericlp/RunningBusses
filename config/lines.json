@@ -1,0 +1,10 @@
+{
+  "feed": "vt",
+  "routeIdPrefix": "90110145",
+  "agencyIdSuffix": "1418",
+  "categories": {
+    "stadsbuss": { "numberRange": [22, 99], "exclude": [25] },
+    "stombuss": { "numbers": [17, 18, 19, 21, 25] }
+  },
+  "splitDirections": { "lengthDifference": 0.12 }
+}
