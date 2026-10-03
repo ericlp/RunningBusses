@@ -163,12 +163,11 @@ interface StripProps {
 }
 
 /** The top strip of a draft: start stop, one card per leg, and a sticky total with the save button. */
-export function BuilderStrip({ name, legs, onName, onSave, onCancel, saving, canSave, editing, onRemoveFirst, onRemoveLast, onSplit }: StripProps) {
+export function BuilderStrip({ legs, onSave, onCancel, saving, canSave, editing, onRemoveFirst, onRemoveLast, onSplit }: StripProps) {
   const s = courseStats(legs);
   return (
     <div className="strip">
       <div className="strip-head">
-        <input value={name} placeholder={t('strip.name')} aria-label={t('strip.name')} onChange={(e) => onName(e.target.value)} />
         <span className="strip-total">{legs.length ? formatTotal(s) : '0,0 km'}</span>
         <button className="primary compact" disabled={!canSave || saving} onClick={onSave}>
           {saving ? t('strip.saving') : editing ? t('strip.saveChanges') : t('strip.save')}

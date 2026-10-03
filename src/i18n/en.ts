@@ -5,6 +5,7 @@ export const en: Dict = {
   'nav.map': 'Map',
   'nav.plan': 'Plan',
   'nav.filter': 'Filter',
+  'sheet.resize': 'Resize panel',
   'nav.settings': 'Settings',
   'nav.mode': 'Mode',
   'sort.label': "Sort by",
@@ -87,6 +88,7 @@ export const en: Dict = {
   'course.baseName': 'Course',
   'total.atLeast': 'at least {text}',
 
+  'name.title': 'Name the course (optional)',
   'strip.name': 'Course name',
   'strip.save': 'Save',
   'strip.saveChanges': 'Save changes',

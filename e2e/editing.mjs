@@ -13,7 +13,6 @@ for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { 
   await p.click('text=Planera');
   await p.click('text=Skapa bana');
   await p.waitForSelector('.strip');
-  await p.fill('.strip-head input', 'Testbana');
   // depth-first: take the first option, undo and try the next one when it dead-ends before 3 legs
   const dfs = async (depth) => {
     if (depth === 3) return true;
@@ -32,6 +31,7 @@ for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { 
   console.log(name, 'legs built', n);
   check(n >= 3, `${name}: built at least 3 legs`);
   await p.click('.strip >> text=Spara');
+  await p.fill('.modal input', 'Testbana'); await p.click('.modal .primary');
   await p.waitForSelector('.course');
   const before = await p.textContent('.course .total');
 
@@ -50,6 +50,7 @@ for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { 
   check(startBefore !== startRev, `${name}: reverse changes start (${startBefore} -> ${startRev})`);
   await p.click('text=Vänd riktning');
   await p.click('.strip >> text=Spara ändringar');
+  await p.click('.modal .primary');
   await p.waitForSelector('.course');
   const legsAfter = await p.locator('.course .seq .badge').count();
   check(legsAfter === n - 2, `${name}: edit saved (${legsAfter} legs)`);

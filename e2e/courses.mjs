@@ -21,6 +21,7 @@ for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { 
   await p.waitForTimeout(500);
   await p.screenshot({ path: `.cache/${name}-build.png` });
   await p.click('.strip >> text=Spara');
+  await p.fill('.modal input', 'Testbana'); await p.click('.modal .primary');
   await p.waitForSelector('.course');
   await p.screenshot({ path: `.cache/${name}-plan.png` });
   const total = await p.textContent('.course .total');

@@ -5,6 +5,7 @@ export const fr: Dict = {
   'nav.map': 'Carte',
   'nav.plan': 'Planifier',
   'nav.filter': 'Filtres',
+  'sheet.resize': 'Redimensionner le panneau',
   'nav.settings': 'Réglages',
   'nav.mode': 'Mode',
   'sort.label': "Trier par",
@@ -87,6 +88,7 @@ export const fr: Dict = {
   'course.baseName': 'Parcours',
   'total.atLeast': 'au moins {text}',
 
+  'name.title': 'Nommer le parcours (facultatif)',
   'strip.name': 'Nom du parcours',
   'strip.save': 'Enregistrer',
   'strip.saveChanges': 'Enregistrer les modifications',

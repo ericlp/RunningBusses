@@ -4,6 +4,7 @@ export const sv = {
   'nav.map': 'Karta',
   'nav.plan': 'Planera',
   'nav.filter': 'Filter',
+  'sheet.resize': 'Ändra panelens höjd',
   'nav.settings': 'Inställningar',
   'nav.mode': 'Läge',
   'sort.label': "Sortera",
@@ -86,6 +87,7 @@ export const sv = {
   'course.baseName': 'Bana',
   'total.atLeast': 'minst {text}',
 
+  'name.title': 'Namnge banan (valfritt)',
   'strip.name': 'Namn på banan',
   'strip.save': 'Spara',
   'strip.saveChanges': 'Spara ändringar',

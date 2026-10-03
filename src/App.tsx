@@ -75,6 +75,10 @@ export function App() {
   const { pref } = useLang();
   const { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation } = useAppearance();
   const [showSettings, setShowSettings] = useState(false);
+  // bottom sheet height on phones: 0 peek, 1 half, 2 tall
+  const [snap, setSnap] = useState(1);
+  const [naming, setNaming] = useState(false);
+  const dragY = useRef<number | null>(null);
   useEffect(() => {
     if (!showSettings) return;
     setShowFilters(false);
@@ -524,7 +528,7 @@ export function App() {
             name={draft?.name ?? ''}
             legs={legs}
             onName={(name) => setDraft((d) => ({ ...(d ?? EMPTY_DRAFT), name }))}
-            onSave={saveDraftAsCourse}
+            onSave={() => setNaming(true)}
             onCancel={closeBuild}
             saving={saving}
             canSave={legs.some((l) => l.kind === 'line') && ready}
@@ -567,6 +571,44 @@ export function App() {
                   {t('complete.confirm')}
                 </button>
                 <button className="chip" onClick={() => setCompleting(null)}>
+                  {t('split.cancel')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {naming && draft && (
+          <div className="modal-back">
+            <div className="modal" role="dialog" aria-modal="true" aria-label={t('name.title')}>
+              <h2>{t('name.title')}</h2>
+              <label className="field">
+                <span>{t('strip.name')}</span>
+                <input
+                  autoFocus
+                  value={draft.name}
+                  placeholder={t('course.defaultName', { n: courses.length + 1 })}
+                  onChange={(e) => setDraft((d) => ({ ...(d ?? EMPTY_DRAFT), name: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setNaming(false);
+                      void saveDraftAsCourse();
+                    }
+                  }}
+                />
+              </label>
+              <div className="actions">
+                <button
+                  className="primary compact"
+                  disabled={saving}
+                  onClick={() => {
+                    setNaming(false);
+                    void saveDraftAsCourse();
+                  }}
+                >
+                  {draft.editingId ? t('strip.saveChanges') : t('strip.save')}
+                </button>
+                <button className="chip" onClick={() => setNaming(false)}>
                   {t('split.cancel')}
                 </button>
               </div>
@@ -659,8 +701,22 @@ export function App() {
         )}
 
         {dataset && (
-          <section className={`sheet ${mode}`} aria-label={mode === 'build' ? t('sheet.build') : mode === 'plan' ? t('sheet.plan') : t('sheet.browse')}>
-            <div className="sheet-handle" />
+          <section className={`sheet ${mode} snap${snap}`} aria-label={mode === 'build' ? t('sheet.build') : mode === 'plan' ? t('sheet.plan') : t('sheet.browse')}>
+            <button
+              type="button"
+              className="sheet-handle"
+              aria-label={t('sheet.resize')}
+              onPointerDown={(e) => {
+                dragY.current = e.clientY;
+                e.currentTarget.setPointerCapture(e.pointerId);
+              }}
+              onPointerUp={(e) => {
+                const d = e.clientY - (dragY.current ?? e.clientY);
+                dragY.current = null;
+                if (Math.abs(d) < 12) setSnap((s) => (s + 1) % 3);
+                else setSnap((s) => Math.max(0, Math.min(2, s + (d < 0 ? 1 : -1))));
+              }}
+            />
             <div className="sheet-body">
               {mode === 'build' && (
                 <BuilderPanel
