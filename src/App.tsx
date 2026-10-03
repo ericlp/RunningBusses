@@ -27,7 +27,7 @@ import { applyFilters, categoryLabel, defaultFilters, formatKm, searchLines, SOR
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { BackupSection } from './components/Backup';
 import type { Key } from './i18n/sv';
-import { MAP_STYLES, THEMES, setMapStyle, setTheme, useAppearance, type MapStyle, type ThemePref } from './appearance';
+import { BORDERS, LINE_COLORS, MAP_STYLES, THEMES, setBorder, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type LineColors, type MapStyle, type ThemePref } from './appearance';
 import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
 import type { Category, Dataset, Line, Tag } from './domain/types';
 
@@ -71,7 +71,7 @@ const legCoords = (legs: Leg[]) => legs.flatMap((l) => (l.kind === 'line' ? l.li
 
 export function App() {
   const { pref } = useLang();
-  const { theme, mapStyle } = useAppearance();
+  const { theme, mapStyle, border, lineColors } = useAppearance();
   const [showSettings, setShowSettings] = useState(false);
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [offline, setOffline] = useState(false);
@@ -373,23 +373,22 @@ export function App() {
       const used = usedLineKeys(others, legs);
       const optionKeys = new Set(options.map((o) => o.line.key));
       const pool = dataset ? applyFilters(dataset.lines, { ...filters, status: 'all' }) : [];
-      for (const l of pool) if (!used.has(l.key) && !optionKeys.has(l.key)) layers.push({ coords: l.coordinates, tone: 'base', opacity: 0.5 });
+      for (const l of pool) if (!used.has(l.key) && !optionKeys.has(l.key)) layers.push({ coords: l.coordinates, key: l.key, tone: 'base', opacity: 0.7 });
       const seen = new Set<string>();
       for (const o of options) {
         if (seen.has(o.line.key)) continue;
         seen.add(o.line.key);
         tappable.push(o.line);
-        layers.push({ coords: o.line.coordinates, tone: 'candidate', weight: 5, casing: true, opacity: 1 });
+        layers.push({ coords: o.line.coordinates, key: o.line.key, tone: 'candidate', weight: 5, casing: true, opacity: 1 });
       }
       const d = legLayers(legs);
       layers.push(...d.layers);
       markers = d.markers;
     } else {
-      const dim = mode === 'plan' && selectedCourse !== null;
       const shown = visible.filter((l) => l.key !== selectedKey);
       for (const l of shown) {
         const st = statusOf(l.key);
-        layers.push({ coords: l.coordinates, tone: toneOf[st], weight: st === 'NotPlanned' ? 3 : 4, opacity: dim || selectedKey ? 0.65 : 0.85 });
+        layers.push({ coords: l.coordinates, key: l.key, tone: toneOf[st], weight: st === 'NotPlanned' ? 3 : 4, opacity: 1 });
       }
       if (mode === 'plan') {
         tappable = courses.flatMap((c) => c.legs.flatMap((l) => (l.kind === 'line' ? [l.line] : [])));
@@ -685,6 +684,26 @@ export function App() {
                   {MAP_STYLES.map((v) => (
                     <option key={v} value={v}>
                       {t(`settings.map${v[0].toUpperCase()}${v.slice(1)}` as Key)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>{t('settings.border')}</span>
+                <select value={border} onChange={(e) => setBorder(e.target.value as Border)}>
+                  {BORDERS.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`settings.border${v[0].toUpperCase()}${v.slice(1)}` as Key)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>{t('settings.lineColors')}</span>
+                <select value={lineColors} onChange={(e) => setLineColors(e.target.value as LineColors)}>
+                  {LINE_COLORS.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`settings.colors${v[0].toUpperCase()}${v.slice(1)}` as Key)}
                     </option>
                   ))}
                 </select>

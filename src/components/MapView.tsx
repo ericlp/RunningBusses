@@ -2,13 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import type { Line } from '../domain/types';
 import { linesNear } from '../domain/hit';
-import { useAppearance } from '../appearance';
+import { BORDER_PX, useAppearance } from '../appearance';
 
 export type Tone = 'base' | 'planned' | 'done' | 'highlight' | 'candidate' | 'connector';
 
 export interface MapLayer {
   coords: [number, number][];
   tone: Tone;
+  /** App line key; lets the rainbow colouring give each line its own colour. */
+  key?: string;
   weight?: number;
   opacity?: number;
   dashed?: boolean;
@@ -45,6 +47,13 @@ const GOTHENBURG: L.LatLngExpression = [57.7089, 11.9746];
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const toneColor = (t: Tone): string =>
   ({ base: css('--line'), planned: css('--vt-blue'), done: '#2e9e4f', highlight: css('--highlight'), candidate: '#f08c00', connector: '#d6342c' })[t];
+/** Golden-angle hues keep neighbouring line numbers visually far apart. */
+function rainbow(key: string, dark: boolean): string {
+  const n = parseInt(key, 10) || 0;
+  const hue = (n * 137.508 + (key.endsWith('r') ? 60 : 0)) % 360;
+  return `hsl(${hue.toFixed(0)}, 85%, ${dark ? 60 : 42}%)`;
+}
+const RAINBOW_TONES: Tone[] = ['base', 'planned', 'done', 'candidate'];
 const toLatLngs = (c: [number, number][]) => c.map(([lon, lat]) => [lat, lon] as L.LatLngTuple);
 
 export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
@@ -52,7 +61,7 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
   const map = useRef<L.Map | null>(null);
   const group = useRef<L.LayerGroup | null>(null);
   const [zoom, setZoom] = useState(12);
-  const { resolved } = useAppearance();
+  const { resolved, border, lineColors } = useAppearance();
   const latest = useRef({ tappable, onTap });
   latest.current = { tappable, onTap };
 
@@ -89,10 +98,11 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
     g.clearLayers();
     for (const l of layers) {
       const pts = toLatLngs(l.coords);
-      const color = toneColor(l.tone);
+      const color = lineColors === 'rainbow' && l.key && RAINBOW_TONES.includes(l.tone) ? rainbow(l.key, resolved === 'dark') : toneColor(l.tone);
       const weight = (l.weight ?? 3) * zoomScale(zoom);
       const casingColor = resolved === 'dark' ? '#0b1a22' : '#fff';
-      if (l.tone !== 'connector') L.polyline(pts, { color: casingColor, weight: weight + (l.casing ? 4 : 2), opacity: (l.opacity ?? 0.9) * 0.9, interactive: false }).addTo(g);
+      const outline = BORDER_PX[border] + (l.casing ? 2 : 0);
+      if (l.tone !== 'connector' && outline > 0) L.polyline(pts, { color: casingColor, weight: weight + outline, opacity: Math.min(1, (l.opacity ?? 0.9) * 0.95), interactive: false }).addTo(g);
       L.polyline(pts, { color, weight, opacity: l.opacity ?? 0.9, dashArray: l.dashed ? '8 8' : undefined, interactive: false }).addTo(g);
     }
     for (const mk of markers) {
@@ -105,7 +115,7 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
         interactive: false,
       }).addTo(g);
     }
-  }, [layers, markers, zoom, resolved]);
+  }, [layers, markers, zoom, resolved, border, lineColors]);
 
   useEffect(() => {
     if (!fit || !map.current || fit.coords.length === 0) return;

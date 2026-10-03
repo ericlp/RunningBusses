@@ -9,7 +9,7 @@
   --border: #dfe4e8;
   --accent: var(--vt-blue);
   --accent-text: #ffffff;
-  --line: #7fb8d0;
+  --line: #1b86b8;
   --highlight: #003f58;
   --shadow: 0 2px 10px rgba(0, 30, 45, 0.18);
   color-scheme: light;
@@ -778,7 +778,7 @@ button {
   --text: #eef3f5;
   --muted: #9db0ba;
   --border: #28404b;
-  --line: #3d7f9b;
+  --line: #37a6d9;
   --highlight: #5fd0ff;
   --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   color-scheme: dark;

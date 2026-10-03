@@ -3,11 +3,19 @@ import { useSyncExternalStore } from 'react';
 export type ThemePref = 'auto' | 'light' | 'dark';
 export type MapStyle = 'standard' | 'soft' | 'grey';
 
+export type Border = 'none' | 'thin' | 'normal' | 'thick';
+export type LineColors = 'status' | 'rainbow';
+export const BORDERS: readonly Border[] = ['none', 'thin', 'normal', 'thick'];
+export const LINE_COLORS: readonly LineColors[] = ['status', 'rainbow'];
+/** Extra width in px added to each line for its outline. */
+export const BORDER_PX: Record<Border, number> = { none: 0, thin: 2, normal: 4, thick: 7 };
 export const THEMES: readonly ThemePref[] = ['auto', 'light', 'dark'];
 export const MAP_STYLES: readonly MapStyle[] = ['standard', 'soft', 'grey'];
 
 const THEME_KEY = 'rb.theme';
 const MAP_KEY = 'rb.mapStyle';
+const BORDER_KEY = 'rb.border';
+const COLORS_KEY = 'rb.lineColors';
 
 function read<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   try {
@@ -21,6 +29,8 @@ function read<T extends string>(key: string, allowed: readonly T[], fallback: T)
 const media = window.matchMedia('(prefers-color-scheme: dark)');
 let theme = read(THEME_KEY, THEMES, 'auto');
 let mapStyle = read(MAP_KEY, MAP_STYLES, 'soft');
+let border = read(BORDER_KEY, BORDERS, 'normal');
+let lineColors = read(COLORS_KEY, LINE_COLORS, 'status');
 let snapshot = '';
 const listeners = new Set<() => void>();
 
@@ -30,7 +40,7 @@ function apply() {
   const root = document.documentElement;
   root.dataset.theme = resolvedTheme();
   root.dataset.map = mapStyle;
-  snapshot = `${theme}|${mapStyle}|${resolvedTheme()}`;
+  snapshot = `${theme}|${mapStyle}|${border}|${lineColors}|${resolvedTheme()}`;
   listeners.forEach((l) => l());
 }
 media.addEventListener('change', apply);
@@ -56,6 +66,18 @@ export function setMapStyle(next: MapStyle) {
   apply();
 }
 
+export function setBorder(next: Border) {
+  border = next;
+  save(BORDER_KEY, next);
+  apply();
+}
+
+export function setLineColors(next: LineColors) {
+  lineColors = next;
+  save(COLORS_KEY, next);
+  apply();
+}
+
 export function useAppearance() {
   useSyncExternalStore(
     (cb) => {
@@ -64,5 +86,5 @@ export function useAppearance() {
     },
     () => snapshot,
   );
-  return { theme, mapStyle, resolved: resolvedTheme() };
+  return { theme, mapStyle, border, lineColors, resolved: resolvedTheme() };
 }
