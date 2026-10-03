@@ -110,6 +110,7 @@ Each phase ends with something usable. A phase is built only after the previous 
 5. **Monthly refresh.** The scheduled job, the update rules above (pinned unlocked courses, missing lines, warnings), a "data from" date in settings.
 6. **Polish.** Playwright checks on a phone and a desktop width for the main journeys, touch targets of at least 44 px, keyboard use, contrast, and a walkthrough on a real phone.
 7. **Stretch.** GPX export; archiving renumbered line sets.
+8. **Language (future).** Browser-preferred language with Swedish, English and French, see plan 003. Preferably done right after Phase 3, before more strings pile up.
 
 Deliberately postponed: multi-tab write protection and anything else not needed to use the app yourselves. Add it when it proves necessary.
 
@@ -126,3 +127,4 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 
 - [001 – Phase 0 data findings](001-phase0-data-findings.md): feed structure, the 49 lines, direction-specific routes, categories and tags.
 - [002 – Phase 2: courses](002-phase2-courses.md): what was built, manual legs, draft handling.
+- [003 – Preferred language](003-preferred-language.md): future feature, browser language with Swedish, English and French.
