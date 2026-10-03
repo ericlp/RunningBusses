@@ -28,6 +28,7 @@ export function LineCard({ line, info, onClose }: { line: Line; info: RouteInfo;
         <span className="name">
           {line.from} → {line.to}
         </span>
+        <b className="card-km">{formatKm(line.lengthM)}</b>
         <button className="chip" onClick={onClose} aria-label={t('card.close')}>
           ×
         </button>

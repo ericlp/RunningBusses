@@ -262,6 +262,9 @@ button {
   .sheet.snap0.has-sel:not([style]) { max-height: none; }
   .sheet.snap0.has-sel:not([style]) .sheet-body { display: block; padding-bottom: 8px; }
   .sheet.snap0.has-sel:not([style]) .sheet-body > :not(.line-card) { display: none; }
+  .sheet.snap0.has-sel:not([style]) .line-card > :not(.card-title) { display: none; }
+  .sheet.snap0.has-sel:not([style]) .card-title { margin: 0; }
+  .sheet.snap0.has-sel:not([style]) .card-km { display: inline; }
   .sheet.snap1, .sheet.snap1.build { max-height: 36%; }
   .sheet.snap2, .sheet.snap2.build { max-height: 78%; }
 }
@@ -996,3 +999,5 @@ button {
 @media (max-width: 599px) {
   .leaflet-control-zoom { display: none; }
 }
+
+.card-km { display: none; white-space: nowrap; }

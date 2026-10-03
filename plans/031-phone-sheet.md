@@ -9,3 +9,4 @@ The name field is gone from the builder strip; Save opens a small optional-name 
 Dragging the handle now resizes the sheet live (follows the finger) and animates to the nearest of peek/half/tall on release.
 
 When the sheet is minimised and a route is selected in browse mode, the sheet grows just enough to show the selected route card.
+The minimised card is a single row: badge, from → to, km, close.
