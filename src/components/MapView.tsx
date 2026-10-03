@@ -69,7 +69,7 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
   latest.current = { tappable, onTap };
 
   useEffect(() => {
-    const m = L.map(el.current!, { center: GOTHENBURG, zoom: 12, zoomControl: false, preferCanvas: true });
+    const m = L.map(el.current!, { center: GOTHENBURG, zoom: 12, zoomControl: false, renderer: L.canvas({ padding: 0.8 }) });
     L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19 }).addTo(m);
     m.on('zoomend', () => setZoom(m.getZoom()));
     let frame = 0;
