@@ -23,9 +23,9 @@ for (const [w, h, scheme] of [[360, 740, 'light'], [360, 740, 'dark'], [1280, 80
     ok(small.length === 0, `${w}px ${scheme} ${label}: touch targets ${small.join(' | ')}`);
   };
   await check('browse');
-  await p.click('text=Filter');
+  await p.click('button.tool:has-text("Filter")');
   await check('filters');
-  await p.click('text=Filter');
+  await p.click('.filter-panel [aria-label="Stäng"]');
   await p.click('text=Planera');
   await p.click('text=Skapa bana');
   await p.locator('.sheet .list button').first().click();

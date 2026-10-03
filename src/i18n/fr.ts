@@ -6,6 +6,9 @@ export const fr: Dict = {
   'nav.plan': 'Planifier',
   'nav.filter': 'Filtres',
   'nav.settings': 'Réglages',
+  'nav.mode': 'Mode',
+  'filter.title': 'Filtrer les lignes',
+  'filter.reset': 'Réinitialiser',
 
   'common.close': 'Fermer',
 

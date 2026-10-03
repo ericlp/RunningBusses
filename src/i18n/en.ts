@@ -6,6 +6,9 @@ export const en: Dict = {
   'nav.plan': 'Plan',
   'nav.filter': 'Filter',
   'nav.settings': 'Settings',
+  'nav.mode': 'Mode',
+  'filter.title': 'Filter routes',
+  'filter.reset': 'Reset',
 
   'common.close': 'Close',
 

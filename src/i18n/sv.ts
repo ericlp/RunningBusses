@@ -5,6 +5,9 @@ export const sv = {
   'nav.plan': 'Planera',
   'nav.filter': 'Filter',
   'nav.settings': 'Inställningar',
+  'nav.mode': 'Läge',
+  'filter.title': 'Filtrera linjer',
+  'filter.reset': 'Återställ',
 
   'common.close': 'Stäng',
 

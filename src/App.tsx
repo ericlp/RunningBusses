@@ -410,27 +410,31 @@ export function App() {
   }, [mode, dataset, visible, selected, selectedKey, selectedCourse, courses, others, legs, options, filters]);
 
   const stats = courseStats(legs);
+  const activeFilters = Number(filters.category !== defaultFilters.category) + Number(filters.status !== 'all') + filters.tags.length + Number(filters.minKm !== null || filters.maxKm !== null);
 
   return (
     <div className="app">
       <header className="topbar">
         <h1>{t('app.title')}</h1>
         {mode !== 'build' && (
-          <>
+          <div className="segmented" role="group" aria-label={t('nav.mode')}>
             <button aria-pressed={mode === 'browse'} onClick={() => switchMode('browse')}>
               {t('nav.map')}
             </button>
             <button aria-pressed={mode === 'plan'} onClick={() => switchMode('plan')}>
               {t('nav.plan')}
             </button>
-          </>
+          </div>
         )}
-        <button aria-pressed={showFilters} onClick={() => setShowFilters((s) => !s)}>
-          {t('nav.filter')}
-        </button>
-        <button aria-label={t('nav.settings')} onClick={() => setShowSettings(true)}>
-          ⚙
-        </button>
+        <div className="tools">
+          <button className="tool" aria-pressed={showFilters} aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
+            {t('nav.filter')}
+            {activeFilters > 0 && <span className="count">{activeFilters}</span>}
+          </button>
+          <button className="tool" aria-label={t('nav.settings')} onClick={() => setShowSettings(true)}>
+            ⚙
+          </button>
+        </div>
       </header>
       <main className="main">
         {error && !dataset ? (
@@ -518,42 +522,60 @@ export function App() {
           </div>
         )}
 
-        {dataset && (
-          <section className={`sheet ${mode}`} aria-label={mode === 'build' ? t('sheet.build') : mode === 'plan' ? t('sheet.plan') : t('sheet.browse')}>
-            <div className="sheet-handle" />
-            <div className="sheet-body">
-              {showFilters && (
-                <div className="filters">
-                  <div className="chips" role="group" aria-label={t('filter.category')}>
+        {showFilters && (
+          <section className="filter-panel" aria-label={t('filter.title')}>
+            <div className="filter-head">
+              <h2>{t('filter.title')}</h2>
+              <button className="chip" disabled={activeFilters === 0} onClick={() => setFilters(defaultFilters)}>
+                {t('filter.reset')}
+              </button>
+              <button className="chip" aria-label={t('common.close')} onClick={() => setShowFilters(false)}>
+                ×
+              </button>
+            </div>
+                  <div className="filter-group" role="group" aria-label={t('filter.category')}>
+                    <h3>{t('filter.category')}</h3>
+                    <div className="chips">
                     {(['stadsbuss', 'stombuss', 'all'] as const).map((c) => (
                       <button key={c} className="chip" aria-pressed={filters.category === c} onClick={() => setFilters((f) => ({ ...f, category: c }))}>
                         {c === 'all' ? t('filter.all') : categoryLabel(c as Category)}
                       </button>
                     ))}
+                    </div>
                   </div>
                   {mode !== 'build' && (
-                    <div className="chips" role="group" aria-label={t('filter.status')}>
+                    <div className="filter-group" role="group" aria-label={t('filter.status')}>
+                    <h3>{t('filter.status')}</h3>
+                    <div className="chips">
                       {STATUS_FILTERS.map((s) => (
                         <button key={s} className="chip" aria-pressed={filters.status === s} onClick={() => setFilters((f) => ({ ...f, status: s }))}>
                           {statusFilterLabel(s)}
                         </button>
                       ))}
                     </div>
+                    </div>
                   )}
-                  <div className="chips" role="group" aria-label={t('filter.tags')}>
+                  <div className="filter-group" role="group" aria-label={t('filter.tags')}>
+                    <h3>{t('filter.tags')}</h3>
+                    <div className="chips">
                     {ALL_TAGS.map((t) => (
                       <button key={t} className="chip" aria-pressed={filters.tags.includes(t)} onClick={() => toggleTag(t)}>
                         {tagLabel(t)}
                       </button>
                     ))}
+                    </div>
                   </div>
                   <div className="field">
                     <input inputMode="decimal" placeholder={t('filter.minKm')} aria-label={t('filter.minKmAria')} value={filters.minKm ?? ''} onChange={(e) => setFilters((f) => ({ ...f, minKm: num(e.target.value) }))} />
                     <input inputMode="decimal" placeholder={t('filter.maxKm')} aria-label={t('filter.maxKmAria')} value={filters.maxKm ?? ''} onChange={(e) => setFilters((f) => ({ ...f, maxKm: num(e.target.value) }))} />
                   </div>
-                </div>
-              )}
+                          </section>
+        )}
 
+        {dataset && (
+          <section className={`sheet ${mode}`} aria-label={mode === 'build' ? t('sheet.build') : mode === 'plan' ? t('sheet.plan') : t('sheet.browse')}>
+            <div className="sheet-handle" />
+            <div className="sheet-body">
               {mode === 'build' && (
                 <BuilderPanel
                   options={options}
