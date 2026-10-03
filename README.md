@@ -1,6 +1,6 @@
 # Do you wanna chase buses?
 
-A static, phone-first site for planning runs along Gothenburg city-bus routes. Chain routes into courses, mark them completed, and move your progress between devices with a backup file. Live at https://ericlp.github.io/RunningBusses/ (sv / en / fr, follows the browser language).
+A static, phone-first site for planning runs along Gothenburg city-bus routes. Chain routes into courses, mark them completed, and move your progress between devices with a link or a backup file. Live at https://ericlp.github.io/RunningBusses/ (sv / en / fr, follows the browser language).
 
 The bus lines show where the bus drives. They are a reference only: roads, tunnels and busways may not be runnable.
 
@@ -23,7 +23,7 @@ Source: Trafiklab *GTFS Regional Static* (Västtrafik). Put your key in `.env` (
 
 ## Data on your device
 
-Courses live in the browser (IndexedDB). Use ⚙ → Säkerhetskopia to export, and import with merge or replace on another device. A copy from before the last import can be downloaded.
+Courses live in the browser (IndexedDB). Use ⚙ → Säkerhetskopia to share a link (courses only) or export a file, and open the link or import the file with merge or replace on another device. A copy from before the last import can be downloaded.
 
 ## Plans
 

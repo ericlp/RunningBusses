@@ -28,6 +28,7 @@ import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcil
 import { courseToGpx, gpxFileName } from './domain/gpx';
 import { REPO_URL, Tour, type TourStep } from './components/Tour';
 import { BackupSection } from './components/Backup';
+import { decodeShare, payloadFromHash, type ShareError, type Shared } from './domain/share';
 import type { Key } from './i18n/sv';
 import { BORDERS, LINE_COLORS, OVERLAPS, setOverlap, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setShowLocation, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type Overlap, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
 import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
@@ -71,10 +72,29 @@ function legLayers(legs: Leg[]): { layers: MapLayer[]; markers: MapMarker[] } {
 
 const legCoords = (legs: Leg[]) => legs.flatMap((l) => (l.kind === 'line' ? l.line.coordinates : []));
 
+// read once at load and removed from the address bar, so a reload does not import again
+const initialSyncPayload = payloadFromHash(location.hash);
+if (initialSyncPayload !== null) history.replaceState(null, '', location.pathname + location.search);
+
 export function App() {
   const { pref } = useLang();
   const { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation } = useAppearance();
   const [showSettings, setShowSettings] = useState(false);
+  const syncPayload = useRef<string | null>(initialSyncPayload);
+  const [syncTick, setSyncTick] = useState(0);
+  useEffect(() => {
+    // a link pasted into the address bar of an open tab only changes the hash
+    const onHash = () => {
+      const p = payloadFromHash(location.hash);
+      if (p === null) return;
+      syncPayload.current = p;
+      history.replaceState(null, '', location.pathname + location.search);
+      setSyncTick((n) => n + 1);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  const [incoming, setIncoming] = useState<{ shared: Shared | null; error: ShareError | null } | null>(null);
   // bottom sheet height on phones: 0 peek, 1 half, 2 tall
   const [snap, setSnap] = useState(1);
   const [naming, setNaming] = useState(false);
@@ -256,8 +276,19 @@ export function App() {
   };
   useEffect(() => {
     // first visit only; automated browsers skip it so tests are not blocked
-    if (dataset && !navigator.webdriver && !localStorage.getItem('rb.tour')) setTour(true);
+    if (dataset && !navigator.webdriver && !localStorage.getItem('rb.tour') && !syncPayload.current) setTour(true);
   }, [dataset]);
+  useEffect(() => {
+    // a shared link is only read; nothing is saved until the user confirms the import
+    const payload = syncPayload.current;
+    if (!dataset || !ready || !payload) return;
+    syncPayload.current = null;
+    void decodeShare(payload, dataset.lines).then((r) => {
+      if (r.ok) setIncoming({ shared: r.shared, error: null });
+      else setIncoming({ shared: null, error: r.error });
+      setShowSettings(true);
+    });
+  }, [dataset, ready, syncTick]);
 
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -938,7 +969,7 @@ export function App() {
               >
                 {t('tour.start')}
               </button>
-              <BackupSection courses={courses} radiusM={radiusM} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
+              <BackupSection courses={courses} radiusM={radiusM} feedVersion={dataset.feedVersion} incoming={incoming} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
               <p>
                 <a href={REPO_URL} target="_blank" rel="noreferrer">
                   {t('settings.repo')}
