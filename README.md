@@ -1,4 +1,4 @@
-# Busslöpning Göteborg
+# Do you wanna chase buses?
 
 A static, phone-first site for planning runs along Gothenburg city-bus routes. Chain routes into courses, mark them completed, and move your progress between devices with a backup file. Live at https://ericlp.github.io/RunningBusses/ (sv / en / fr, follows the browser language).
 

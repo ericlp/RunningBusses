@@ -1,7 +1,7 @@
 import type { Dict } from './sv';
 
 export const fr: Dict = {
-  'app.title': 'Course à pied sur les bus de Göteborg',
+  'app.title': 'Do you wanna chase buses?',
   'nav.map': 'Carte',
   'nav.plan': 'Planifier',
   'nav.filter': 'Filtres',

@@ -1,6 +1,6 @@
 /** Swedish is the source language: it defines every key. en.ts and fr.ts must match it exactly. */
 export const sv = {
-  'app.title': 'Busslöpning Göteborg',
+  'app.title': 'Do you wanna chase buses?',
   'nav.map': 'Karta',
   'nav.plan': 'Planera',
   'nav.filter': 'Filter',

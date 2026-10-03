@@ -24,7 +24,7 @@ export function courseToGpx(course: Course): string {
     }
   });
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Gothenburg Bus Running" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Do you wanna chase buses?" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${esc(course.name)}</name><desc>${esc('Bus routes are a reference, not a verified running route.')}</desc></metadata>
 ${waypoints.join('\n')}
   <trk>
