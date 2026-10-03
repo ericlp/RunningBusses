@@ -913,3 +913,29 @@ button {
 
 .dir-arrow { background: none; border: 0; pointer-events: none; }
 .dir-arrow svg { display: block; }
+
+.tour { position: fixed; inset: 0; z-index: 3000; }
+.tour-dim { position: absolute; inset: 0; background: rgba(0, 20, 30, 0.6); }
+.tour-hole {
+  position: absolute;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 20, 30, 0.6), 0 0 0 3px #fff inset;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+.tour-card {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  max-width: 420px;
+  margin: 0 auto;
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.tour-card h2 { margin: 2px 0 6px; font-size: 18px; }
+.tour-card p { margin: 0 0 8px; }
+.tour-card .actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.tour-card .spacer { flex: 1; }

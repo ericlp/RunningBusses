@@ -25,6 +25,7 @@ import {
 } from './domain/course';
 import { applyFilters, categoryLabel, facetAvailability, defaultFilters, formatKm, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
+import { Tour, type TourStep } from './components/Tour';
 import { BackupSection } from './components/Backup';
 import type { Key } from './i18n/sv';
 import { BORDERS, LINE_COLORS, OVERLAPS, setOverlap, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setShowLocation, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type Overlap, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
@@ -88,6 +89,7 @@ export function App() {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [chooser, setChooser] = useState<ChooserItem[] | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [tour, setTour] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -218,6 +220,21 @@ export function App() {
     const c = courses.find((x) => x.id === id);
     if (c) fitTo(legCoords(c.legs));
   };
+
+  const onTourStep = (s: TourStep) => {
+    switchMode(s.mode ?? 'browse');
+    setShowFilters(!!s.filters);
+  };
+  const closeTour = () => {
+    localStorage.setItem('rb.tour', 'done');
+    setTour(false);
+    switchMode('browse');
+    setShowFilters(false);
+  };
+  useEffect(() => {
+    // first visit only; automated browsers skip it so tests are not blocked
+    if (dataset && !navigator.webdriver && !localStorage.getItem('rb.tour')) setTour(true);
+  }, [dataset]);
 
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -698,6 +715,8 @@ export function App() {
             </div>
           </section>
         )}
+        {tour && <Tour onStep={onTourStep} onClose={closeTour} />}
+
         {showSettings && dataset && (
           <div className="modal-back" onClick={() => setShowSettings(false)}>
             <div className="modal" role="dialog" aria-modal="true" aria-label={t('settings.title')} onClick={(e) => e.stopPropagation()}>
@@ -775,6 +794,16 @@ export function App() {
               </label>
               <button className="chip check plain" aria-pressed={showLocation} onClick={() => setShowLocation(!showLocation)}>
                 {t('settings.location')}
+              </button>
+              <button
+                className="chip"
+                onClick={() => {
+                  setShowSettings(false);
+                  if (mode === 'build') return;
+                  setTour(true);
+                }}
+              >
+                {t('tour.start')}
               </button>
               <BackupSection courses={courses} radiusM={radiusM} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
               <p className="muted">{t('settings.data', { version: dataset.feedVersion })} · {t('settings.dataDate', { date: dataset.generatedAt.slice(0, 10) })}</p>
