@@ -27,7 +27,7 @@ import { applyFilters, categoryLabel, defaultFilters, formatKm, searchLines, SOR
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { BackupSection } from './components/Backup';
 import type { Key } from './i18n/sv';
-import { BORDERS, LINE_COLORS, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
+import { BORDERS, LINE_COLORS, OVERLAPS, setOverlap, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type Overlap, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
 import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
 import type { Category, Dataset, Line, Tag } from './domain/types';
 
@@ -71,7 +71,7 @@ const legCoords = (legs: Leg[]) => legs.flatMap((l) => (l.kind === 'line' ? l.li
 
 export function App() {
   const { pref } = useLang();
-  const { theme, mapStyle, border, lineColors, panSpeed } = useAppearance();
+  const { theme, mapStyle, border, lineColors, panSpeed, overlap } = useAppearance();
   const [showSettings, setShowSettings] = useState(false);
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [offline, setOffline] = useState(false);
@@ -631,7 +631,7 @@ export function App() {
                     </select>
                   </div>
                   <button
-                    className="chip check"
+                    className="chip check plain"
                     aria-pressed={filters.status === 'incomplete' || filters.status === 'unplanned'}
                     onClick={() => setFilters((f) => ({ ...f, status: f.status === 'incomplete' || f.status === 'unplanned' ? 'all' : 'incomplete' }))}
                   >
@@ -705,6 +705,16 @@ export function App() {
                   {BORDERS.map((v) => (
                     <option key={v} value={v}>
                       {t(`settings.border${v[0].toUpperCase()}${v.slice(1)}` as Key)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>{t('settings.overlap')}</span>
+                <select value={overlap} onChange={(e) => setOverlap(e.target.value as Overlap)}>
+                  {OVERLAPS.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`settings.overlap${v[0].toUpperCase()}${v.slice(1)}` as Key)}
                     </option>
                   ))}
                 </select>

@@ -62,7 +62,7 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
   const map = useRef<L.Map | null>(null);
   const group = useRef<L.LayerGroup | null>(null);
   const [zoom, setZoom] = useState(12);
-  const { resolved, border, lineColors } = useAppearance();
+  const { resolved, border, lineColors, overlap } = useAppearance();
   const latest = useRef({ tappable, onTap });
   latest.current = { tappable, onTap };
 
@@ -94,13 +94,13 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
     };
   }, []);
 
-  // Lines sharing a road are drawn as interleaved stripes so none hides another
+  // Lines sharing a road are found once per set of layers
   const runs = useMemo(
     () =>
-      lineColors === 'rainbow'
-        ? splitByOverlap(layers.filter((l) => l.key && RAINBOW_TONES.includes(l.tone)).map((l) => ({ key: l.key!, coords: l.coords })))
-        : null,
-    [layers, lineColors],
+      overlap === 'stack'
+        ? null
+        : splitByOverlap(layers.filter((l) => l.key && RAINBOW_TONES.includes(l.tone)).map((l) => ({ key: l.key!, coords: l.coords }))),
+    [layers, overlap],
   );
 
   useEffect(() => {
@@ -108,6 +108,28 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
     g.clearLayers();
     const rainbowOn = lineColors === 'rainbow';
     const casingColor = resolved === 'dark' ? '#0b1a22' : '#fff';
+    const toPx = (c: [number, number]) => L.CRS.EPSG3857.latLngToPoint(L.latLng(c[1], c[0]), zoom);
+
+    // Shifts a path sideways by a number of screen pixels, so lines sharing a road lie next to each other
+    const shifted = (coords: [number, number][], px: number): L.LatLngTuple[] => {
+      const p = coords.map(toPx);
+      return p.map((pt, i) => {
+        const a = p[Math.max(0, i - 1)];
+        const b = p[Math.min(p.length - 1, i + 1)];
+        const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        const q = L.point(pt.x - ((b.y - a.y) / len) * px, pt.y + ((b.x - a.x) / len) * px);
+        const ll = L.CRS.EPSG3857.pointToLatLng(q, zoom);
+        return [ll.lat, ll.lng];
+      });
+    };
+
+    interface Piece {
+      pts: L.LatLngTuple[];
+      line: L.PolylineOptions;
+      casing: L.PolylineOptions | null;
+      top: boolean;
+    }
+    const pieces: Piece[] = [];
     for (const l of layers) {
       const color = rainbowOn && l.key && RAINBOW_TONES.includes(l.tone) ? rainbow(l.key, resolved === 'dark') : toneColor(l.tone);
       const weight = (l.weight ?? 3) * zoomScale(zoom);
@@ -115,17 +137,29 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
       const opacity = l.opacity ?? 0.9;
       const parts = runs && l.key && runs.has(l.key) ? runs.get(l.key)! : [{ coords: l.coords, group: [l.key ?? ''] }];
       for (const part of parts) {
-        const pts = toLatLngs(part.coords);
         const n = part.group.length;
-        if (l.tone !== 'connector' && outline > 0) L.polyline(pts, { color: casingColor, weight: weight + outline, opacity: Math.min(1, opacity * 0.95), interactive: false }).addTo(g);
-        if (n > 1) {
-          const dash = Math.max(8, weight * 1.6);
-          const i = part.group.indexOf(l.key!);
-          L.polyline(pts, { color, weight, opacity, dashArray: `${dash} ${dash * (n - 1)}`, dashOffset: String(-i * dash), lineCap: 'butt', interactive: false }).addTo(g);
-        } else {
-          L.polyline(pts, { color, weight, opacity, dashArray: l.dashed ? '8 8' : undefined, interactive: false }).addTo(g);
-        }
+        const i = part.group.indexOf(l.key!);
+        const side = overlap === 'side' && n > 1;
+        const stripe = overlap === 'stripes' && n > 1;
+        const pts = side ? shifted(part.coords, (i - (n - 1) / 2) * (weight + Math.min(2, BORDER_PX[border]))) : toLatLngs(part.coords);
+        const dash = Math.max(8, weight * 1.6);
+        pieces.push({
+          pts,
+          top: !!l.casing,
+          casing: l.tone !== 'connector' && outline > 0 ? { color: casingColor, weight: weight + outline, opacity: Math.min(1, opacity * 0.95), interactive: false } : null,
+          line: stripe
+            ? { color, weight, opacity, dashArray: `${dash} ${dash * (n - 1)}`, dashOffset: String(-i * dash), lineCap: 'butt', interactive: false }
+            : { color, weight, opacity, dashArray: l.dashed ? '8 8' : undefined, interactive: false },
+        });
       }
+    }
+    // All outlines go under all lines, otherwise one line's outline hides its neighbour's stripes
+    const flat = pieces.filter((p) => !p.top);
+    for (const p of flat) if (p.casing) L.polyline(p.pts, p.casing).addTo(g);
+    for (const p of flat) L.polyline(p.pts, p.line).addTo(g);
+    for (const p of pieces.filter((p) => p.top)) {
+      if (p.casing) L.polyline(p.pts, p.casing).addTo(g);
+      L.polyline(p.pts, p.line).addTo(g);
     }
     for (const mk of markers) {
       L.circleMarker([mk.at[1], mk.at[0]], {
@@ -137,7 +171,7 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
         interactive: false,
       }).addTo(g);
     }
-  }, [layers, runs, markers, zoom, resolved, border, lineColors]);
+  }, [layers, runs, markers, zoom, resolved, border, lineColors, overlap]);
 
   useEffect(() => {
     if (!fit || !map.current || fit.coords.length === 0) return;

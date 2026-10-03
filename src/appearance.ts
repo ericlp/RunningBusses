@@ -13,6 +13,8 @@ export type PanSpeed = 'off' | 'fast' | 'normal' | 'slow';
 export const PAN_SPEEDS: readonly PanSpeed[] = ['off', 'fast', 'normal', 'slow'];
 /** Seconds a camera move takes. */
 export const PAN_SECONDS: Record<PanSpeed, number> = { off: 0, fast: 0.6, normal: 1.4, slow: 2.6 };
+export type Overlap = 'side' | 'stripes' | 'stack';
+export const OVERLAPS: readonly Overlap[] = ['side', 'stripes', 'stack'];
 export const THEMES: readonly ThemePref[] = ['auto', 'light', 'dark'];
 export const MAP_STYLES: readonly MapStyle[] = ['standard', 'soft', 'grey'];
 
@@ -20,6 +22,7 @@ const THEME_KEY = 'rb.theme';
 const MAP_KEY = 'rb.mapStyle';
 const BORDER_KEY = 'rb.border';
 const PAN_KEY = 'rb.panSpeed';
+const OVERLAP_KEY = 'rb.overlap';
 const COLORS_KEY = 'rb.lineColors';
 
 function read<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
@@ -37,6 +40,7 @@ let mapStyle = read(MAP_KEY, MAP_STYLES, 'soft');
 let border = read(BORDER_KEY, BORDERS, 'normal');
 let lineColors = read(COLORS_KEY, LINE_COLORS, 'status');
 let panSpeed = read(PAN_KEY, PAN_SPEEDS, 'normal');
+let overlap = read(OVERLAP_KEY, OVERLAPS, 'side');
 let snapshot = '';
 const listeners = new Set<() => void>();
 
@@ -46,7 +50,7 @@ function apply() {
   const root = document.documentElement;
   root.dataset.theme = resolvedTheme();
   root.dataset.map = mapStyle;
-  snapshot = `${theme}|${mapStyle}|${border}|${lineColors}|${panSpeed}|${resolvedTheme()}`;
+  snapshot = `${theme}|${mapStyle}|${border}|${lineColors}|${panSpeed}|${overlap}|${resolvedTheme()}`;
   listeners.forEach((l) => l());
 }
 media.addEventListener('change', apply);
@@ -92,6 +96,12 @@ export function setPanSpeed(next: PanSpeed) {
 
 export const currentPanSpeed = (): PanSpeed => panSpeed;
 
+export function setOverlap(next: Overlap) {
+  overlap = next;
+  save(OVERLAP_KEY, next);
+  apply();
+}
+
 export function useAppearance() {
   useSyncExternalStore(
     (cb) => {
@@ -100,5 +110,5 @@ export function useAppearance() {
     },
     () => snapshot,
   );
-  return { theme, mapStyle, border, lineColors, panSpeed, resolved: resolvedTheme() };
+  return { theme, mapStyle, border, lineColors, panSpeed, overlap, resolved: resolvedTheme() };
 }
