@@ -45,7 +45,7 @@ describe('translation helpers', () => {
     expect(formatKm(9700)).toBe('9.7 km');
     expect(tn('courses.resumeDraft', 1)).toBe('Continue draft (1 leg)');
     expect(tn('courses.resumeDraft', 3)).toBe('Continue draft (3 legs)');
-    expect(lineLabel({ number: '62', tags: ['retur'], label: '62 retur' })).toBe('62 return');
+    expect(lineLabel({ number: '62', tags: ['retur'], label: '62 retur' })).toBe('62R');
     setLangPref('fr');
     expect(t('courses.create')).toBe('Créer un parcours');
     expect(tn('courses.resumeDraft', 0)).toBe('Continuer le brouillon (0 étape)');

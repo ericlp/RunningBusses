@@ -9,12 +9,17 @@ export const BORDERS: readonly Border[] = ['none', 'thin', 'normal', 'thick'];
 export const LINE_COLORS: readonly LineColors[] = ['status', 'rainbow'];
 /** Extra width in px added to each line for its outline. */
 export const BORDER_PX: Record<Border, number> = { none: 0, thin: 2, normal: 4, thick: 7 };
+export type PanSpeed = 'off' | 'fast' | 'normal' | 'slow';
+export const PAN_SPEEDS: readonly PanSpeed[] = ['off', 'fast', 'normal', 'slow'];
+/** Seconds a camera move takes. */
+export const PAN_SECONDS: Record<PanSpeed, number> = { off: 0, fast: 0.6, normal: 1.4, slow: 2.6 };
 export const THEMES: readonly ThemePref[] = ['auto', 'light', 'dark'];
 export const MAP_STYLES: readonly MapStyle[] = ['standard', 'soft', 'grey'];
 
 const THEME_KEY = 'rb.theme';
 const MAP_KEY = 'rb.mapStyle';
 const BORDER_KEY = 'rb.border';
+const PAN_KEY = 'rb.panSpeed';
 const COLORS_KEY = 'rb.lineColors';
 
 function read<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
@@ -31,6 +36,7 @@ let theme = read(THEME_KEY, THEMES, 'auto');
 let mapStyle = read(MAP_KEY, MAP_STYLES, 'soft');
 let border = read(BORDER_KEY, BORDERS, 'normal');
 let lineColors = read(COLORS_KEY, LINE_COLORS, 'status');
+let panSpeed = read(PAN_KEY, PAN_SPEEDS, 'normal');
 let snapshot = '';
 const listeners = new Set<() => void>();
 
@@ -40,7 +46,7 @@ function apply() {
   const root = document.documentElement;
   root.dataset.theme = resolvedTheme();
   root.dataset.map = mapStyle;
-  snapshot = `${theme}|${mapStyle}|${border}|${lineColors}|${resolvedTheme()}`;
+  snapshot = `${theme}|${mapStyle}|${border}|${lineColors}|${panSpeed}|${resolvedTheme()}`;
   listeners.forEach((l) => l());
 }
 media.addEventListener('change', apply);
@@ -78,6 +84,14 @@ export function setLineColors(next: LineColors) {
   apply();
 }
 
+export function setPanSpeed(next: PanSpeed) {
+  panSpeed = next;
+  save(PAN_KEY, next);
+  apply();
+}
+
+export const currentPanSpeed = (): PanSpeed => panSpeed;
+
 export function useAppearance() {
   useSyncExternalStore(
     (cb) => {
@@ -86,5 +100,5 @@ export function useAppearance() {
     },
     () => snapshot,
   );
-  return { theme, mapStyle, border, lineColors, resolved: resolvedTheme() };
+  return { theme, mapStyle, border, lineColors, panSpeed, resolved: resolvedTheme() };
 }

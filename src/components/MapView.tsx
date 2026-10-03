@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import type { Line } from '../domain/types';
 import { linesNear } from '../domain/hit';
-import { BORDER_PX, useAppearance } from '../appearance';
+import { BORDER_PX, PAN_SECONDS, currentPanSpeed, useAppearance } from '../appearance';
 
 export type Tone = 'base' | 'planned' | 'done' | 'highlight' | 'candidate' | 'connector';
 
@@ -120,11 +120,16 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
   useEffect(() => {
     if (!fit || !map.current || fit.coords.length === 0) return;
     const wide = window.innerWidth >= 900;
-    map.current.fitBounds(L.latLngBounds(toLatLngs(fit.coords)), {
-      paddingTopLeft: [wide ? 410 : 20, fit.topInset],
-      paddingBottomRight: [20, wide ? 20 : 300],
+    const bounds = L.latLngBounds(toLatLngs(fit.coords));
+    const opts = {
+      paddingTopLeft: [wide ? 410 : 20, fit.topInset] as L.PointTuple,
+      paddingBottomRight: [20, wide ? 20 : 300] as L.PointTuple,
       maxZoom: 15,
-    });
+    };
+    const seconds = PAN_SECONDS[currentPanSpeed()];
+    // flyToBounds eases between distant routes so you see how they relate
+    if (seconds === 0) map.current.fitBounds(bounds, { ...opts, animate: false });
+    else map.current.flyToBounds(bounds, { ...opts, duration: seconds, easeLinearity: 0.2 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fit?.seq]);
 

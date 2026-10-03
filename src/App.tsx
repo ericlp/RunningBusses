@@ -27,7 +27,7 @@ import { applyFilters, categoryLabel, defaultFilters, formatKm, searchLines, SOR
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { BackupSection } from './components/Backup';
 import type { Key } from './i18n/sv';
-import { BORDERS, LINE_COLORS, MAP_STYLES, THEMES, setBorder, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type LineColors, type MapStyle, type ThemePref } from './appearance';
+import { BORDERS, LINE_COLORS, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
 import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
 import type { Category, Dataset, Line, Tag } from './domain/types';
 
@@ -71,7 +71,7 @@ const legCoords = (legs: Leg[]) => legs.flatMap((l) => (l.kind === 'line' ? l.li
 
 export function App() {
   const { pref } = useLang();
-  const { theme, mapStyle, border, lineColors } = useAppearance();
+  const { theme, mapStyle, border, lineColors, panSpeed } = useAppearance();
   const [showSettings, setShowSettings] = useState(false);
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [offline, setOffline] = useState(false);
@@ -704,6 +704,16 @@ export function App() {
                   {LINE_COLORS.map((v) => (
                     <option key={v} value={v}>
                       {t(`settings.colors${v[0].toUpperCase()}${v.slice(1)}` as Key)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>{t('settings.panSpeed')}</span>
+                <select value={panSpeed} onChange={(e) => setPanSpeed(e.target.value as PanSpeed)}>
+                  {PAN_SPEEDS.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`settings.pan${v[0].toUpperCase()}${v.slice(1)}` as Key)}
                     </option>
                   ))}
                 </select>
