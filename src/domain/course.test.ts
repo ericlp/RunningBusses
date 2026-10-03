@@ -81,6 +81,16 @@ describe('nextOptions', () => {
     expect(opts[0].reversed).toBe(true);
   });
 
+  it('still offers the nearest route, flagged as outside, when nothing is within the radius', () => {
+    const near = mk('n', 3000, [11.97, end + dLat(2000)], [12.1, 57.8]);
+    const farther = mk('f', 3000, [11.97, end + dLat(5000)], [12.1, 57.8]);
+    const opts = nextOptions([farther, near], new Set(['1']), legs, 500);
+    expect(opts).toHaveLength(1);
+    expect(opts[0].line.key).toBe('n');
+    expect(opts[0].outside).toBe(true);
+    expect(opts[0].gapM!).toBeGreaterThan(1900);
+  });
+
   it('offers both traversals of a loop', () => {
     const loop = mk('l', 3000, [11.97, end + dLat(50)], [11.97, end + dLat(50)]);
     expect(nextOptions([loop], new Set(['1']), legs, 500).map((o) => o.reversed)).toEqual([false, true]);

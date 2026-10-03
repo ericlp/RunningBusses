@@ -39,6 +39,8 @@ export interface Option {
   reversed: boolean;
   /** Straight-line distance from the current end; null when there is no known end to measure from. */
   gapM: number | null;
+  /** True for the nearest route when nothing lies within the radius; it is offered anyway. */
+  outside?: boolean;
 }
 
 export interface Gap {
@@ -133,6 +135,7 @@ export function formatTotal(s: CourseStats): string {
 export function nextOptions(lines: Line[], usedKeys: ReadonlySet<string>, legs: Leg[], radiusM: number): Option[] {
   const end = legs.length ? legEnd(legs[legs.length - 1]) : null;
   const out: Option[] = [];
+  let nearest: Option | null = null;
   for (const line of lines) {
     if (usedKeys.has(line.key)) continue;
     for (const reversed of [false, true]) {
@@ -143,8 +146,11 @@ export function nextOptions(lines: Line[], usedKeys: ReadonlySet<string>, legs: 
       const start = legStart({ kind: 'line', line, reversed })!;
       const gapM = haversineM(end, start);
       if (gapM <= radiusM) out.push({ line, reversed, gapM });
+      else if (!nearest || gapM < nearest.gapM!) nearest = { line, reversed, gapM, outside: true };
     }
   }
+  // the nearest route is always offered, however far away, so the list is never a dead end
+  if (nearest && out.length === 0) out.push(nearest);
   return out.sort((a, b) => (a.gapM ?? 0) - (b.gapM ?? 0) || Number(a.line.number) - Number(b.line.number));
 }
 

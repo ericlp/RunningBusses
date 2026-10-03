@@ -273,8 +273,8 @@ export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUn
           </button>
         </div>
       )}
-      <p className="muted">{hasLegs ? t('panel.next', { n: options.length, radius: radiusM }) : t('panel.first')}</p>
-      {hasLegs && options.length === 0 && <p>{t('panel.none', { radius: radiusM })}</p>}
+      <p className="muted">{hasLegs ? t('panel.next', { n: options.filter((o) => !o.outside).length, radius: radiusM }) : t('panel.first')}</p>
+      {hasLegs && options.length > 0 && options[0].outside && <p>{t('panel.none', { radius: radiusM })}</p>}
       <ul className="list">
         {options.map((o) => (
           <li key={`${o.line.key}-${o.reversed}`}>
@@ -285,7 +285,7 @@ export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUn
                 {o.gapM !== null && (
                   <>
                     <br />
-                    <span className="sub">{t('panel.gap', { dist: formatDistance(o.gapM) })}</span>
+                    <span className="sub">{t(o.outside ? 'panel.nearest' : 'panel.gap', { dist: formatDistance(o.gapM) })}</span>
                   </>
                 )}
               </span>
