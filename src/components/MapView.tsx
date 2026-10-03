@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import type { Line } from '../domain/types';
 import { linesNear } from '../domain/hit';
@@ -35,8 +35,11 @@ interface Props {
   onTap: (hits: Line[]) => void;
 }
 
+const dark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+// Lines grow with zoom so they stay distinct from the street network
+const zoomScale = (z: number) => Math.min(2.4, Math.max(1, 1 + (z - 12) * 0.3));
 const GOTHENBURG: L.LatLngExpression = [57.7089, 11.9746];
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -48,12 +51,24 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const group = useRef<L.LayerGroup | null>(null);
+  const [zoom, setZoom] = useState(12);
   const latest = useRef({ tappable, onTap });
   latest.current = { tappable, onTap };
 
   useEffect(() => {
     const m = L.map(el.current!, { center: GOTHENBURG, zoom: 12, zoomControl: false, preferCanvas: true });
-    L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19 }).addTo(m);
+    L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19, className: 'muted-tiles' }).addTo(m);
+    m.on('zoomend', () => setZoom(m.getZoom()));
+    let frame = 0;
+    m.on('mousemove', (e: L.LeafletMouseEvent) => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const mPerPx = (40075016 * Math.cos((e.latlng.lat * Math.PI) / 180)) / (256 * 2 ** m.getZoom());
+        const hit = linesNear(latest.current.tappable, e.latlng.lat, e.latlng.lng, 14 * mPerPx).length > 0;
+        m.getContainer().style.cursor = hit ? 'pointer' : '';
+      });
+    });
     L.control.zoom({ position: 'bottomright' }).addTo(m);
     group.current = L.layerGroup().addTo(m);
     m.on('click', (e: L.LeafletMouseEvent) => {
@@ -74,8 +89,9 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
     for (const l of layers) {
       const pts = toLatLngs(l.coords);
       const color = toneColor(l.tone);
-      const weight = l.weight ?? 3;
-      if (l.casing) L.polyline(pts, { color: '#fff', weight: weight + 4, opacity: 0.9, interactive: false }).addTo(g);
+      const weight = (l.weight ?? 3) * zoomScale(zoom);
+      const casingColor = dark() ? '#0b1a22' : '#fff';
+      if (l.tone !== 'connector') L.polyline(pts, { color: casingColor, weight: weight + (l.casing ? 4 : 2), opacity: (l.opacity ?? 0.9) * 0.9, interactive: false }).addTo(g);
       L.polyline(pts, { color, weight, opacity: l.opacity ?? 0.9, dashArray: l.dashed ? '8 8' : undefined, interactive: false }).addTo(g);
     }
     for (const mk of markers) {
@@ -88,7 +104,7 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
         interactive: false,
       }).addTo(g);
     }
-  }, [layers, markers]);
+  }, [layers, markers, zoom]);
 
   useEffect(() => {
     if (!fit || !map.current || fit.coords.length === 0) return;

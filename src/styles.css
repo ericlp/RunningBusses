@@ -785,3 +785,14 @@ button {
     margin-right: auto;
   }
 }
+
+/* Mute the basemap so the coloured bus lines stand out */
+.muted-tiles {
+  filter: grayscale(1) contrast(0.85) brightness(1.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  .muted-tiles {
+    filter: grayscale(1) invert(1) contrast(0.8) brightness(0.85);
+  }
+}
