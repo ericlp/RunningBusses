@@ -75,6 +75,12 @@ export function App() {
   const { pref } = useLang();
   const { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation } = useAppearance();
   const [showSettings, setShowSettings] = useState(false);
+  useEffect(() => {
+    if (!showSettings) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setShowSettings(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showSettings]);
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -462,7 +468,7 @@ export function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
+      <header className="topbar" onClick={() => showSettings && setShowSettings(false)}>
         <h1>{t('app.title')}</h1>
         {mode !== 'build' && (
           <div className="segmented" role="group" aria-label={t('nav.mode')}>
@@ -479,7 +485,10 @@ export function App() {
             {t('nav.filter')}
             {activeFilters > 0 && <span className="count">{activeFilters}</span>}
           </button>
-          <button className="tool" aria-label={t('nav.settings')} onClick={() => setShowSettings(true)}>
+          <button className="tool" aria-label={t('nav.settings')} onClick={(e) => {
+              e.stopPropagation();
+              setShowSettings((s) => !s);
+            }}>
             ⚙
           </button>
         </div>
@@ -731,7 +740,12 @@ export function App() {
         {showSettings && dataset && (
           <div className="modal-back" onClick={() => setShowSettings(false)}>
             <div className="modal" role="dialog" aria-modal="true" aria-label={t('settings.title')} onClick={(e) => e.stopPropagation()}>
-              <h2>{t('settings.title')}</h2>
+              <div className="modal-head">
+                <h2>{t('settings.title')}</h2>
+                <button className="tool" aria-label={t('common.close')} onClick={() => setShowSettings(false)}>
+                  ✕
+                </button>
+              </div>
               <label className="field">
                 <span>{t('settings.language')}</span>
                 <select value={pref} onChange={(e) => setLangPref(e.target.value as LangPref)}>
