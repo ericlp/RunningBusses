@@ -15,20 +15,6 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f1b21;
-    --surface: #17262e;
-    --text: #eef3f5;
-    --muted: #9db0ba;
-    --border: #28404b;
-    --line: #3d7f9b;
-    --highlight: #5fd0ff;
-    --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-    color-scheme: dark;
-  }
-}
-
 * {
   box-sizing: border-box;
 }
@@ -786,13 +772,38 @@ button {
   }
 }
 
-/* Mute the basemap so the coloured bus lines stand out */
-.muted-tiles {
-  filter: grayscale(1) contrast(0.85) brightness(1.08);
+:root[data-theme='dark'] {
+  --bg: #0f1b21;
+  --surface: #17262e;
+  --text: #eef3f5;
+  --muted: #9db0ba;
+  --border: #28404b;
+  --line: #3d7f9b;
+  --highlight: #5fd0ff;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  .muted-tiles {
-    filter: grayscale(1) invert(1) contrast(0.8) brightness(0.85);
-  }
+/* Basemap styles: filters on the tile pane, so line colours are untouched */
+:root[data-map='soft'] .leaflet-tile-pane {
+  filter: saturate(0.55) brightness(1.04);
+}
+:root[data-map='grey'] .leaflet-tile-pane {
+  filter: grayscale(1) contrast(0.85) brightness(1.08);
+}
+:root[data-theme='dark'] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85);
+}
+:root[data-theme='dark'][data-map='soft'] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) saturate(0.55) brightness(0.9) contrast(0.85);
+}
+:root[data-theme='dark'][data-map='grey'] .leaflet-tile-pane {
+  filter: invert(1) grayscale(1) brightness(0.85) contrast(0.85);
+}
+
+.modal label.field {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  align-items: center;
+  gap: 8px;
 }

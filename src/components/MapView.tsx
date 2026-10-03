@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import type { Line } from '../domain/types';
 import { linesNear } from '../domain/hit';
+import { useAppearance } from '../appearance';
 
 export type Tone = 'base' | 'planned' | 'done' | 'highlight' | 'candidate' | 'connector';
 
@@ -35,7 +36,6 @@ interface Props {
   onTap: (hits: Line[]) => void;
 }
 
-const dark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 // Lines grow with zoom so they stay distinct from the street network
@@ -52,12 +52,13 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
   const map = useRef<L.Map | null>(null);
   const group = useRef<L.LayerGroup | null>(null);
   const [zoom, setZoom] = useState(12);
+  const { resolved } = useAppearance();
   const latest = useRef({ tappable, onTap });
   latest.current = { tappable, onTap };
 
   useEffect(() => {
     const m = L.map(el.current!, { center: GOTHENBURG, zoom: 12, zoomControl: false, preferCanvas: true });
-    L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19, className: 'muted-tiles' }).addTo(m);
+    L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19 }).addTo(m);
     m.on('zoomend', () => setZoom(m.getZoom()));
     let frame = 0;
     m.on('mousemove', (e: L.LeafletMouseEvent) => {
@@ -90,7 +91,7 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
       const pts = toLatLngs(l.coords);
       const color = toneColor(l.tone);
       const weight = (l.weight ?? 3) * zoomScale(zoom);
-      const casingColor = dark() ? '#0b1a22' : '#fff';
+      const casingColor = resolved === 'dark' ? '#0b1a22' : '#fff';
       if (l.tone !== 'connector') L.polyline(pts, { color: casingColor, weight: weight + (l.casing ? 4 : 2), opacity: (l.opacity ?? 0.9) * 0.9, interactive: false }).addTo(g);
       L.polyline(pts, { color, weight, opacity: l.opacity ?? 0.9, dashArray: l.dashed ? '8 8' : undefined, interactive: false }).addTo(g);
     }
@@ -104,7 +105,7 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
         interactive: false,
       }).addTo(g);
     }
-  }, [layers, markers, zoom]);
+  }, [layers, markers, zoom, resolved]);
 
   useEffect(() => {
     if (!fit || !map.current || fit.coords.length === 0) return;

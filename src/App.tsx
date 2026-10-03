@@ -26,6 +26,8 @@ import {
 import { applyFilters, categoryLabel, defaultFilters, formatKm, searchLines, sortLines, statusFilterLabel, tagLabel, type Filters, type StatusFilter } from './domain/filter';
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { BackupSection } from './components/Backup';
+import type { Key } from './i18n/sv';
+import { MAP_STYLES, THEMES, setMapStyle, setTheme, useAppearance, type MapStyle, type ThemePref } from './appearance';
 import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
 import type { Category, Dataset, Line, Tag } from './domain/types';
 
@@ -69,6 +71,7 @@ const legCoords = (legs: Leg[]) => legs.flatMap((l) => (l.kind === 'line' ? l.li
 
 export function App() {
   const { pref } = useLang();
+  const { theme, mapStyle } = useAppearance();
   const [showSettings, setShowSettings] = useState(false);
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [offline, setOffline] = useState(false);
@@ -654,6 +657,26 @@ export function App() {
                   {LANGS.map((l) => (
                     <option key={l} value={l}>
                       {LANG_NAMES[l]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>{t('settings.theme')}</span>
+                <select value={theme} onChange={(e) => setTheme(e.target.value as ThemePref)}>
+                  {THEMES.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`settings.theme${v[0].toUpperCase()}${v.slice(1)}` as Key)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>{t('settings.mapStyle')}</span>
+                <select value={mapStyle} onChange={(e) => setMapStyle(e.target.value as MapStyle)}>
+                  {MAP_STYLES.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`settings.map${v[0].toUpperCase()}${v.slice(1)}` as Key)}
                     </option>
                   ))}
                 </select>
