@@ -258,6 +258,10 @@ button {
   .sheet.dragging { transition: none; }
   .sheet.snap0 { max-height: 44px; }
   .sheet.snap0:not([style]) .sheet-body { display: none; }
+  /* minimised sheet: a selected route still shows its card */
+  .sheet.snap0.has-sel:not([style]) { max-height: none; }
+  .sheet.snap0.has-sel:not([style]) .sheet-body { display: block; padding-bottom: 8px; }
+  .sheet.snap0.has-sel:not([style]) .sheet-body > :not(.line-card) { display: none; }
   .sheet.snap1, .sheet.snap1.build { max-height: 36%; }
   .sheet.snap2, .sheet.snap2.build { max-height: 78%; }
 }

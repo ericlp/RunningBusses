@@ -706,7 +706,7 @@ export function App() {
         {dataset && (
           <section
             ref={sheetRef}
-            className={`sheet ${mode} snap${snap}${dragging ? ' dragging' : ''}`}
+            className={`sheet ${mode} snap${snap}${mode === 'browse' && selected ? ' has-sel' : ''}${dragging ? ' dragging' : ''}`}
             style={sheetH === null ? undefined : { height: sheetH, maxHeight: sheetH }}
             aria-label={mode === 'build' ? t('sheet.build') : mode === 'plan' ? t('sheet.plan') : t('sheet.browse')}
           >

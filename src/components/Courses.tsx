@@ -22,7 +22,7 @@ import { useState } from 'react';
 
 export function LineCard({ line, info, onClose }: { line: Line; info: RouteInfo; onClose: () => void }) {
   return (
-    <article aria-label={t('card.aria', { label: lineLabel(line) })}>
+    <article className="line-card" aria-label={t('card.aria', { label: lineLabel(line) })}>
       <div className="card-title">
         <span className="badge">{lineLabel(line)}</span>
         <span className="name">
