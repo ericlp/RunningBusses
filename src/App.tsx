@@ -477,10 +477,9 @@ export function App() {
           />
         )}
 
-        {noticeOpen && mode !== 'build' && (
+        {noticeOpen && mode !== 'build' && (offline || (dataset && Date.now() - Date.parse(dataset.generatedAt) > STALE_DAYS * 864e5)) && (
           <div className="notice" role="note">
             <span>
-              {t('notice.text')}
               {offline && t('notice.offline')}
               {dataset && Date.now() - Date.parse(dataset.generatedAt) > STALE_DAYS * 864e5 && t('notice.stale', { date: dataset.generatedAt.slice(0, 10) })}
             </span>
