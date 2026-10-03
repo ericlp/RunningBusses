@@ -15,7 +15,7 @@ await p.waitForSelector('.toast, [role=status]', { timeout: 3000 }).catch(()=>{}
 ok(/uppdaterades/.test(await p.locator('body').innerText()), 'open course auto-updated toast');
 // complete then unlock -> pinned
 await p.click('text=Planera').catch(()=>{}); await p.waitForTimeout(300);
-await p.click('.course-main'); await p.click('button:has-text("Markera som genomförd")');
+await p.click('.course-main'); await p.click('button:has-text("Markera som genomförd")'); await p.click('.modal button.primary');
 await p.waitForTimeout(400); await p.click('button:has-text("Markera som ej genomförd")'); await p.waitForTimeout(400);
 ok(await p.locator('.tag:text-is("Äldre data")').count() === 1, 'unlocked course is pinned');
 ok(await p.locator('button:has-text("Uppdatera till aktuell data")').count() === 1, 'update button');

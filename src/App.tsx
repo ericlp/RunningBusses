@@ -92,6 +92,7 @@ export function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [fit, setFit] = useState<Fit | null>(null);
+  const [completing, setCompleting] = useState<{ course: Course; date: string } | null>(null);
   const [split, setSplit] = useState<{ at: number; name1: string; name2: string } | null>(null);
 
   useEffect(() => {
@@ -347,14 +348,26 @@ export function App() {
     }
   };
 
+  const today = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
   const toggleComplete = async (c: Course) => {
-    const completing = c.status !== 'Completed';
-    const msg = completing
-      ? t('confirm.complete', { name: c.name })
-      : t('confirm.uncomplete', { name: c.name });
-    if (!confirm(msg)) return;
+    if (c.status !== 'Completed') {
+      setCompleting({ course: c, date: today() });
+      return;
+    }
+    if (!confirm(t('confirm.uncomplete', { name: c.name }))) return;
     const now = new Date().toISOString();
-    await commit(courses.map((x) => (x.id === c.id ? { ...x, status: completing ? 'Completed' : 'NotCompleted', completedAt: completing ? now : null, pinned: completing ? undefined : true, updatedAt: now } : x)));
+    await commit(courses.map((x) => (x.id === c.id ? { ...x, status: 'NotCompleted', completedAt: null, pinned: true, updatedAt: now } : x)));
+  };
+
+  const confirmComplete = async () => {
+    if (!completing) return;
+    const { course: c, date } = completing;
+    const now = new Date().toISOString();
+    if (await commit(courses.map((x) => (x.id === c.id ? { ...x, status: 'Completed', completedAt: date || today(), pinned: undefined, updatedAt: now } : x)))) setCompleting(null);
   };
 
   const deleteCourse = async (c: Course) => {
@@ -492,6 +505,27 @@ export function App() {
         {toast && (
           <div className="toast" role="alert">
             {toast}
+          </div>
+        )}
+
+        {completing && (
+          <div className="modal-back">
+            <div className="modal" role="dialog" aria-modal="true" aria-label={t('complete.title')}>
+              <h2>{t('complete.title')}</h2>
+              <p className="muted">{t('confirm.complete', { name: completing.course.name })}</p>
+              <label className="field">
+                <span>{t('complete.date')}</span>
+                <input type="date" value={completing.date} max={today()} onChange={(e) => setCompleting((x) => x && { ...x, date: e.target.value })} />
+              </label>
+              <div className="actions">
+                <button className="primary compact" onClick={confirmComplete} disabled={saving || !completing.date}>
+                  {t('complete.confirm')}
+                </button>
+                <button className="chip" onClick={() => setCompleting(null)}>
+                  {t('split.cancel')}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -739,10 +773,9 @@ export function App() {
                   ))}
                 </select>
               </label>
-              <label className="field check-row">
-                <input type="checkbox" checked={showLocation} onChange={(e) => setShowLocation(e.target.checked)} />
-                <span>{t('settings.location')}</span>
-              </label>
+              <button className="chip check plain" aria-pressed={showLocation} onClick={() => setShowLocation(!showLocation)}>
+                {t('settings.location')}
+              </button>
               <BackupSection courses={courses} radiusM={radiusM} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
               <p className="muted">{t('settings.data', { version: dataset.feedVersion })} · {t('settings.dataDate', { date: dataset.generatedAt.slice(0, 10) })}</p>
               <button className="chip" onClick={() => setShowSettings(false)}>

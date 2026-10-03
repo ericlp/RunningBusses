@@ -123,6 +123,9 @@ export const fr: Dict = {
   'panel.gaps_other': 'Écarts du parcours : {n} écarts, {dist}',
   'option.gap': ' · écart {dist}',
 
+  'complete.title': 'Marquer comme terminée',
+  'complete.date': 'Date',
+  'complete.confirm': 'Enregistrer',
   'split.title': 'Scinder le parcours',
   'split.note': 'Les deux parties deviennent non terminées. L’écart entre elles n’est pas compté.',
   'split.part1': 'Parcours 1',

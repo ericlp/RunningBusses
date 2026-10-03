@@ -123,6 +123,9 @@ export const en: Dict = {
   'panel.gaps_other': 'Course gaps: {n} gaps, {dist}',
   'option.gap': ' · gap {dist}',
 
+  'complete.title': 'Mark as completed',
+  'complete.date': 'Date',
+  'complete.confirm': 'Save',
   'split.title': 'Split course',
   'split.note': 'Both parts become not completed. The gap between them is not counted.',
   'split.part1': 'Course 1',

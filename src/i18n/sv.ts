@@ -122,6 +122,9 @@ export const sv = {
   'panel.gaps_other': 'Banans delsträckor: {n} glapp, {dist}',
   'option.gap': ' · glapp {dist}',
 
+  'complete.title': 'Markera som genomförd',
+  'complete.date': 'Datum',
+  'complete.confirm': 'Spara',
   'split.title': 'Dela bana',
   'split.note': 'Båda delarna blir ej genomförda. Glappet mellan dem räknas inte med.',
   'split.part1': 'Bana 1',

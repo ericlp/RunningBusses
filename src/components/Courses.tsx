@@ -91,7 +91,7 @@ export function CourseList({ courses, lines, onRefresh, selectedId, draftLegs, d
                 <span className="course-head">
                   <b>{c.name}</b>
                   {c.pinned && <span className="tag">{t('courses.pinned')}</span>}
-                  <span className={`tag ${c.status === 'Completed' ? 'status-Completed' : ''}`}>{c.status === 'Completed' ? t('courses.statusDone') : t('courses.statusOpen')}</span>
+                  <span className={`tag ${c.status === 'Completed' ? 'status-Completed' : ''}`}>{c.status === 'Completed' ? `${t('courses.statusDone')}${c.completedAt ? ` ${c.completedAt.slice(0, 10)}` : ''}` : t('courses.statusOpen')}</span>
                 </span>
                 <span className="seq">
                   {c.legs.map((l, i) => (

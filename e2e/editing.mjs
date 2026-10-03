@@ -81,6 +81,7 @@ for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { 
   await p.locator('.course-main').first().click();
   if ((await p.locator('text=Markera som genomförd').count()) === 0) await p.locator('.course-main').first().click();
   await p.click('text=Markera som genomförd');
+  await p.click('.modal button.primary');
   await p.waitForSelector('.status-Completed');
   check((await p.locator('text=Redigera').count()) === 0, `${name}: no edit on completed course`);
   check(!(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)), `${name}: no horizontal overflow`);

@@ -29,9 +29,9 @@ for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { 
   await p.click('text=Planera');
   await p.waitForSelector('.course');
   console.log(name, 'persisted after reload:', await p.locator('.course').count());
-  p.once('dialog', (d) => d.accept());
   await p.click('.course-main');
   await p.click('text=Markera som genomförd');
+  await p.click('.modal button.primary');
   await p.waitForSelector('.status-Completed');
   await p.click('text=Karta');
   await p.waitForSelector('.list button');
