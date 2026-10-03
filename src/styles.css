@@ -254,8 +254,10 @@ button {
 }
 
 @media (max-width: 899px) {
+  .sheet { transition: height 0.25s ease, max-height 0.25s ease; }
+  .sheet.dragging { transition: none; }
   .sheet.snap0 { max-height: 44px; }
-  .sheet.snap0 .sheet-body { display: none; }
+  .sheet.snap0:not([style]) .sheet-body { display: none; }
   .sheet.snap1, .sheet.snap1.build { max-height: 36%; }
   .sheet.snap2, .sheet.snap2.build { max-height: 78%; }
 }

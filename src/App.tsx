@@ -78,7 +78,10 @@ export function App() {
   // bottom sheet height on phones: 0 peek, 1 half, 2 tall
   const [snap, setSnap] = useState(1);
   const [naming, setNaming] = useState(false);
-  const dragY = useRef<number | null>(null);
+  const dragRef = useRef<{ y: number; h: number; moved: boolean } | null>(null);
+  const sheetRef = useRef<HTMLElement | null>(null);
+  const [sheetH, setSheetH] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
   useEffect(() => {
     if (!showSettings) return;
     setShowFilters(false);
@@ -701,20 +704,60 @@ export function App() {
         )}
 
         {dataset && (
-          <section className={`sheet ${mode} snap${snap}`} aria-label={mode === 'build' ? t('sheet.build') : mode === 'plan' ? t('sheet.plan') : t('sheet.browse')}>
+          <section
+            ref={sheetRef}
+            className={`sheet ${mode} snap${snap}${dragging ? ' dragging' : ''}`}
+            style={sheetH === null ? undefined : { height: sheetH, maxHeight: sheetH }}
+            aria-label={mode === 'build' ? t('sheet.build') : mode === 'plan' ? t('sheet.plan') : t('sheet.browse')}
+          >
             <button
               type="button"
               className="sheet-handle"
               aria-label={t('sheet.resize')}
               onPointerDown={(e) => {
-                dragY.current = e.clientY;
+                const el = sheetRef.current;
+                if (!el) return;
+                dragRef.current = { y: e.clientY, h: el.offsetHeight, moved: false };
                 e.currentTarget.setPointerCapture(e.pointerId);
               }}
-              onPointerUp={(e) => {
-                const d = e.clientY - (dragY.current ?? e.clientY);
-                dragY.current = null;
-                if (Math.abs(d) < 12) setSnap((s) => (s + 1) % 3);
-                else setSnap((s) => Math.max(0, Math.min(2, s + (d < 0 ? 1 : -1))));
+              onPointerMove={(e) => {
+                const d = dragRef.current;
+                const el = sheetRef.current;
+                if (!d || !el) return;
+                if (!d.moved && Math.abs(e.clientY - d.y) < 6) return;
+                d.moved = true;
+                setDragging(true);
+                const max = (el.parentElement?.clientHeight ?? 700) * 0.9;
+                setSheetH(Math.max(44, Math.min(max, d.h - (e.clientY - d.y))));
+              }}
+              onPointerCancel={() => {
+                dragRef.current = null;
+                setDragging(false);
+                setSheetH(null);
+              }}
+              onPointerUp={() => {
+                const d = dragRef.current;
+                const el = sheetRef.current;
+                dragRef.current = null;
+                setDragging(false);
+                if (!d || !el) return;
+                if (!d.moved) {
+                  setSnap((n) => (n + 1) % 3);
+                  return;
+                }
+                const parent = el.parentElement?.clientHeight ?? 700;
+                const full = (el.querySelector('.sheet-body')?.scrollHeight ?? 0) + 44;
+                const targets = [44, parent * 0.36, parent * 0.78].map((h, i) => (i === 0 ? h : Math.min(h, Math.max(full, 44))));
+                const cur = el.offsetHeight;
+                let best = 0;
+                targets.forEach((h, i) => {
+                  if (Math.abs(h - cur) < Math.abs(targets[best] - cur)) best = i;
+                });
+                setSheetH(targets[best]);
+                window.setTimeout(() => {
+                  setSnap(best);
+                  setSheetH(null);
+                }, 260);
               }}
             />
             <div className="sheet-body">

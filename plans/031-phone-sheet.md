@@ -5,3 +5,5 @@ Bottom sheet is resizable (tap or drag the handle: peek / half / tall), starts a
 # Naming
 
 The name field is gone from the builder strip; Save opens a small optional-name dialog (placeholder shows the default name).
+
+Dragging the handle now resizes the sheet live (follows the finger) and animates to the nearest of peek/half/tall on release.
