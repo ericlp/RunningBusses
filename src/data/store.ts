@@ -4,6 +4,8 @@ import { idbGet, idbSet } from './idb';
 export interface Draft {
   name: string;
   legs: Leg[];
+  /** Set when the draft is an edit of this saved course rather than a new course. */
+  editingId?: string;
 }
 
 export const DEFAULT_RADIUS_M = 500;

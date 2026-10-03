@@ -127,4 +127,5 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 
 - [001 – Phase 0 data findings](001-phase0-data-findings.md): feed structure, the 49 lines, direction-specific routes, categories and tags.
 - [002 – Phase 2: courses](002-phase2-courses.md): what was built, manual legs, draft handling.
+- [004 – Phase 3: editing](004-phase3-editing.md): edit view, remove from ends, split, reverse, draft rules.
 - [003 – Preferred language](003-preferred-language.md): future feature, browser language with Swedish, English and French.

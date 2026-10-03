@@ -187,3 +187,37 @@ export const routeStatusLabels: Record<RouteStatus, string> = {
   NotCompleted: 'Planerad, ej genomförd',
   Completed: 'Genomförd',
 };
+
+const hasLine = (legs: Leg[]) => legs.some((l) => l.kind === 'line');
+
+/** Drops the first leg. Manual legs left at the front would have no start point, so they go too. */
+export function removeFirst(legs: Leg[]): Leg[] {
+  const rest = legs.slice(1);
+  while (rest[0]?.kind === 'manual') rest.shift();
+  return rest;
+}
+
+export function removeLast(legs: Leg[]): Leg[] {
+  return legs.slice(0, -1);
+}
+
+export const canRemoveFirst = (legs: Leg[]) => hasLine(removeFirst(legs));
+export const canRemoveLast = (legs: Leg[]) => legs.length > 1;
+
+/** A split sits between legs[i - 1] and legs[i]; both halves must be non-empty and start with a real line. */
+export function canSplitAt(legs: Leg[], i: number): boolean {
+  return i >= 1 && i < legs.length && legs[i].kind === 'line';
+}
+
+export function splitAt(legs: Leg[], i: number): [Leg[], Leg[]] {
+  if (!canSplitAt(legs, i)) throw new Error('Cannot split here');
+  return [legs.slice(0, i), legs.slice(i)];
+}
+
+/** Reverses order and every line's direction. Not possible when a manual leg would end up first. */
+export const canReverse = (legs: Leg[]) => legs.length > 0 && legs[legs.length - 1].kind === 'line';
+
+export function reverseLegs(legs: Leg[]): Leg[] {
+  if (!canReverse(legs)) throw new Error('Cannot reverse');
+  return [...legs].reverse().map((l) => (l.kind === 'line' ? { ...l, reversed: !l.reversed } : l));
+}

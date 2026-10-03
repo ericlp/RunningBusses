@@ -1,4 +1,19 @@
-import { courseStats, formatDistance, formatTotal, legLabel, legStartName, legEndName, routeStatusLabels, type Course, type Leg, type Option, type RouteInfo } from '../domain/course';
+import {
+  canRemoveFirst,
+  canRemoveLast,
+  canSplitAt,
+  courseStats,
+  formatDistance,
+  formatTotal,
+  legLabel,
+  legStartName,
+  legEndName,
+  routeStatusLabels,
+  type Course,
+  type Leg,
+  type Option,
+  type RouteInfo,
+} from '../domain/course';
 import { categoryLabels, formatKm, tagLabels } from '../domain/filter';
 import type { Line } from '../domain/types';
 import { useState } from 'react';
@@ -44,17 +59,21 @@ interface CourseListProps {
   courses: Course[];
   selectedId: string | null;
   draftLegs: number;
+  /** Name of the course being edited in the saved draft, if the draft is an edit. */
+  draftEditingId: string | null;
   onSelect: (id: string | null) => void;
   onCreate: () => void;
+  onEdit: (c: Course) => void;
   onToggleComplete: (c: Course) => void;
   onDelete: (c: Course) => void;
 }
 
-export function CourseList({ courses, selectedId, draftLegs, onSelect, onCreate, onToggleComplete, onDelete }: CourseListProps) {
+export function CourseList({ courses, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
+  const editing = courses.find((c) => c.id === draftEditingId);
   return (
     <div>
       <button className="primary" onClick={onCreate}>
-        {draftLegs > 0 ? `Fortsätt utkast (${draftLegs} ${draftLegs === 1 ? 'etapp' : 'etapper'})` : 'Skapa bana'}
+        {editing ? `Fortsätt redigera "${editing.name}"` : draftLegs > 0 ? `Fortsätt utkast (${draftLegs} ${draftLegs === 1 ? 'etapp' : 'etapper'})` : 'Skapa bana'}
       </button>
       {courses.length === 0 && <p className="muted">Inga banor än. Skapa en bana genom att koppla ihop linjer.</p>}
       <ul className="courses">
@@ -91,6 +110,11 @@ export function CourseList({ courses, selectedId, draftLegs, onSelect, onCreate,
                     ))}
                   </ol>
                   <div className="actions">
+                    {c.status !== 'Completed' && (
+                      <button className="chip" onClick={() => onEdit(c)}>
+                        Redigera
+                      </button>
+                    )}
                     <button className="chip" onClick={() => onToggleComplete(c)}>
                       {c.status === 'Completed' ? 'Markera som ej genomförd' : 'Markera som genomförd'}
                     </button>
@@ -116,10 +140,14 @@ interface StripProps {
   onCancel: () => void;
   saving: boolean;
   canSave: boolean;
+  editing: boolean;
+  onRemoveFirst: () => void;
+  onRemoveLast: () => void;
+  onSplit: (index: number) => void;
 }
 
 /** The top strip of a draft: start stop, one card per leg, and a sticky total with the save button. */
-export function BuilderStrip({ name, legs, onName, onSave, onCancel, saving, canSave }: StripProps) {
+export function BuilderStrip({ name, legs, onName, onSave, onCancel, saving, canSave, editing, onRemoveFirst, onRemoveLast, onSplit }: StripProps) {
   const s = courseStats(legs);
   return (
     <div className="strip">
@@ -127,7 +155,7 @@ export function BuilderStrip({ name, legs, onName, onSave, onCancel, saving, can
         <input value={name} placeholder="Namn på banan" aria-label="Namn på banan" onChange={(e) => onName(e.target.value)} />
         <span className="strip-total">{legs.length ? formatTotal(s) : '0,0 km'}</span>
         <button className="primary compact" disabled={!canSave || saving} onClick={onSave}>
-          {saving ? 'Sparar…' : 'Spara'}
+          {saving ? 'Sparar…' : editing ? 'Spara ändringar' : 'Spara'}
         </button>
         <button className="chip" onClick={onCancel} aria-label="Stäng och behåll utkastet">
           Stäng
@@ -143,8 +171,25 @@ export function BuilderStrip({ name, legs, onName, onSave, onCancel, saving, can
           return (
             <div className="leg-wrap" key={i} role="listitem">
               {gap && <span className="connector">↔ {formatDistance(gap.m)}</span>}
+              {editing && canSplitAt(legs, i) && (
+                <button className="chip split" onClick={() => onSplit(i)} aria-label={`Dela banan före ${legLabel(l)}`}>
+                  ✂ Dela
+                </button>
+              )}
               <div className="leg-card">
-                <span className="badge small">{legLabel(l)}</span>
+                <span className="leg-top">
+                  <span className="badge small">{legLabel(l)}</span>
+                  {i === 0 && canRemoveFirst(legs) && (
+                    <button className="x" onClick={onRemoveFirst} aria-label={`Ta bort ${legLabel(l)} från början`}>
+                      ×
+                    </button>
+                  )}
+                  {i === legs.length - 1 && canRemoveLast(legs) && (
+                    <button className="x" onClick={onRemoveLast} aria-label={`Ta bort ${legLabel(l)} från slutet`}>
+                      ×
+                    </button>
+                  )}
+                </span>
                 <b>{legEndName(l)}</b>
                 <span className="muted">{l.kind === 'manual' && l.lengthM === null ? '? km' : formatKm(l.kind === 'manual' ? (l.lengthM ?? 0) : l.line.lengthM)}</span>
               </div>
@@ -165,9 +210,12 @@ interface PanelProps {
   onUndo: () => void;
   onAddManual: (label: string, lengthM: number | null) => void;
   onDiscard: () => void;
+  canReverse: boolean;
+  onReverse: () => void;
+  editing: boolean;
 }
 
-export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUndo, onAddManual, onDiscard }: PanelProps) {
+export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUndo, onAddManual, onDiscard, canReverse, onReverse, editing }: PanelProps) {
   const [manualOpen, setManualOpen] = useState(false);
   const [label, setLabel] = useState('');
   const [km, setKm] = useState('');
@@ -185,13 +233,18 @@ export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUn
         <button className="chip" onClick={onUndo} disabled={!hasLegs}>
           Ångra senaste
         </button>
+        {canReverse && (
+          <button className="chip" onClick={onReverse}>
+            ⇄ Vänd riktning
+          </button>
+        )}
         {hasLegs && (
           <button className="chip" onClick={() => setManualOpen((o) => !o)} aria-expanded={manualOpen}>
             + Manuell sträcka
           </button>
         )}
         <button className="chip danger" onClick={onDiscard}>
-          Förkasta utkast
+          {editing ? 'Förkasta ändringar' : 'Förkasta utkast'}
         </button>
         <label className="radius">
           Radie
@@ -229,6 +282,61 @@ export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUn
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+interface SplitProps {
+  first: Leg[];
+  second: Leg[];
+  name1: string;
+  name2: string;
+  onName1: (n: string) => void;
+  onName2: (n: string) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+  saving: boolean;
+}
+
+/** Preview of a split: two new, not completed courses, each with its own name and total. */
+export function SplitDialog({ first, second, name1, name2, onName1, onName2, onConfirm, onCancel, saving }: SplitProps) {
+  const parts = [
+    { legs: first, name: name1, set: onName1, label: 'Bana 1' },
+    { legs: second, name: name2, set: onName2, label: 'Bana 2' },
+  ];
+  return (
+    <div className="modal-back">
+      <div className="modal" role="dialog" aria-modal="true" aria-label="Dela bana">
+        <h2>Dela bana</h2>
+        <p className="muted">Båda delarna blir ej genomförda. Glappet mellan dem räknas inte med.</p>
+        {parts.map((p) => {
+          const s = courseStats(p.legs);
+          return (
+            <div key={p.label} className="split-part">
+              <input value={p.name} aria-label={`Namn på ${p.label}`} onChange={(e) => p.set(e.target.value)} />
+              <div className="seq">
+                {p.legs.map((l, i) => (
+                  <span className="badge small" key={i}>
+                    {legLabel(l)}
+                  </span>
+                ))}
+              </div>
+              <span className="muted">
+                {s.startName} → {s.endName}
+              </span>
+              <b>{formatTotal(s)}</b>
+            </div>
+          );
+        })}
+        <div className="actions">
+          <button className="primary compact" onClick={onConfirm} disabled={saving || !name1.trim() || !name2.trim()}>
+            {saving ? 'Sparar…' : 'Dela'}
+          </button>
+          <button className="chip" onClick={onCancel}>
+            Avbryt
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MapView, type Fit, type MapLayer, type MapMarker, type Tone } from './components/MapView';
-import { BuilderPanel, BuilderStrip, CourseList, LineCard } from './components/Courses';
+import { BuilderPanel, BuilderStrip, CourseList, LineCard, SplitDialog } from './components/Courses';
 import { loadDataset } from './data/dataset';
 import { DEFAULT_RADIUS_M, loadCourses, loadDraft, loadRadius, saveCourses, saveDraft, saveRadius, type Draft } from './data/store';
 import {
@@ -9,6 +9,11 @@ import {
   legStart,
   nextOptions,
   orientedCoordinates,
+  canReverse,
+  removeFirst,
+  removeLast,
+  reverseLegs,
+  splitAt,
   routeInfo,
   routeStatuses,
   usedLineKeys,
@@ -76,6 +81,7 @@ export function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [fit, setFit] = useState<Fit | null>(null);
+  const [split, setSplit] = useState<{ at: number; name1: string; name2: string } | null>(null);
 
   useEffect(() => {
     loadDataset()
@@ -87,7 +93,9 @@ export function App() {
     Promise.all([loadCourses(), loadDraft()])
       .then(([c, d]) => {
         setCourses(c);
-        setDraft(d);
+        // an edit draft is only meaningful while its course still exists and is not completed
+        const stale = d?.editingId && !c.some((x) => x.id === d.editingId && x.status !== 'Completed');
+        setDraft(stale ? null : d);
         setReady(true);
       })
       .catch(() => setToast('Kunde inte läsa sparade banor. Ändringar sparas inte förrän det fungerar.'));
@@ -114,11 +122,13 @@ export function App() {
   const selectedCourse = useMemo(() => courses.find((c) => c.id === selectedCourseId) ?? null, [courses, selectedCourseId]);
 
   const legs = draft?.legs ?? [];
+  // the course being edited releases its own lines for the draft
+  const others = useMemo(() => courses.filter((c) => c.id !== draft?.editingId), [courses, draft?.editingId]);
   const options = useMemo(() => {
     if (mode !== 'build' || !dataset) return [];
     const pool = applyFilters(dataset.lines, { ...filters, status: 'all' });
-    return nextOptions(pool, usedLineKeys(courses, legs), legs, radiusM);
-  }, [mode, dataset, filters, courses, legs, radiusM]);
+    return nextOptions(pool, usedLineKeys(others, legs), legs, radiusM);
+  }, [mode, dataset, filters, others, legs, radiusM]);
 
   const fitTo = (coords: [number, number][], topInset = 70) => setFit({ coords, seq: (fit?.seq ?? 0) + 1, topInset });
 
@@ -148,7 +158,7 @@ export function App() {
     const leg: Leg = { kind: 'line', line: o.line, reversed: o.reversed };
     setDraft((d) => ({ ...(d ?? EMPTY_DRAFT), legs: [...(d?.legs ?? []), leg] }));
     setChooser(null);
-    fitTo(o.line.coordinates, 190);
+    fitTo(o.line.coordinates, 230);
   };
 
   const optionItem = (o: Option): ChooserItem => ({
@@ -200,6 +210,15 @@ export function App() {
     setMode('build');
   };
 
+  const startEdit = (c: Course) => {
+    if (c.status === 'Completed') return;
+    if (draft && draft.editingId !== c.id && draft.legs.length > 0 && !confirm('Du har ett osparat utkast. Förkasta det och redigera den här banan?')) return;
+    if (draft?.editingId !== c.id) setDraft({ name: c.name, legs: c.legs, editingId: c.id });
+    setChooser(null);
+    setMode('build');
+    fitTo(legCoords(c.legs), 230);
+  };
+
   const closeBuild = () => {
     setMode('plan');
     setChooser(null);
@@ -215,6 +234,24 @@ export function App() {
     if (!draft || !legs.some((l) => l.kind === 'line')) return;
     setSaving(true);
     const now = new Date().toISOString();
+    if (draft.editingId) {
+      const existing = courses.find((c) => c.id === draft.editingId);
+      if (!existing || existing.status === 'Completed') {
+        setSaving(false);
+        setToast('Banan finns inte längre eller är genomförd. Ändringarna sparades inte.');
+        return;
+      }
+      const updated: Course = { ...existing, name: draft.name.trim() || existing.name, legs: draft.legs, updatedAt: now };
+      const ok = await commit(courses.map((c) => (c.id === updated.id ? updated : c)));
+      setSaving(false);
+      if (ok) {
+        setDraft(null);
+        setMode('plan');
+        setSelectedCourseId(updated.id);
+        fitTo(legCoords(updated.legs));
+      }
+      return;
+    }
     const course: Course = {
       id: crypto.randomUUID(),
       name: draft.name.trim() || `Bana ${courses.length + 1}`,
@@ -231,6 +268,37 @@ export function App() {
       setMode('plan');
       setSelectedCourseId(course.id);
       fitTo(legCoords(course.legs));
+    }
+  };
+
+  const openSplit = (at: number) => {
+    const base = draft?.name.trim() || 'Bana';
+    setSplit({ at, name1: `${base} 1`, name2: `${base} 2` });
+  };
+
+  const confirmSplit = async () => {
+    if (!split || !draft?.editingId) return;
+    const existing = courses.find((c) => c.id === draft.editingId);
+    if (!existing || existing.status === 'Completed') {
+      setToast('Banan finns inte längre eller är genomförd.');
+      setSplit(null);
+      return;
+    }
+    const [a, b] = splitAt(draft.legs, split.at);
+    const now = new Date().toISOString();
+    const first: Course = { ...existing, name: split.name1.trim(), legs: a, status: 'NotCompleted', completedAt: null, updatedAt: now };
+    const second: Course = { id: crypto.randomUUID(), name: split.name2.trim(), status: 'NotCompleted', createdAt: now, updatedAt: now, completedAt: null, legs: b };
+    setSaving(true);
+    // one write replaces the old course with both halves, so a failure leaves nothing half-split
+    const next = courses.flatMap((c) => (c.id === existing.id ? [first, second] : [c]));
+    const ok = await commit(next);
+    setSaving(false);
+    if (ok) {
+      setSplit(null);
+      setDraft(null);
+      setMode('plan');
+      setSelectedCourseId(first.id);
+      fitTo(legCoords(first.legs));
     }
   };
 
@@ -258,7 +326,7 @@ export function App() {
     let markers: MapMarker[] = [];
     let tappable: Line[] = [];
     if (mode === 'build') {
-      const used = usedLineKeys(courses, legs);
+      const used = usedLineKeys(others, legs);
       const optionKeys = new Set(options.map((o) => o.line.key));
       const pool = dataset ? applyFilters(dataset.lines, { ...filters, status: 'all' }) : [];
       for (const l of pool) if (!used.has(l.key) && !optionKeys.has(l.key)) layers.push({ coords: l.coordinates, tone: 'base', opacity: 0.5 });
@@ -299,7 +367,7 @@ export function App() {
     }
     return { layers, markers, tappable };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, dataset, visible, selected, selectedKey, selectedCourse, courses, legs, options, filters]);
+  }, [mode, dataset, visible, selected, selectedKey, selectedCourse, courses, others, legs, options, filters]);
 
   const stats = courseStats(legs);
 
@@ -347,6 +415,10 @@ export function App() {
             onCancel={closeBuild}
             saving={saving}
             canSave={legs.some((l) => l.kind === 'line') && ready}
+            editing={!!draft?.editingId}
+            onRemoveFirst={() => setDraft((d) => (d ? { ...d, legs: removeFirst(d.legs) } : d))}
+            onRemoveLast={() => setDraft((d) => (d ? { ...d, legs: removeLast(d.legs) } : d))}
+            onSplit={openSplit}
           />
         )}
 
@@ -366,6 +438,20 @@ export function App() {
           <div className="toast" role="alert">
             {toast}
           </div>
+        )}
+
+        {split && draft && (
+          <SplitDialog
+            first={splitAt(draft.legs, split.at)[0]}
+            second={splitAt(draft.legs, split.at)[1]}
+            name1={split.name1}
+            name2={split.name2}
+            onName1={(n) => setSplit((x) => x && { ...x, name1: n })}
+            onName2={(n) => setSplit((x) => x && { ...x, name2: n })}
+            onConfirm={confirmSplit}
+            onCancel={() => setSplit(null)}
+            saving={saving}
+          />
         )}
 
         {chooser && (
@@ -431,7 +517,10 @@ export function App() {
                   radiusM={radiusM || DEFAULT_RADIUS_M}
                   onRadius={setRadius}
                   onPick={addOption}
-                  onUndo={() => setDraft((d) => (d ? { ...d, legs: d.legs.slice(0, -1) } : d))}
+                  onUndo={() => setDraft((d) => (d ? { ...d, legs: removeLast(d.legs) } : d))}
+                  canReverse={canReverse(legs)}
+                  onReverse={() => setDraft((d) => (d && canReverse(d.legs) ? { ...d, legs: reverseLegs(d.legs) } : d))}
+                  editing={!!draft?.editingId}
                   onAddManual={(label, lengthM) =>
                     setDraft((d) => ({ ...(d ?? EMPTY_DRAFT), legs: [...(d?.legs ?? []), { kind: 'manual', id: crypto.randomUUID(), label, lengthM }] }))
                   }
@@ -444,6 +533,8 @@ export function App() {
                   courses={courses}
                   selectedId={selectedCourseId}
                   draftLegs={legs.length}
+                  draftEditingId={draft?.editingId ?? null}
+                  onEdit={startEdit}
                   onSelect={selectCourse}
                   onCreate={startBuild}
                   onToggleComplete={toggleComplete}

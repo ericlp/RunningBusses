@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { courseStats, formatTotal, nextOptions, routeInfo, usedLineKeys, type Course, type Leg } from './course';
+import { canRemoveFirst, canRemoveLast, canReverse, canSplitAt, courseStats, formatTotal, nextOptions, removeFirst, removeLast, reverseLegs, routeInfo, splitAt, usedLineKeys, type Course, type Leg } from './course';
 import type { Line } from './types';
 
 // 1 degree of latitude is ~111.2 km, so metres / 111195 gives the offset in degrees
@@ -113,5 +113,51 @@ describe('route status', () => {
   });
   it('collects used keys from all courses and extra legs', () => {
     expect([...usedLineKeys([course('Completed')], [lineLeg(mk('7', 1, O, O))])].sort()).toEqual(['59', '7']);
+  });
+});
+
+describe('editing operations', () => {
+  const a = mk('1', 1000, O, [11.97, 57.701]);
+  const b = mk('2', 2000, [11.97, 57.701], [11.97, 57.703]);
+  const c = mk('3', 3000, [11.97, 57.703], [11.97, 57.706]);
+  const man: Leg = { kind: 'manual', id: 'm', label: 'Fot', lengthM: 100 };
+  const keys = (legs: Leg[]) => legs.map((l) => (l.kind === 'line' ? l.line.key : 'm'));
+
+  it('removes from the start and the end', () => {
+    expect(keys(removeFirst([lineLeg(a), lineLeg(b), lineLeg(c)]))).toEqual(['2', '3']);
+    expect(keys(removeLast([lineLeg(a), lineLeg(b), lineLeg(c)]))).toEqual(['1', '2']);
+  });
+
+  it('removing the first leg also drops manual legs that would lead the course', () => {
+    expect(keys(removeFirst([lineLeg(a), man, lineLeg(b)]))).toEqual(['2']);
+    expect(canRemoveFirst([lineLeg(a), man])).toBe(false);
+    expect(canRemoveFirst([lineLeg(a)])).toBe(false);
+    expect(canRemoveLast([lineLeg(a)])).toBe(false);
+  });
+
+  it('splits only between two legs and into two non-empty parts', () => {
+    const legs = [lineLeg(a), lineLeg(b), lineLeg(c)];
+    expect(canSplitAt(legs, 0)).toBe(false);
+    expect(canSplitAt(legs, 3)).toBe(false);
+    const [x, y] = splitAt(legs, 1);
+    expect(keys(x)).toEqual(['1']);
+    expect(keys(y)).toEqual(['2', '3']);
+    expect(courseStats(x).totalM + courseStats(y).totalM).toBeCloseTo(courseStats(legs).totalM, 5);
+  });
+
+  it('cannot split so a manual leg starts a course', () => {
+    expect(canSplitAt([lineLeg(a), man, lineLeg(b)], 1)).toBe(false);
+    expect(canSplitAt([lineLeg(a), man, lineLeg(b)], 2)).toBe(true);
+  });
+
+  it('reverses order and direction, and reversing twice gives the original', () => {
+    const legs = [lineLeg(a), lineLeg(b)];
+    const r = reverseLegs(legs);
+    expect(keys(r)).toEqual(['2', '1']);
+    expect(courseStats(r).startName).toBe('2-till');
+    expect(courseStats(r).endName).toBe('1-från');
+    expect(Math.round(courseStats(r).totalM)).toBe(Math.round(courseStats(legs).totalM));
+    expect(reverseLegs(r)).toEqual(legs);
+    expect(canReverse([lineLeg(a), man])).toBe(false);
   });
 });
