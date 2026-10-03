@@ -26,7 +26,7 @@ import {
 import { applyFilters, categoryLabel, facetAvailability, defaultFilters, formatKm, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { courseToGpx, gpxFileName } from './domain/gpx';
-import { Tour, type TourStep } from './components/Tour';
+import { REPO_URL, Tour, type TourStep } from './components/Tour';
 import { BackupSection } from './components/Backup';
 import type { Key } from './i18n/sv';
 import { BORDERS, LINE_COLORS, OVERLAPS, setOverlap, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setShowLocation, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type Overlap, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
@@ -896,6 +896,11 @@ export function App() {
                 {t('tour.start')}
               </button>
               <BackupSection courses={courses} radiusM={radiusM} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
+              <p>
+                <a href={REPO_URL} target="_blank" rel="noreferrer">
+                  {t('settings.repo')}
+                </a>
+              </p>
               <p className="muted">{t('settings.data', { version: dataset.feedVersion })} · {t('settings.dataDate', { date: dataset.generatedAt.slice(0, 10) })}</p>
               <button className="chip" onClick={() => setShowSettings(false)}>
                 {t('common.close')}

@@ -37,7 +37,7 @@ function read<T extends string>(key: string, allowed: readonly T[], fallback: T)
 const media = window.matchMedia('(prefers-color-scheme: dark)');
 let theme = read(THEME_KEY, THEMES, 'auto');
 let mapStyle = read(MAP_KEY, MAP_STYLES, 'soft');
-let border = read(BORDER_KEY, BORDERS, 'normal');
+let border = read(BORDER_KEY, BORDERS, window.matchMedia('(max-width: 640px)').matches ? 'thin' : 'normal');
 let lineColors = read(COLORS_KEY, LINE_COLORS, 'status');
 let panSpeed = read(PAN_KEY, PAN_SPEEDS, 'normal');
 // small screens default to stripes: side-by-side lines take too much room there

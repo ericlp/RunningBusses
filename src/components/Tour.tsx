@@ -20,7 +20,10 @@ export const TOUR_STEPS: TourStep[] = [
   { target: '.sheet', mode: 'plan' },
   { target: '.tools .tool:last-child', mode: 'browse' },
   {},
+  {},
 ];
+
+export const REPO_URL = 'https://github.com/ericlp/RunningBusses';
 
 interface Props {
   onStep: (s: TourStep) => void;
@@ -77,6 +80,13 @@ export function Tour({ onStep, onClose }: Props) {
         <p className="muted">{t('tour.step', { n: i + 1, total: TOUR_STEPS.length })}</p>
         <h2>{t(`tour.s${i}.title` as Key)}</h2>
         <p>{t(`tour.s${i}.body` as Key)}</p>
+        {last && (
+          <p>
+            <a href={REPO_URL + '/issues'} target="_blank" rel="noreferrer">
+              {REPO_URL.replace('https://', '')}
+            </a>
+          </p>
+        )}
         <div className="actions">
           <button className="chip" onClick={onClose}>
             {last ? t('tour.close') : t('tour.skip')}

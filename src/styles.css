@@ -226,8 +226,9 @@ button {
 .sheet-handle {
   align-self: stretch;
   flex: none;
-  min-height: 28px;
-  height: 28px;
+  min-height: 44px;
+  height: 44px;
+  margin-bottom: -14px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -239,7 +240,7 @@ button {
   content: '';
   position: absolute;
   left: 50%;
-  top: 11px;
+  top: 14px;
   width: 44px;
   height: 5px;
   margin-left: -22px;
@@ -253,7 +254,7 @@ button {
 }
 
 @media (max-width: 899px) {
-  .sheet.snap0 { max-height: 28px; }
+  .sheet.snap0 { max-height: 44px; }
   .sheet.snap0 .sheet-body { display: none; }
   .sheet.snap1, .sheet.snap1.build { max-height: 36%; }
   .sheet.snap2, .sheet.snap2.build { max-height: 78%; }

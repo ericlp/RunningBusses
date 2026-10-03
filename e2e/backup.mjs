@@ -10,7 +10,7 @@ await p.click('.sheet .list button >> nth=0');
 await p.waitForTimeout(300);
 const first = p.locator('.sheet .list button').first(); 
 if (await p.locator('.sheet .list button').count()) await first.click().catch(()=>{});
-await p.click('button:has-text("Spara")'); await p.waitForTimeout(500);
+await p.click('.strip >> text=Spara'); await p.click('.modal .primary'); await p.waitForTimeout(500);
 await p.click('[aria-label="Inställningar"]');
 const [dl] = await Promise.all([p.waitForEvent('download'), p.click('button:text-is("Exportera")')]);
 await dl.saveAs('/tmp/rb-bk.json');

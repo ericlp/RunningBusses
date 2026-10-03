@@ -7,7 +7,7 @@ p.on('dialog', d => d.accept());
 await p.goto('http://localhost:4173/'); await p.waitForSelector('.badge');
 await p.click('text=Planera'); await p.click('text=Skapa bana');
 await p.locator('.sheet .list button').first().click();
-await p.click('button:has-text("Spara")'); await p.waitForTimeout(500);
+await p.click('.strip >> text=Spara'); await p.click('.modal .primary'); await p.waitForTimeout(500);
 // tamper stored length to simulate older data, then reload so reconcile runs
 await p.evaluate(() => new Promise((res) => { const r = indexedDB.open('running-busses', 1); r.onsuccess = () => { const db = r.result; const s = db.transaction('kv','readwrite').objectStore('kv'); const g = s.get('courses'); g.onsuccess = () => { const c = g.result; c[0].legs[0].line.lengthM = 1234; s.put(c,'courses').onsuccess = res; }; }; }));
 await p.reload(); await p.waitForSelector('.badge');
