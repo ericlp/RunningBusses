@@ -23,7 +23,7 @@ import {
   type Option,
   type RouteStatus,
 } from './domain/course';
-import { applyFilters, categoryLabel, facetAvailability, defaultFilters, formatKm, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
+import { applyFilters, categoryLabel, facetAvailability, defaultFilters, formatKm, sameCategories, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { courseToGpx, gpxFileName } from './domain/gpx';
 import { REPO_URL, Tour, type TourStep } from './components/Tour';
@@ -32,7 +32,7 @@ import { decodeShare, payloadFromHash, type ShareError, type Shared } from './do
 import type { Key } from './i18n/sv';
 import { BORDERS, LINE_COLORS, OVERLAPS, setOverlap, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setShowLocation, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type Overlap, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
 import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
-import type { Category, Dataset, Line, Tag } from './domain/types';
+import { CATEGORIES, type Category, type Dataset, type Line, type Tag } from './domain/types';
 
 const STALE_DAYS = 45;
 
@@ -455,6 +455,12 @@ export function App() {
     if (await commit(courses.filter((x) => x.id !== c.id))) setSelectedCourseId(null);
   };
 
+  // at least one category stays selected, so the list is never empty by accident
+  const toggleCategory = (c: Category) =>
+    setFilters((f) => {
+      if (!f.categories.includes(c)) return { ...f, categories: CATEGORIES.filter((x) => x === c || f.categories.includes(x)) };
+      return f.categories.length > 1 ? { ...f, categories: f.categories.filter((x) => x !== c) } : f;
+    });
   const toggleTag = (t: Tag) => setFilters((f) => ({ ...f, tags: f.tags.includes(t) ? f.tags.filter((x) => x !== t) : [...f.tags, t] }));
   const num = (v: string) => (v === '' ? null : Number(v.replace(',', '.')));
 
@@ -511,7 +517,7 @@ export function App() {
 
   const stats = courseStats(legs);
   const avail = useMemo(() => (dataset ? facetAvailability(dataset.lines, filters, statusOf) : null), [dataset, filters, statuses]);
-  const activeFilters = Number(filters.category !== defaultFilters.category) + Number(filters.status !== defaultFilters.status) + filters.tags.length + Number(filters.minKm !== null || filters.maxKm !== null);
+  const activeFilters = Number(!sameCategories(filters.categories, defaultFilters.categories)) + Number(filters.status !== defaultFilters.status) + filters.tags.length + Number(filters.minKm !== null || filters.maxKm !== null);
 
   return (
     <div className="app">
@@ -698,9 +704,9 @@ export function App() {
                   <div className="filter-group" role="group" aria-label={t('filter.category')}>
                     <h3>{t('filter.category')}</h3>
                     <div className="chips">
-                    {(['stadsbuss', 'stombuss', 'all'] as const).map((c) => (
-                      <button key={c} className="chip radio" disabled={avail ? !avail.category(c) : false} data-default={c === defaultFilters.category} aria-pressed={filters.category === c} onClick={() => setFilters((f) => ({ ...f, category: f.category === c ? defaultFilters.category : c }))}>
-                        {c === 'all' ? t('filter.all') : categoryLabel(c as Category)}
+                    {CATEGORIES.map((c) => (
+                      <button key={c} className="chip check" disabled={avail ? !avail.category(c) : false} data-default={defaultFilters.categories.includes(c)} aria-pressed={filters.categories.includes(c)} onClick={() => toggleCategory(c)}>
+                        {categoryLabel(c)}
                       </button>
                     ))}
                     </div>

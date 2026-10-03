@@ -5,15 +5,13 @@ import { writeFile } from 'node:fs/promises';
 import { pathLengthM } from '../src/domain/geo';
 import type { Category, Dataset, Line, Manifest } from '../src/domain/types';
 import { readCsv } from './transit/csv';
+import { categoryOf as categorize, type CategoryConfig } from './transit/category';
 import { planRoutes, type Pattern } from './transit/select';
 
 interface Config {
   routeIdPrefix: string;
   agencyIdSuffix: string;
-  categories: {
-    stadsbuss: { numberRange: [number, number]; exclude: number[] };
-    stombuss: { numbers: number[] };
-  };
+  categories: CategoryConfig;
   splitDirections: { lengthDifference: number };
 }
 
@@ -25,13 +23,7 @@ const config: Config = JSON.parse(readFileSync(`${root}config/lines.json`, 'utf8
 const args = process.argv.slice(2);
 const argValue = (name: string) => args.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
 
-function categoryOf(number: number): Category | undefined {
-  const { stadsbuss, stombuss } = config.categories;
-  if (stombuss.numbers.includes(number)) return 'stombuss';
-  const [lo, hi] = stadsbuss.numberRange;
-  if (number >= lo && number <= hi && !stadsbuss.exclude.includes(number)) return 'stadsbuss';
-  return undefined;
-}
+const categoryOf = (name: string): Category | undefined => categorize(name, config.categories);
 
 async function download(): Promise<void> {
   if (existsSync('.env')) process.loadEnvFile('.env');
@@ -71,12 +63,12 @@ async function main(): Promise<void> {
   const referenceDate = argValue('date') ?? (await pickReferenceDate());
   console.log(`Feed ${feedVersion}, reference weekday ${referenceDate}`);
 
-  const routes = new Map<string, { number: number; callOrdered: boolean }>();
+  const routes = new Map<string, { number: string; callOrdered: boolean }>();
   for await (const r of readCsv(`${feedDir}/routes.txt`)) {
     if (!r.route_id.startsWith(config.routeIdPrefix) || !r.agency_id.endsWith(config.agencyIdSuffix)) continue;
-    if (!/^\d+$/.test(r.route_short_name) || !categoryOf(Number(r.route_short_name))) continue;
+    if (!categoryOf(r.route_short_name)) continue;
     if (r.route_type !== '700' && r.route_type !== '1501') continue;
-    routes.set(r.route_id, { number: Number(r.route_short_name), callOrdered: r.route_type === '1501' });
+    routes.set(r.route_id, { number: r.route_short_name, callOrdered: r.route_type === '1501' });
   }
 
   const activeServices = new Set<string>();
@@ -126,7 +118,7 @@ async function main(): Promise<void> {
   }
 
   // Patterns per line number, from the reference-day trips.
-  const patternsByNumber = new Map<number, Map<string, Pattern>>();
+  const patternsByNumber = new Map<string, Map<string, Pattern>>();
   for (const [tripId, t] of trips) {
     const seq = (stopSeq.get(tripId) ?? []).sort((a, b) => a[0] - b[0]).map(([, id]) => displayName(id));
     const shape = shapes.get(t.shape);
@@ -156,9 +148,9 @@ async function main(): Promise<void> {
 
   const round5 = (n: number) => Math.round(n * 1e5) / 1e5;
   const lines: Line[] = [];
-  const missing: number[] = [];
+  const missing: string[] = [];
   const allNumbers = [...new Set([...routes.values()].map((r) => r.number))];
-  for (const number of allNumbers.sort((a, b) => a - b)) {
+  for (const number of allNumbers.sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))) {
     const patterns = [...(patternsByNumber.get(number)?.values() ?? [])];
     const planned = planRoutes(patterns, config.splitDirections.lengthDifference);
     if (!planned.length) {
@@ -175,7 +167,7 @@ async function main(): Promise<void> {
       }
       lines.push({
         key: `${number}${p.suffix}`,
-        number: String(number),
+        number,
         label: p.suffix ? `${number} retur` : String(number),
         category: categoryOf(number)!,
         tags: p.tags,
@@ -205,8 +197,8 @@ async function main(): Promise<void> {
   writeFileSync(`${outDir}/lines.json`, JSON.stringify(dataset));
   writeFileSync(`${outDir}/manifest.json`, JSON.stringify(manifest, null, 2) + '\n');
 
-  const byCat = (c: Category) => lines.filter((l) => l.category === c).length;
-  console.log(`Wrote ${lines.length} routes (stadsbuss ${byCat('stadsbuss')}, stombuss ${byCat('stombuss')}), hash ${hash}`);
+  const counts = [...new Set(lines.map((l) => l.category))].map((c) => `${c} ${lines.filter((l) => l.category === c).length}`);
+  console.log(`Wrote ${lines.length} routes (${counts.join(', ')}), hash ${hash}`);
   if (missing.length) console.warn(`WARNING: no weekday service or shape for lines: ${missing.join(', ')}`);
   for (const l of lines.filter((l) => l.tags.length)) console.log(`  ${l.label.padEnd(8)} ${(l.lengthM / 1000).toFixed(1).padStart(5)} km  [${l.tags.join(', ')}]  ${l.from} → ${l.to}`);
 }

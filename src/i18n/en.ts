@@ -36,7 +36,6 @@ export const en: Dict = {
   'filter.category': 'Category',
   'filter.status': 'Status',
   'filter.tags': 'Properties',
-  'filter.all': 'All',
   'filter.minKm': 'Min km',
   'filter.maxKm': 'Max km',
   'filter.minKmAria': 'Minimum distance in km',
@@ -44,6 +43,8 @@ export const en: Dict = {
 
   'category.stadsbuss': 'City bus',
   'category.stombuss': 'Trunk bus',
+  'category.express': 'Express bus',
+  'category.industri': 'Industrial bus',
   'tag.call-ordered': 'On demand',
   'tag.loop': 'Loop',
   'tag.one-way': 'One-way',

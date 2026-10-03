@@ -52,7 +52,8 @@ const toneColor = (t: Tone): string =>
   ({ base: css('--line'), planned: css('--vt-blue'), done: '#2e9e4f', highlight: css('--highlight'), candidate: '#f08c00', connector: '#d6342c' })[t];
 /** Golden-angle hues keep neighbouring line numbers visually far apart. */
 function rainbow(key: string, dark: boolean): string {
-  const n = parseInt(key, 10) || 0;
+  // names like X40 have no leading number, so they get a number from their letters
+  const n = parseInt(key, 10) || [...key].reduce((h, ch) => h * 31 + ch.charCodeAt(0), 7);
   const hue = (n * 137.508 + (key.endsWith('r') ? 60 : 0)) % 360;
   return `hsl(${hue.toFixed(0)}, 85%, ${dark ? 60 : 42}%)`;
 }

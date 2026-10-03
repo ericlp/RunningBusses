@@ -37,11 +37,24 @@ describe('applyFilters', () => {
   it('defaults to stadsbuss only', () => {
     expect(applyFilters(lines, defaultFilters).map((l) => l.key)).toEqual(['1', '2']);
   });
+  it('shows the union of the selected categories', () => {
+    const more = [...lines, line({ key: 'X40', number: 'X40', category: 'express' }), line({ key: '114', number: '114', category: 'industri' })];
+    expect(applyFilters(more, { ...defaultFilters, categories: ['express', 'industri'] }).map((l) => l.key)).toEqual(['X40', '114']);
+    expect(applyFilters(more, { ...defaultFilters, categories: ['stombuss', 'express'] }).map((l) => l.key)).toEqual(['3', 'X40']);
+  });
   it('filters on category, tags and distance together', () => {
-    expect(applyFilters(lines, { ...defaultFilters, category: 'all' })).toHaveLength(3);
+    expect(applyFilters(lines, { ...defaultFilters, categories: ['stadsbuss', 'stombuss'] })).toHaveLength(3);
     expect(applyFilters(lines, { ...defaultFilters, tags: ['loop'] }).map((l) => l.key)).toEqual(['2']);
-    expect(applyFilters(lines, { ...defaultFilters, category: 'all', minKm: 9 }).map((l) => l.key)).toEqual(['2', '3']);
+    expect(applyFilters(lines, { ...defaultFilters, categories: ['stadsbuss', 'stombuss'], minKm: 9 }).map((l) => l.key)).toEqual(['2', '3']);
     expect(applyFilters(lines, { ...defaultFilters, maxKm: 3 }).map((l) => l.key)).toEqual(['1']);
+  });
+});
+
+describe('sortLines by number', () => {
+  it('reads numbers naturally, with express names last', () => {
+    const keys = ['X40', '114', '9', '17', 'X5', '62r', '62'];
+    const sorted = sortLines(keys.map((k) => line({ key: k, number: k.replace('r', '') })));
+    expect(sorted.map((l) => l.key)).toEqual(['9', '17', '62', '62r', '114', 'X5', 'X40']);
   });
 });
 

@@ -35,7 +35,6 @@ export const sv = {
   'filter.category': 'Kategori',
   'filter.status': 'Status',
   'filter.tags': 'Egenskaper',
-  'filter.all': 'Alla',
   'filter.minKm': 'Min km',
   'filter.maxKm': 'Max km',
   'filter.minKmAria': 'Minsta sträcka i km',
@@ -43,6 +42,8 @@ export const sv = {
 
   'category.stadsbuss': 'Stadsbuss',
   'category.stombuss': 'Stombuss',
+  'category.express': 'Expressbuss',
+  'category.industri': 'Industribuss',
   'tag.call-ordered': 'Anropsstyrd',
   'tag.loop': 'Slinga',
   'tag.one-way': 'Enkelriktad',

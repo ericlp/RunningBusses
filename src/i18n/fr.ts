@@ -36,7 +36,6 @@ export const fr: Dict = {
   'filter.category': 'Catégorie',
   'filter.status': 'Statut',
   'filter.tags': 'Caractéristiques',
-  'filter.all': 'Toutes',
   'filter.minKm': 'Min km',
   'filter.maxKm': 'Max km',
   'filter.minKmAria': 'Distance minimale en km',
@@ -44,6 +43,8 @@ export const fr: Dict = {
 
   'category.stadsbuss': 'Bus urbain',
   'category.stombuss': 'Bus express (stombuss)',
+  'category.express': 'Bus express',
+  'category.industri': 'Bus industriels',
   'tag.call-ordered': 'Sur réservation',
   'tag.loop': 'Boucle',
   'tag.one-way': 'Sens unique',

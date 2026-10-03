@@ -1,4 +1,8 @@
-export type Category = 'stadsbuss' | 'stombuss';
+export type Category = 'stadsbuss' | 'stombuss' | 'express' | 'industri';
+export const CATEGORIES: readonly Category[] = ['stadsbuss', 'stombuss', 'express', 'industri'];
+
+/** Orders line numbers the way people read them: 9 before 17 before 114 before X1. */
+export const compareLineNumbers = (a: string, b: string): number => a.localeCompare(b, 'en', { numeric: true });
 export type Tag = 'call-ordered' | 'loop' | 'one-way' | 'retur';
 
 export interface Stop {

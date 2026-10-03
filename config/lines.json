@@ -4,7 +4,9 @@
   "agencyIdSuffix": "1418",
   "categories": {
     "stadsbuss": { "numberRange": [22, 99], "exclude": [25] },
-    "stombuss": { "numbers": [17, 18, 19, 21, 25] }
+    "stombuss": { "numbers": [17, 18, 19, 21, 25] },
+    "express": { "pattern": "^X\\d+$" },
+    "industri": { "numberRange": [114, 258] }
   },
   "splitDirections": { "lengthDifference": 0.12 }
 }

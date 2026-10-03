@@ -133,3 +133,4 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [007 – Phase 6: polish](007-phase6-polish.md): touch targets, contrast, e2e suite, README.
 - [003 – Preferred language](003-preferred-language.md): done, browser language with Swedish, English and French.
 - [033 – Share link](033-share-link.md): courses-only link to move progress between devices, no backend.
+- [034 – More bus categories](034-more-bus-categories.md): express and industrial buses, multi-select category filter; trams shelved.

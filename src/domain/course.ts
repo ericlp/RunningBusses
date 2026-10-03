@@ -1,6 +1,6 @@
 import { haversineM, type LatLon } from './geo';
 import { lineLabel, localeTag, t } from '../i18n';
-import type { Line } from './types';
+import { compareLineNumbers, type Line } from './types';
 
 export type CourseStatus = 'NotCompleted' | 'Completed';
 export type RouteStatus = 'NotPlanned' | 'NotCompleted' | 'Completed';
@@ -151,7 +151,7 @@ export function nextOptions(lines: Line[], usedKeys: ReadonlySet<string>, legs: 
   }
   // the nearest route is always offered, however far away, so the list is never a dead end
   if (nearest && out.length === 0) out.push(nearest);
-  return out.sort((a, b) => (a.gapM ?? 0) - (b.gapM ?? 0) || Number(a.line.number) - Number(b.line.number));
+  return out.sort((a, b) => (a.gapM ?? 0) - (b.gapM ?? 0) || compareLineNumbers(a.line.number, b.line.number));
 }
 
 export function usedLineKeys(courses: Course[], extra: Leg[] = []): Set<string> {
