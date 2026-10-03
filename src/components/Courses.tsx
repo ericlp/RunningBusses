@@ -14,6 +14,7 @@ import {
   type Option,
   type RouteInfo,
 } from '../domain/course';
+import { missingLineKeys } from '../domain/reconcile';
 import { categoryLabel, formatKm, tagLabel } from '../domain/filter';
 import { lineLabel, t, tn } from '../i18n';
 import type { Line } from '../domain/types';
@@ -67,9 +68,12 @@ interface CourseListProps {
   onEdit: (c: Course) => void;
   onToggleComplete: (c: Course) => void;
   onDelete: (c: Course) => void;
+  onRefresh: (c: Course) => void;
+  /** Line keys currently in the dataset, to warn about lines that have disappeared. */
+  lines: Line[];
 }
 
-export function CourseList({ courses, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
+export function CourseList({ courses, lines, onRefresh, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
   const editing = courses.find((c) => c.id === draftEditingId);
   return (
     <div>
@@ -86,6 +90,7 @@ export function CourseList({ courses, selectedId, draftLegs, draftEditingId, onS
               <button className="course-main" aria-pressed={selected} onClick={() => onSelect(selected ? null : c.id)}>
                 <span className="course-head">
                   <b>{c.name}</b>
+                  {c.pinned && <span className="tag">{t('courses.pinned')}</span>}
                   <span className={`tag ${c.status === 'Completed' ? 'status-Completed' : ''}`}>{c.status === 'Completed' ? t('courses.statusDone') : t('courses.statusOpen')}</span>
                 </span>
                 <span className="seq">
@@ -110,17 +115,23 @@ export function CourseList({ courses, selectedId, draftLegs, draftEditingId, onS
                       </li>
                     ))}
                   </ol>
+                  {missingLineKeys(c, lines).length > 0 && c.status !== 'Completed' && <p className="gap">{t('courses.missing', { keys: missingLineKeys(c, lines).join(', ') })}</p>}
                   <div className="actions">
+                    {c.pinned && (
+                      <button className="chip" onClick={() => onRefresh(c)}>
+                        {t('courses.update')}
+                      </button>
+                    )}
                     {c.status !== 'Completed' && (
                       <button className="chip" onClick={() => onEdit(c)}>
-                        Redigera
+                        {t('courses.edit')}
                       </button>
                     )}
                     <button className="chip" onClick={() => onToggleComplete(c)}>
                       {c.status === 'Completed' ? t('courses.markUndone') : t('courses.markDone')}
                     </button>
                     <button className="chip danger" onClick={() => onDelete(c)}>
-                      Ta bort
+                      {t('courses.delete')}
                     </button>
                   </div>
                 </div>

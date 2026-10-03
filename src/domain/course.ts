@@ -29,6 +29,8 @@ export interface Course {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+  /** Set when a completed course was unlocked: it keeps its old route data until the user updates it. */
+  pinned?: boolean;
   legs: Leg[];
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapView, type Fit, type MapLayer, type MapMarker, type Tone } from './components/MapView';
 import { BuilderPanel, BuilderStrip, CourseList, LineCard, SplitDialog } from './components/Courses';
 import { loadDataset } from './data/dataset';
@@ -24,9 +24,12 @@ import {
   type RouteStatus,
 } from './domain/course';
 import { applyFilters, categoryLabel, defaultFilters, formatKm, searchLines, sortLines, statusFilterLabel, tagLabel, type Filters, type StatusFilter } from './domain/filter';
+import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { BackupSection } from './components/Backup';
 import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
 import type { Category, Dataset, Line, Tag } from './domain/types';
+
+const STALE_DAYS = 45;
 
 type Mode = 'browse' | 'plan' | 'build';
 
@@ -105,10 +108,20 @@ export function App() {
       .catch(() => setToast(t('toast.loadCourses')));
   }, []);
 
+  const reconciledFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready || !dataset || reconciledFor.current === dataset.generatedAt) return;
+    reconciledFor.current = dataset.generatedAt;
+    const r = reconcileCourses(courses, dataset.lines);
+    if (!r.changes.length) return;
+    commit(r.courses).then((ok) => ok && setToast(tn('toast.updated', r.changes.length)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, dataset]);
+
   useEffect(() => {
     if (!ready) return;
     const empty = !draft || (draft.legs.length === 0 && draft.name === '');
-    saveDraft(empty ? null : draft).catch(() => setToast('Kunde inte spara utkastet.'));
+    saveDraft(empty ? null : draft).catch(() => setToast(t('toast.saveDraft')));
   }, [draft, ready]);
 
   useEffect(() => {
@@ -320,6 +333,16 @@ export function App() {
     return true;
   };
 
+  const refreshCourse = async (c: Course) => {
+    if (!dataset) return;
+    const change = previewRefresh(c, dataset.lines);
+    if (change && !confirm(t('confirm.update', { name: c.name, old: formatDistance(change.oldTotalM), new: formatDistance(change.newTotalM) }))) return;
+    const now = new Date().toISOString();
+    if (await commit(courses.map((x) => (x.id === c.id ? { ...x, legs: refreshLegs(x.legs, dataset.lines), pinned: undefined, updatedAt: now } : x)))) {
+      if (!change) setToast(t('toast.updateNone'));
+    }
+  };
+
   const toggleComplete = async (c: Course) => {
     const completing = c.status !== 'Completed';
     const msg = completing
@@ -327,7 +350,7 @@ export function App() {
       : t('confirm.uncomplete', { name: c.name });
     if (!confirm(msg)) return;
     const now = new Date().toISOString();
-    await commit(courses.map((x) => (x.id === c.id ? { ...x, status: completing ? 'Completed' : 'NotCompleted', completedAt: completing ? now : null, updatedAt: now } : x)));
+    await commit(courses.map((x) => (x.id === c.id ? { ...x, status: completing ? 'Completed' : 'NotCompleted', completedAt: completing ? now : null, pinned: completing ? undefined : true, updatedAt: now } : x)));
   };
 
   const deleteCourse = async (c: Course) => {
@@ -447,6 +470,7 @@ export function App() {
             <span>
               {t('notice.text')}
               {offline && t('notice.offline')}
+              {dataset && Date.now() - Date.parse(dataset.generatedAt) > STALE_DAYS * 864e5 && t('notice.stale', { date: dataset.generatedAt.slice(0, 10) })}
             </span>
             <button aria-label={t('common.close')} onClick={() => setNoticeOpen(false)}>
               ×
@@ -559,6 +583,8 @@ export function App() {
                   onCreate={startBuild}
                   onToggleComplete={toggleComplete}
                   onDelete={deleteCourse}
+                  onRefresh={refreshCourse}
+                  lines={dataset?.lines ?? []}
                 />
               )}
 
@@ -611,7 +637,7 @@ export function App() {
                 </select>
               </label>
               <BackupSection courses={courses} radiusM={radiusM} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
-              <p className="muted">{t('settings.data', { version: dataset.feedVersion })}</p>
+              <p className="muted">{t('settings.data', { version: dataset.feedVersion })} · {t('settings.dataDate', { date: dataset.generatedAt.slice(0, 10) })}</p>
               <button className="chip" onClick={() => setShowSettings(false)}>
                 {t('common.close')}
               </button>
