@@ -27,7 +27,7 @@ import { applyFilters, categoryLabel, facetAvailability, defaultFilters, formatK
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { BackupSection } from './components/Backup';
 import type { Key } from './i18n/sv';
-import { BORDERS, LINE_COLORS, OVERLAPS, setOverlap, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type Overlap, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
+import { BORDERS, LINE_COLORS, OVERLAPS, setOverlap, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setShowLocation, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type Overlap, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
 import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
 import type { Category, Dataset, Line, Tag } from './domain/types';
 
@@ -71,7 +71,7 @@ const legCoords = (legs: Leg[]) => legs.flatMap((l) => (l.kind === 'line' ? l.li
 
 export function App() {
   const { pref } = useLang();
-  const { theme, mapStyle, border, lineColors, panSpeed, overlap } = useAppearance();
+  const { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation } = useAppearance();
   const [showSettings, setShowSettings] = useState(false);
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [offline, setOffline] = useState(false);
@@ -739,6 +739,10 @@ export function App() {
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="field check-row">
+                <input type="checkbox" checked={showLocation} onChange={(e) => setShowLocation(e.target.checked)} />
+                <span>{t('settings.location')}</span>
               </label>
               <BackupSection courses={courses} radiusM={radiusM} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
               <p className="muted">{t('settings.data', { version: dataset.feedVersion })} · {t('settings.dataDate', { date: dataset.generatedAt.slice(0, 10) })}</p>

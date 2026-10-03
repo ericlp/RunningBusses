@@ -158,6 +158,7 @@ export const sv = {
   'settings.lineColors': "Linjefärger",
   'settings.colorsStatus': "Efter status",
   'settings.colorsRainbow': "Regnbåge (en färg per linje)",
+  'settings.location': 'Visa min position på kartan',
   'settings.panSpeed': "Kamerarörelse",
   'settings.panOff': "Av (hoppa direkt)",
   'settings.panFast': "Snabb",

@@ -62,7 +62,7 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
   const map = useRef<L.Map | null>(null);
   const group = useRef<L.LayerGroup | null>(null);
   const [zoom, setZoom] = useState(12);
-  const { resolved, border, lineColors, overlap } = useAppearance();
+  const { resolved, border, lineColors, overlap, showLocation } = useAppearance();
   const latest = useRef({ tappable, onTap });
   latest.current = { tappable, onTap };
 
@@ -93,6 +93,31 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
       map.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!showLocation || !m || !navigator.geolocation) return;
+    const dot = L.circleMarker([0, 0], { radius: 8, color: '#fff', weight: 3, fillColor: '#1a73e8', fillOpacity: 1, interactive: false });
+    const halo = L.circle([0, 0], { radius: 0, weight: 1, color: '#1a73e8', fillOpacity: 0.12, interactive: false });
+    const id = navigator.geolocation.watchPosition(
+      (p) => {
+        const ll: L.LatLngTuple = [p.coords.latitude, p.coords.longitude];
+        dot.setLatLng(ll);
+        halo.setLatLng(ll).setRadius(p.coords.accuracy);
+        if (!m.hasLayer(dot)) {
+          halo.addTo(m);
+          dot.addTo(m);
+        }
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000 },
+    );
+    return () => {
+      navigator.geolocation.clearWatch(id);
+      dot.remove();
+      halo.remove();
+    };
+  }, [showLocation]);
 
   // Lines sharing a road are found once per set of layers
   const runs = useMemo(

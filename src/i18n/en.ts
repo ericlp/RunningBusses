@@ -159,6 +159,7 @@ export const en: Dict = {
   'settings.lineColors': "Line colours",
   'settings.colorsStatus': "By status",
   'settings.colorsRainbow': "Rainbow (one colour per line)",
+  'settings.location': 'Show my position on the map',
   'settings.panSpeed': "Map movement",
   'settings.panOff': "Off (jump directly)",
   'settings.panFast': "Fast",

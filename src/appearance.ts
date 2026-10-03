@@ -41,6 +41,7 @@ let border = read(BORDER_KEY, BORDERS, 'normal');
 let lineColors = read(COLORS_KEY, LINE_COLORS, 'status');
 let panSpeed = read(PAN_KEY, PAN_SPEEDS, 'normal');
 let overlap = read(OVERLAP_KEY, OVERLAPS, 'side');
+let showLocation = localStorage.getItem('rb.location') === 'on';
 let snapshot = '';
 const listeners = new Set<() => void>();
 
@@ -50,7 +51,7 @@ function apply() {
   const root = document.documentElement;
   root.dataset.theme = resolvedTheme();
   root.dataset.map = mapStyle;
-  snapshot = `${theme}|${mapStyle}|${border}|${lineColors}|${panSpeed}|${overlap}|${resolvedTheme()}`;
+  snapshot = `${theme}|${mapStyle}|${border}|${lineColors}|${panSpeed}|${overlap}|${showLocation}|${resolvedTheme()}`;
   listeners.forEach((l) => l());
 }
 media.addEventListener('change', apply);
@@ -102,6 +103,12 @@ export function setOverlap(next: Overlap) {
   apply();
 }
 
+export function setShowLocation(next: boolean) {
+  showLocation = next;
+  save('rb.location', next ? 'on' : 'off');
+  apply();
+}
+
 export function useAppearance() {
   useSyncExternalStore(
     (cb) => {
@@ -110,5 +117,5 @@ export function useAppearance() {
     },
     () => snapshot,
   );
-  return { theme, mapStyle, border, lineColors, panSpeed, overlap, resolved: resolvedTheme() };
+  return { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation, resolved: resolvedTheme() };
 }
