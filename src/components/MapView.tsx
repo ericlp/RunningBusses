@@ -16,6 +16,8 @@ export interface MapLayer {
   opacity?: number;
   dashed?: boolean;
   casing?: boolean;
+  /** Fixed line colour (trams): drawn as a border around a thinner status line, never rainbow. */
+  fixedColor?: string;
   /** Draw direction arrows along the path, in coordinate order. */
   arrows?: boolean;
 }
@@ -124,14 +126,15 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
 
   // Lines sharing a road are found once per set of layers
   const runs = useMemo(
-    () =>
-      overlap === 'stack'
-        ? null
-        : splitByOverlap(
-            layers.filter((l) => l.key && RAINBOW_TONES.includes(l.tone)).map((l) => ({ key: l.key!, coords: l.coords })),
-            // lines closer than ~4 px would visibly touch, so the sharing distance follows the zoom
-            Math.min(40, Math.max(10, 4 * ((40075016 * Math.cos((57.7 * Math.PI) / 180)) / (256 * 2 ** zoom)))),
-          ),
+    () => {
+      if (overlap === 'stack') return null;
+      // lines closer than ~4 px would visibly touch, so the sharing distance follows the zoom
+      const cell = Math.min(40, Math.max(10, 4 * ((40075016 * Math.cos((57.7 * Math.PI) / 180)) / (256 * 2 ** zoom))));
+      const shared = layers.filter((l) => l.key && RAINBOW_TONES.includes(l.tone));
+      const input = (fixed: boolean) => shared.filter((l) => !!l.fixedColor === fixed).map((l) => ({ key: l.key!, coords: l.coords }));
+      // trams are thicker and run on their own tracks, so they only share space with each other
+      return new Map([...splitByOverlap(input(false), cell), ...splitByOverlap(input(true), cell)]);
+    },
     [layers, overlap, zoom],
   );
 
@@ -159,12 +162,25 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
       pts: L.LatLngTuple[];
       line: L.PolylineOptions;
       casing: L.PolylineOptions | null;
+      border: L.PolylineOptions | null;
       top: boolean;
     }
+    // A white tram line (line 1) would vanish on the map, so trams always keep a dark edge in that case
+    const casingOptions = (l: MapLayer, tram: string | null, outline: number, width: number, opacity: number): L.PolylineOptions | null => {
+      if (l.tone === 'connector') return null;
+      const pale = tram?.toLowerCase() === '#ffffff';
+      const px = pale ? Math.max(outline, 2) : outline;
+      if (px <= 0) return null;
+      return { color: pale ? '#231f20' : casingColor, weight: width + px, opacity: Math.min(1, opacity * 0.95), interactive: false };
+    };
     const pieces: Piece[] = [];
     for (const l of layers) {
-      const color = rainbowOn && l.key && RAINBOW_TONES.includes(l.tone) ? rainbow(l.key, resolved === 'dark') : toneColor(l.tone);
-      const weight = (l.weight ?? 3) * zoomScale(zoom);
+      const tram = l.fixedColor && RAINBOW_TONES.includes(l.tone) ? l.fixedColor : null;
+      const color = tram ? toneColor(l.tone) : rainbowOn && l.key && RAINBOW_TONES.includes(l.tone) ? rainbow(l.key, resolved === 'dark') : toneColor(l.tone);
+      // a tram keeps its line colour as a wide border; the thin inner line carries the status
+      const statusWeight = (l.weight ?? 3) * zoomScale(zoom);
+      const weight = tram ? Math.max(2, statusWeight * 0.6) : statusWeight;
+      const borderWeight = tram ? statusWeight * 1.9 : 0;
       const outline = BORDER_PX[border] + (l.casing ? 2 : 0);
       const opacity = l.opacity ?? 0.9;
       const parts = runs && l.key && runs.has(l.key) ? runs.get(l.key)! : [{ coords: l.coords, group: [l.key ?? ''], flip: false }];
@@ -172,13 +188,15 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
         const n = part.group.length;
         const i = part.group.indexOf(l.key!);
         const side = overlap === 'side' && n > 1;
-        const stripe = overlap === 'stripes' && n > 1;
-        const pts = side ? shifted(part.coords, (part.flip ? -1 : 1) * (i - (n - 1) / 2) * (weight + Math.min(2, BORDER_PX[border]))) : toLatLngs(part.coords);
+        const stripe = overlap === 'stripes' && n > 1 && !tram;
+        const unit = tram ? borderWeight : weight;
+        const pts = side ? shifted(part.coords, (part.flip ? -1 : 1) * (i - (n - 1) / 2) * (unit + Math.min(2, BORDER_PX[border]))) : toLatLngs(part.coords);
         const dash = Math.max(8, weight * 1.6);
         pieces.push({
           pts,
           top: !!l.casing,
-          casing: l.tone !== 'connector' && outline > 0 ? { color: casingColor, weight: weight + outline, opacity: Math.min(1, opacity * 0.95), interactive: false } : null,
+          casing: casingOptions(l, tram, outline, borderWeight || weight, opacity),
+          border: tram ? { color: tram, weight: borderWeight, opacity, interactive: false } : null,
           line: stripe
             ? { color, weight, opacity, dashArray: `${dash} ${dash * (n - 1)}`, dashOffset: String(-i * dash), lineCap: 'butt', interactive: false }
             : { color, weight, opacity, dashArray: l.dashed ? '8 8' : undefined, interactive: false },
@@ -188,9 +206,11 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
     // All outlines go under all lines, otherwise one line's outline hides its neighbour's stripes
     const flat = pieces.filter((p) => !p.top);
     for (const p of flat) if (p.casing) L.polyline(p.pts, p.casing).addTo(g);
+    for (const p of flat) if (p.border) L.polyline(p.pts, p.border).addTo(g);
     for (const p of flat) L.polyline(p.pts, p.line).addTo(g);
     for (const p of pieces.filter((p) => p.top)) {
       if (p.casing) L.polyline(p.pts, p.casing).addTo(g);
+      if (p.border) L.polyline(p.pts, p.border).addTo(g);
       L.polyline(p.pts, p.line).addTo(g);
     }
     // Chevrons every ~110 px of screen distance; a path crossing itself stays readable

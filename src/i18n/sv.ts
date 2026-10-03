@@ -44,6 +44,7 @@ export const sv = {
   'category.stombuss': 'Stombuss',
   'category.express': 'Expressbuss',
   'category.industri': 'Industribuss',
+  'category.tram': 'Spårvagn',
   'tag.call-ordered': 'Anropsstyrd',
   'tag.loop': 'Slinga',
   'tag.one-way': 'Enkelriktad',

@@ -6,6 +6,7 @@ const config: CategoryConfig = {
   stombuss: { numbers: [17, 18, 19, 21, 25] },
   express: { pattern: '^X\\d+$' },
   industri: { numberRange: [114, 258] },
+  tram: { numberRange: [1, 13], colors: { '1': '#ffffff' } },
 };
 
 describe('categoryOf', () => {
@@ -20,5 +21,11 @@ describe('categoryOf', () => {
   });
   it('leaves everything else out', () => {
     for (const name of ['16', '100', '259', '501', '4E', 'TÅG', 'X', 'x1', '']) expect(categoryOf(name, config)).toBeUndefined();
+  });
+  it('treats numbers 1–13 as trams only for tram routes', () => {
+    expect(categoryOf('7', config, true)).toBe('tram');
+    expect(categoryOf('7', config)).toBeUndefined();
+    expect(categoryOf('14', config, true)).toBeUndefined();
+    expect(categoryOf('X', config, true)).toBeUndefined();
   });
 });

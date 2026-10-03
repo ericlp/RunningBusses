@@ -6,7 +6,25 @@
     "stadsbuss": { "numberRange": [22, 99], "exclude": [25] },
     "stombuss": { "numbers": [17, 18, 19, 21, 25] },
     "express": { "pattern": "^X\\d+$" },
-    "industri": { "numberRange": [114, 258] }
+    "industri": { "numberRange": [114, 258] },
+    "tram": {
+      "numberRange": [1, 13],
+      "colors": {
+        "1": "#ffffff",
+        "2": "#fddd04",
+        "3": "#1476c6",
+        "4": "#00a363",
+        "5": "#ee293d",
+        "6": "#f68b1a",
+        "7": "#994b0b",
+        "8": "#a32b9b",
+        "9": "#bfe8fa",
+        "10": "#c2e577",
+        "11": "#000000",
+        "12": "#57b9a8",
+        "13": "#fdcc99"
+      }
+    }
   },
   "splitDirections": { "lengthDifference": 0.12 }
 }

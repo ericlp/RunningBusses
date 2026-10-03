@@ -17,6 +17,7 @@ import {
 import { missingLineKeys } from '../domain/reconcile';
 import { categoryLabel, formatKm, tagLabel } from '../domain/filter';
 import { lineLabel, t, tn } from '../i18n';
+import { badgeStyle } from '../domain/color';
 import type { Line } from '../domain/types';
 import { useState } from 'react';
 
@@ -24,7 +25,7 @@ export function LineCard({ line, info, onClose }: { line: Line; info: RouteInfo;
   return (
     <article className="line-card" aria-label={t('card.aria', { label: lineLabel(line) })}>
       <div className="card-title">
-        <span className="badge">{lineLabel(line)}</span>
+        <span className="badge" style={badgeStyle(line)}>{lineLabel(line)}</span>
         <span className="name">
           {line.from} → {line.to}
         </span>
@@ -288,7 +289,7 @@ export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUn
         {options.map((o) => (
           <li key={`${o.line.key}-${o.reversed}`}>
             <button onClick={() => onPick(o)}>
-              <span className="badge">{lineLabel(o.line)}</span>
+              <span className="badge" style={badgeStyle(o.line)}>{lineLabel(o.line)}</span>
               <span>
                 {o.reversed ? o.line.to : o.line.from} → {o.reversed ? o.line.from : o.line.to}
                 {o.gapM !== null && (

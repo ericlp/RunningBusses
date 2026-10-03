@@ -45,6 +45,7 @@ export const en: Dict = {
   'category.stombuss': 'Trunk bus',
   'category.express': 'Express bus',
   'category.industri': 'Industrial bus',
+  'category.tram': 'Tram',
   'tag.call-ordered': 'On demand',
   'tag.loop': 'Loop',
   'tag.one-way': 'One-way',

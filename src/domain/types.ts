@@ -1,5 +1,5 @@
-export type Category = 'stadsbuss' | 'stombuss' | 'express' | 'industri';
-export const CATEGORIES: readonly Category[] = ['stadsbuss', 'stombuss', 'express', 'industri'];
+export type Category = 'stadsbuss' | 'stombuss' | 'express' | 'industri' | 'tram';
+export const CATEGORIES: readonly Category[] = ['stadsbuss', 'stombuss', 'express', 'industri', 'tram'];
 
 /** Orders line numbers the way people read them: 9 before 17 before 114 before X1. */
 export const compareLineNumbers = (a: string, b: string): number => a.localeCompare(b, 'en', { numeric: true });
@@ -19,6 +19,8 @@ export interface Line {
   /** Display name, e.g. "62" or "62 retur". */
   label: string;
   category: Category;
+  /** Fixed line colour (trams only), as a hex string. */
+  color?: string;
   tags: Tag[];
   from: string;
   to: string;

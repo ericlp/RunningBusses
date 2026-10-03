@@ -24,6 +24,7 @@ import {
   type RouteStatus,
 } from './domain/course';
 import { applyFilters, categoryLabel, facetAvailability, defaultFilters, formatKm, sameCategories, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
+import { badgeStyle } from './domain/color';
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { courseToGpx, gpxFileName } from './domain/gpx';
 import { REPO_URL, Tour, type TourStep } from './components/Tour';
@@ -472,13 +473,13 @@ export function App() {
       const used = usedLineKeys(others, legs);
       const optionKeys = new Set(options.map((o) => o.line.key));
       const pool = dataset ? applyFilters(dataset.lines, { ...filters, status: 'all' }) : [];
-      for (const l of pool) if (!used.has(l.key) && !optionKeys.has(l.key)) layers.push({ coords: l.coordinates, key: l.key, tone: 'base', opacity: 0.7 });
+      for (const l of pool) if (!used.has(l.key) && !optionKeys.has(l.key)) layers.push({ coords: l.coordinates, key: l.key, tone: 'base', opacity: 0.7, fixedColor: l.color });
       const seen = new Set<string>();
       for (const o of options) {
         if (seen.has(o.line.key)) continue;
         seen.add(o.line.key);
         tappable.push(o.line);
-        layers.push({ coords: o.line.coordinates, key: o.line.key, tone: 'candidate', weight: 5, casing: true, opacity: 1 });
+        layers.push({ coords: o.line.coordinates, key: o.line.key, tone: 'candidate', weight: 5, casing: true, opacity: 1, fixedColor: o.line.color });
       }
       const d = legLayers(legs);
       layers.push(...d.layers);
@@ -487,7 +488,7 @@ export function App() {
       const shown = visible.filter((l) => l.key !== selectedKey);
       for (const l of shown) {
         const st = statusOf(l.key);
-        layers.push({ coords: l.coordinates, key: l.key, tone: toneOf[st], weight: st === 'NotPlanned' ? 3 : 4, opacity: 1 });
+        layers.push({ coords: l.coordinates, key: l.key, tone: toneOf[st], weight: st === 'NotPlanned' ? 3 : 4, opacity: 1, fixedColor: l.color });
       }
       if (mode === 'plan') {
         tappable = courses.flatMap((c) => c.legs.flatMap((l) => (l.kind === 'line' ? [l.line] : [])));
@@ -862,7 +863,7 @@ export function App() {
                       return (
                         <li key={l.key}>
                           <button onClick={() => pickLine(l)} aria-current={l.key === selectedKey}>
-                            <span className="badge">{lineLabel(l)}</span>
+                            <span className="badge" style={badgeStyle(l)}>{lineLabel(l)}</span>
                             <span>
                               {l.from} → {l.to}
                               <br />

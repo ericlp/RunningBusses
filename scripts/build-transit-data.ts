@@ -23,7 +23,7 @@ const config: Config = JSON.parse(readFileSync(`${root}config/lines.json`, 'utf8
 const args = process.argv.slice(2);
 const argValue = (name: string) => args.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
 
-const categoryOf = (name: string): Category | undefined => categorize(name, config.categories);
+const categoryOf = (name: string, isTram = false): Category | undefined => categorize(name, config.categories, isTram);
 
 async function download(): Promise<void> {
   if (existsSync('.env')) process.loadEnvFile('.env');
@@ -63,12 +63,12 @@ async function main(): Promise<void> {
   const referenceDate = argValue('date') ?? (await pickReferenceDate());
   console.log(`Feed ${feedVersion}, reference weekday ${referenceDate}`);
 
-  const routes = new Map<string, { number: string; callOrdered: boolean }>();
+  const routes = new Map<string, { number: string; callOrdered: boolean; tram: boolean }>();
   for await (const r of readCsv(`${feedDir}/routes.txt`)) {
     if (!r.route_id.startsWith(config.routeIdPrefix) || !r.agency_id.endsWith(config.agencyIdSuffix)) continue;
-    if (!categoryOf(r.route_short_name)) continue;
-    if (r.route_type !== '700' && r.route_type !== '1501') continue;
-    routes.set(r.route_id, { number: r.route_short_name, callOrdered: r.route_type === '1501' });
+    if (r.route_type !== '700' && r.route_type !== '1501' && r.route_type !== '900') continue;
+    if (!categoryOf(r.route_short_name, r.route_type === '900')) continue;
+    routes.set(r.route_id, { number: r.route_short_name, callOrdered: r.route_type === '1501', tram: r.route_type === '900' });
   }
 
   const activeServices = new Set<string>();
@@ -151,6 +151,7 @@ async function main(): Promise<void> {
   const missing: string[] = [];
   const allNumbers = [...new Set([...routes.values()].map((r) => r.number))];
   for (const number of allNumbers.sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))) {
+    const isTram = [...routes.values()].some((r) => r.number === number && r.tram);
     const patterns = [...(patternsByNumber.get(number)?.values() ?? [])];
     const planned = planRoutes(patterns, config.splitDirections.lengthDifference);
     if (!planned.length) {
@@ -169,7 +170,8 @@ async function main(): Promise<void> {
         key: `${number}${p.suffix}`,
         number,
         label: p.suffix ? `${number} retur` : String(number),
-        category: categoryOf(number)!,
+        category: categoryOf(number, isTram)!,
+        ...(isTram && config.categories.tram.colors[number] ? { color: config.categories.tram.colors[number] } : {}),
         tags: p.tags,
         from: p.pattern.from,
         to: p.pattern.to,
