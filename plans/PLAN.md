@@ -24,7 +24,9 @@ Sources: Scope list <https://sv.wikipedia.org/wiki/Busstrafik_i_G%C3%B6teborg#St
 
 ### Scope and data
 - In scope: every line categorised as **Stadsbuss** (22–99, Gothenburg city lines). This includes one-way lines and call-ordered lines (e.g. "måste förbeställas"), because the group runs the bus's intended route.
-- One main route per line number. It can be run in either direction.
+- One main route per line number. It can be run in either direction. **Exception (see plan 001):** when a line's two directions differ clearly in geometry, each direction is its own route (`62` and `62 retur`) and both count separately.
+- Every line has a `category` (`stadsbuss` by default; `stombuss` and others may be in the data) and tags for special circumstances (`call-ordered`, `loop`, `one-way`, `retur`). The map filters on category, defaulting to `stadsbuss`, and can filter on tags.
+- Phase 0 found 49 Gothenburg city lines (27–99) with shapes for all of them; see plan 001. The city lines are identified by the `route_id` pattern, not the line number.
 - The main route is picked automatically as a representative full-length weekday pattern, with a manual override in settings.
 - Loop lines (same start and end, e.g. "Heden – Gårdsten – Heden") are ordinary lines. They are no special case, and they are useful for adding distance without leaving a hub.
 - **Manual list.** A line that is in scope but has no geometry we can fetch goes in a separate manual list.
@@ -120,4 +122,6 @@ Deliberately postponed: multi-tab write protection and anything else not needed 
 
 ## Change plans
 
-None yet. After building starts, each change gets `plans/NNN-title.md`, linked here.
+Phase 0 has been done and building starts with Phase 1; this file is now frozen except for corrections. Each change gets `plans/NNN-title.md`, linked here.
+
+- [001 – Phase 0 data findings](001-phase0-data-findings.md): feed structure, the 49 lines, direction-specific routes, categories and tags.
