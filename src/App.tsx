@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { MapView, type Fit, type MapLayer, type MapMarker, type Tone } from './components/MapView';
 import { BuilderPanel, BuilderStrip, CourseList, LineCard, SplitDialog } from './components/Courses';
 import { loadDataset } from './data/dataset';
-import { DEFAULT_RADIUS_M, loadCourses, loadDraft, loadRadius, saveCourses, saveDraft, saveRadius, type Draft } from './data/store';
+import { DEFAULT_RADIUS_M, loadCourses, loadDraft, loadRadius, loadRecovery, saveCourses, saveRecovery, saveDraft, saveRadius, type Draft } from './data/store';
 import {
   courseStats,
   legEnd,
@@ -24,6 +24,7 @@ import {
   type RouteStatus,
 } from './domain/course';
 import { applyFilters, categoryLabel, defaultFilters, formatKm, searchLines, sortLines, statusFilterLabel, tagLabel, type Filters, type StatusFilter } from './domain/filter';
+import { BackupSection } from './components/Backup';
 import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
 import type { Category, Dataset, Line, Tag } from './domain/types';
 
@@ -303,6 +304,20 @@ export function App() {
       setSelectedCourseId(first.id);
       fitTo(legCoords(first.legs));
     }
+  };
+
+  const applyImport = async (next: Course[], radius: number | null): Promise<boolean> => {
+    try {
+      await saveRecovery({ savedAt: new Date().toISOString(), courses });
+    } catch {
+      return false;
+    }
+    if (!(await commit(next))) return false;
+    if (radius !== null) setRadius(radius);
+    // a draft that edits a course which no longer exists or is now completed would be stale
+    if (draft?.editingId && !next.some((x) => x.id === draft.editingId && x.status !== 'Completed')) setDraft(null);
+    setSelectedCourseId(null);
+    return true;
   };
 
   const toggleComplete = async (c: Course) => {
@@ -595,6 +610,7 @@ export function App() {
                   ))}
                 </select>
               </label>
+              <BackupSection courses={courses} radiusM={radiusM} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
               <p className="muted">{t('settings.data', { version: dataset.feedVersion })}</p>
               <button className="chip" onClick={() => setShowSettings(false)}>
                 {t('common.close')}

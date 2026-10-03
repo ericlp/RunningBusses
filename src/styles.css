@@ -659,3 +659,28 @@ button {
     flex: 1;
   }
 }
+
+.backup {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, rgba(127, 127, 127, 0.3));
+}
+
+.backup h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.chip.file {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.conflict {
+  padding: 8px 0;
+}
+
+.conflict p {
+  margin: 0 0 6px;
+}

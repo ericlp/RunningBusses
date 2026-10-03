@@ -106,7 +106,7 @@ Each phase ends with something usable. A phase is built only after the previous 
 1. **Browse map.** Project setup, theme (Västtrafik palette, light and dark, Strava-style), map with real data, tap-to-select popover, line search and filters. Deploy to GitHub Pages as soon as it works. The first dataset is committed by hand from Phase 0.
 2. **Courses.** Create, save, list, highlight, mark completed, delete, derived statuses. The manual list and its legs, and gap totals.
 3. **Editing.** Edit view, remove from either end, split, reverse, rename, undo, unlock.
-4. **Backup.** Export, then replace-import, then merge with conflict choices. A copy of the previous state is kept before an import.
+4. **Backup (done, see plan 005).** Export, then replace-import, then merge with conflict choices. A copy of the previous state is kept before an import.
 5. **Monthly refresh.** The scheduled job, the update rules above (pinned unlocked courses, missing lines, warnings), a "data from" date in settings.
 6. **Polish.** Playwright checks on a phone and a desktop width for the main journeys, touch targets of at least 44 px, keyboard use, contrast, and a walkthrough on a real phone.
 7. **Stretch.** GPX export; archiving renumbered line sets.
@@ -128,4 +128,5 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [001 – Phase 0 data findings](001-phase0-data-findings.md): feed structure, the 49 lines, direction-specific routes, categories and tags.
 - [002 – Phase 2: courses](002-phase2-courses.md): what was built, manual legs, draft handling.
 - [004 – Phase 3: editing](004-phase3-editing.md): edit view, remove from ends, split, reverse, draft rules.
+- [005 – Phase 4: backup](005-phase4-backup.md): export, replace/merge import with conflict choices, recovery copy.
 - [003 – Preferred language](003-preferred-language.md): done, browser language with Swedish, English and French.

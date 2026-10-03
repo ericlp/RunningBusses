@@ -35,3 +35,17 @@ export function loadRadius(): number {
 export function saveRadius(m: number): void {
   localStorage.setItem('radiusM', String(m));
 }
+
+export interface Recovery {
+  savedAt: string;
+  courses: Course[];
+}
+
+/** The state from just before the last import, so a wrong import can be undone from a file. */
+export async function loadRecovery(): Promise<Recovery | null> {
+  return (await idbGet<Recovery>('recovery')) ?? null;
+}
+
+export function saveRecovery(r: Recovery): Promise<void> {
+  return idbSet('recovery', r);
+}
