@@ -413,7 +413,7 @@ export function App() {
   }, [mode, dataset, visible, selected, selectedKey, selectedCourse, courses, others, legs, options, filters]);
 
   const stats = courseStats(legs);
-  const activeFilters = Number(filters.category !== defaultFilters.category) + Number(filters.status !== 'all') + filters.tags.length + Number(filters.minKm !== null || filters.maxKm !== null);
+  const activeFilters = Number(filters.category !== defaultFilters.category) + Number(filters.status !== defaultFilters.status) + filters.tags.length + Number(filters.minKm !== null || filters.maxKm !== null);
 
   return (
     <div className="app">
@@ -540,7 +540,7 @@ export function App() {
                     <h3>{t('filter.category')}</h3>
                     <div className="chips">
                     {(['stadsbuss', 'stombuss', 'all'] as const).map((c) => (
-                      <button key={c} className="chip" aria-pressed={filters.category === c} onClick={() => setFilters((f) => ({ ...f, category: c }))}>
+                      <button key={c} className="chip radio" aria-pressed={filters.category === c} onClick={() => setFilters((f) => ({ ...f, category: f.category === c ? defaultFilters.category : c }))}>
                         {c === 'all' ? t('filter.all') : categoryLabel(c as Category)}
                       </button>
                     ))}
@@ -551,7 +551,7 @@ export function App() {
                     <h3>{t('filter.status')}</h3>
                     <div className="chips">
                       {STATUS_FILTERS.map((s) => (
-                        <button key={s} className="chip" aria-pressed={filters.status === s} onClick={() => setFilters((f) => ({ ...f, status: s }))}>
+                        <button key={s} className="chip radio" aria-pressed={filters.status === s} onClick={() => setFilters((f) => ({ ...f, status: f.status === s ? defaultFilters.status : s }))}>
                           {statusFilterLabel(s)}
                         </button>
                       ))}
@@ -562,7 +562,7 @@ export function App() {
                     <h3>{t('filter.tags')}</h3>
                     <div className="chips">
                     {ALL_TAGS.map((t) => (
-                      <button key={t} className="chip" aria-pressed={filters.tags.includes(t)} onClick={() => toggleTag(t)}>
+                      <button key={t} className="chip check" aria-pressed={filters.tags.includes(t)} onClick={() => toggleTag(t)}>
                         {tagLabel(t)}
                       </button>
                     ))}

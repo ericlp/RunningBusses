@@ -315,6 +315,44 @@ button {
   background: transparent;
 }
 
+/* One choice (radio) and many choices (checkbox) get squarer chips with a marker */
+.chip.radio,
+.chip.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+}
+
+.chip.radio::before,
+.chip.check::before {
+  content: '';
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  box-sizing: border-box;
+}
+
+.chip.radio::before {
+  border-radius: 50%;
+}
+
+.chip.check::before {
+  border-radius: 3px;
+}
+
+.chip.radio[aria-pressed='true']::before {
+  background: radial-gradient(circle, #fff 0 3px, transparent 4px);
+}
+
+.chip.check[aria-pressed='true']::before {
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='%23006f9b' stroke-width='2.2'/%3E%3C/svg%3E")
+    center / 100% no-repeat;
+  border-color: #fff;
+}
+
 .chip[aria-pressed='true'] {
   background: var(--vt-blue-strong);
   border-color: var(--vt-blue-strong);

@@ -14,7 +14,7 @@ export interface Filters {
   maxKm: number | null;
 }
 
-export const defaultFilters: Filters = { category: 'stadsbuss', status: 'all', tags: [], minKm: null, maxKm: null };
+export const defaultFilters: Filters = { category: 'stadsbuss', status: 'incomplete', tags: [], minKm: null, maxKm: null };
 
 export function applyFilters(lines: Line[], f: Filters, statusOf: (key: string) => RouteStatus = () => 'NotPlanned'): Line[] {
   return lines.filter((l) => {
