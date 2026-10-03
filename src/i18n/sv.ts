@@ -6,6 +6,12 @@ export const sv = {
   'nav.filter': 'Filter',
   'nav.settings': 'Inställningar',
   'nav.mode': 'Läge',
+  'sort.label': "Sortera",
+  'sort.number': "Nummer",
+  'sort.shortest': "Kortast först",
+  'sort.longest': "Längst först",
+  'sort.status': "Status",
+  'sort.name': "Startplats A–Ö",
   'filter.title': 'Filtrera linjer',
   'filter.reset': 'Återställ',
 

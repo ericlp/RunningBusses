@@ -7,6 +7,12 @@ export const fr: Dict = {
   'nav.filter': 'Filtres',
   'nav.settings': 'Réglages',
   'nav.mode': 'Mode',
+  'sort.label': "Trier par",
+  'sort.number': "Numéro",
+  'sort.shortest': "Plus courte d’abord",
+  'sort.longest': "Plus longue d’abord",
+  'sort.status': "Statut",
+  'sort.name': "Arrêt de départ A–Z",
   'filter.title': 'Filtrer les lignes',
   'filter.reset': 'Réinitialiser',
 

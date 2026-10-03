@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyFilters, defaultFilters, formatKm, searchLines } from './filter';
+import { applyFilters, defaultFilters, formatKm, searchLines, sortLines } from './filter';
 import { pathLengthM } from './geo';
 import { linesNear } from './hit';
 import type { Line } from './types';
@@ -69,5 +69,22 @@ describe('linesNear', () => {
 describe('formatKm', () => {
   it('uses a decimal comma', () => {
     expect(formatKm(9700)).toBe('9,7 km');
+  });
+});
+
+describe('sortLines', () => {
+  const a = line({ key: '22', number: '22', lengthM: 9000, from: 'Zeta' });
+  const b = line({ key: '3', number: '3', lengthM: 4000, from: 'Alfa' });
+  const c = line({ key: '40', number: '40', lengthM: 6000, from: 'Mitt' });
+  const keys = (l: Line[]) => l.map((x) => x.key);
+  it('sorts by number numerically, distance and name', () => {
+    expect(keys(sortLines([a, b, c]))).toEqual(['3', '22', '40']);
+    expect(keys(sortLines([a, b, c], 'shortest'))).toEqual(['3', '40', '22']);
+    expect(keys(sortLines([a, b, c], 'longest'))).toEqual(['22', '40', '3']);
+    expect(keys(sortLines([a, b, c], 'name'))).toEqual(['3', '40', '22']);
+  });
+  it('puts not-completed first, completed last, ties by number', () => {
+    const st = (k: string) => (k === '22' ? 'Completed' : k === '40' ? 'NotCompleted' : 'NotPlanned') as 'Completed';
+    expect(keys(sortLines([a, b, c], 'status', st))).toEqual(['40', '3', '22']);
   });
 });

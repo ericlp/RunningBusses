@@ -7,6 +7,12 @@ export const en: Dict = {
   'nav.filter': 'Filter',
   'nav.settings': 'Settings',
   'nav.mode': 'Mode',
+  'sort.label': "Sort by",
+  'sort.number': "Number",
+  'sort.shortest': "Shortest first",
+  'sort.longest': "Longest first",
+  'sort.status': "Status",
+  'sort.name': "Start stop A–Z",
   'filter.title': 'Filter routes',
   'filter.reset': 'Reset',
 

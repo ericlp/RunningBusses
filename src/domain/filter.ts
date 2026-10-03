@@ -45,8 +45,21 @@ export function searchLines(lines: Line[], query: string): Line[] {
   );
 }
 
-export function sortLines(lines: Line[]): Line[] {
-  return [...lines].sort((a, b) => Number(a.number) - Number(b.number) || a.key.localeCompare(b.key));
+export type SortKey = 'number' | 'shortest' | 'longest' | 'status' | 'name';
+export const SORT_KEYS: readonly SortKey[] = ['number', 'shortest', 'longest', 'status', 'name'];
+
+const STATUS_RANK: Record<RouteStatus, number> = { NotCompleted: 0, NotPlanned: 1, Completed: 2 };
+
+export function sortLines(lines: Line[], by: SortKey = 'number', statusOf: (key: string) => RouteStatus = () => 'NotPlanned'): Line[] {
+  const byNumber = (a: Line, b: Line) => Number(a.number) - Number(b.number) || a.key.localeCompare(b.key);
+  const primary: Record<SortKey, (a: Line, b: Line) => number> = {
+    number: () => 0,
+    shortest: (a, b) => a.lengthM - b.lengthM,
+    longest: (a, b) => b.lengthM - a.lengthM,
+    status: (a, b) => STATUS_RANK[statusOf(a.key)] - STATUS_RANK[statusOf(b.key)],
+    name: (a, b) => a.from.localeCompare(b.from, localeTag()),
+  };
+  return [...lines].sort((a, b) => primary[by](a, b) || byNumber(a, b));
 }
 
 export function formatKm(m: number): string {

@@ -23,7 +23,7 @@ import {
   type Option,
   type RouteStatus,
 } from './domain/course';
-import { applyFilters, categoryLabel, defaultFilters, formatKm, searchLines, sortLines, statusFilterLabel, tagLabel, type Filters, type StatusFilter } from './domain/filter';
+import { applyFilters, categoryLabel, defaultFilters, formatKm, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { BackupSection } from './components/Backup';
 import type { Key } from './i18n/sv';
@@ -83,6 +83,7 @@ export function App() {
   const [mode, setMode] = useState<Mode>('browse');
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [query, setQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortKey>('number');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [chooser, setChooser] = useState<ChooserItem[] | null>(null);
@@ -137,7 +138,7 @@ export function App() {
   const statuses = useMemo(() => routeStatuses(courses), [courses]);
   const statusOf = (key: string): RouteStatus => statuses.get(key)?.status ?? 'NotPlanned';
   const visible = useMemo(() => (dataset ? applyFilters(dataset.lines, filters, statusOf) : []), [dataset, filters, statuses]);
-  const listed = useMemo(() => sortLines(searchLines(visible, query)), [visible, query]);
+  const listed = useMemo(() => sortLines(searchLines(visible, query), sortBy, statusOf), [visible, query, sortBy, statuses]);
   const selected = useMemo(() => dataset?.lines.find((l) => l.key === selectedKey) ?? null, [dataset, selectedKey]);
   const selectedCourse = useMemo(() => courses.find((c) => c.id === selectedCourseId) ?? null, [courses, selectedCourseId]);
 
@@ -388,7 +389,7 @@ export function App() {
       const shown = visible.filter((l) => l.key !== selectedKey);
       for (const l of shown) {
         const st = statusOf(l.key);
-        layers.push({ coords: l.coordinates, tone: toneOf[st], weight: st === 'NotPlanned' ? 3 : 4, opacity: dim || selectedKey ? 0.4 : 0.85 });
+        layers.push({ coords: l.coordinates, tone: toneOf[st], weight: st === 'NotPlanned' ? 3 : 4, opacity: dim || selectedKey ? 0.65 : 0.85 });
       }
       if (mode === 'plan') {
         tappable = courses.flatMap((c) => c.legs.flatMap((l) => (l.kind === 'line' ? [l.line] : [])));
@@ -618,6 +619,13 @@ export function App() {
                   {selected && <LineCard line={selected} info={routeInfo(selected.key, courses)} onClose={() => setSelectedKey(null)} />}
                   <div className="field">
                     <input type="search" placeholder={t('search.placeholder')} aria-label={t('search.placeholder')} value={query} onChange={(e) => setQuery(e.target.value)} />
+                    <select aria-label={t('sort.label')} value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)}>
+                      {SORT_KEYS.map((k) => (
+                        <option key={k} value={k}>
+                          {t(`sort.${k}` as Key)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <p className="muted">
                     {t('list.count', { shown: listed.length, total: dataset.lines.length, version: dataset.feedVersion })}
