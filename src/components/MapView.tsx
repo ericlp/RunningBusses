@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import type { Line } from '../domain/types';
 import { linesNear } from '../domain/hit';
+import { splitByOverlap } from '../domain/overlap';
 import { BORDER_PX, PAN_SECONDS, currentPanSpeed, useAppearance } from '../appearance';
 
 export type Tone = 'base' | 'planned' | 'done' | 'highlight' | 'candidate' | 'connector';
@@ -93,17 +94,38 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
     };
   }, []);
 
+  // Lines sharing a road are drawn as interleaved stripes so none hides another
+  const runs = useMemo(
+    () =>
+      lineColors === 'rainbow'
+        ? splitByOverlap(layers.filter((l) => l.key && RAINBOW_TONES.includes(l.tone)).map((l) => ({ key: l.key!, coords: l.coords })))
+        : null,
+    [layers, lineColors],
+  );
+
   useEffect(() => {
     const g = group.current!;
     g.clearLayers();
+    const rainbowOn = lineColors === 'rainbow';
+    const casingColor = resolved === 'dark' ? '#0b1a22' : '#fff';
     for (const l of layers) {
-      const pts = toLatLngs(l.coords);
-      const color = lineColors === 'rainbow' && l.key && RAINBOW_TONES.includes(l.tone) ? rainbow(l.key, resolved === 'dark') : toneColor(l.tone);
+      const color = rainbowOn && l.key && RAINBOW_TONES.includes(l.tone) ? rainbow(l.key, resolved === 'dark') : toneColor(l.tone);
       const weight = (l.weight ?? 3) * zoomScale(zoom);
-      const casingColor = resolved === 'dark' ? '#0b1a22' : '#fff';
       const outline = BORDER_PX[border] + (l.casing ? 2 : 0);
-      if (l.tone !== 'connector' && outline > 0) L.polyline(pts, { color: casingColor, weight: weight + outline, opacity: Math.min(1, (l.opacity ?? 0.9) * 0.95), interactive: false }).addTo(g);
-      L.polyline(pts, { color, weight, opacity: l.opacity ?? 0.9, dashArray: l.dashed ? '8 8' : undefined, interactive: false }).addTo(g);
+      const opacity = l.opacity ?? 0.9;
+      const parts = runs && l.key && runs.has(l.key) ? runs.get(l.key)! : [{ coords: l.coords, group: [l.key ?? ''] }];
+      for (const part of parts) {
+        const pts = toLatLngs(part.coords);
+        const n = part.group.length;
+        if (l.tone !== 'connector' && outline > 0) L.polyline(pts, { color: casingColor, weight: weight + outline, opacity: Math.min(1, opacity * 0.95), interactive: false }).addTo(g);
+        if (n > 1) {
+          const dash = Math.max(8, weight * 1.6);
+          const i = part.group.indexOf(l.key!);
+          L.polyline(pts, { color, weight, opacity, dashArray: `${dash} ${dash * (n - 1)}`, dashOffset: String(-i * dash), lineCap: 'butt', interactive: false }).addTo(g);
+        } else {
+          L.polyline(pts, { color, weight, opacity, dashArray: l.dashed ? '8 8' : undefined, interactive: false }).addTo(g);
+        }
+      }
     }
     for (const mk of markers) {
       L.circleMarker([mk.at[1], mk.at[0]], {
@@ -115,7 +137,7 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
         interactive: false,
       }).addTo(g);
     }
-  }, [layers, markers, zoom, resolved, border, lineColors]);
+  }, [layers, runs, markers, zoom, resolved, border, lineColors]);
 
   useEffect(() => {
     if (!fit || !map.current || fit.coords.length === 0) return;
