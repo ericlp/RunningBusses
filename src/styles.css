@@ -910,3 +910,6 @@ button {
   padding: 0 8px;
 }
 
+
+.dir-arrow { background: none; border: 0; pointer-events: none; }
+.dir-arrow svg { display: block; }

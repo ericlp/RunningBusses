@@ -16,6 +16,8 @@ export interface MapLayer {
   opacity?: number;
   dashed?: boolean;
   casing?: boolean;
+  /** Draw direction arrows along the path, in coordinate order. */
+  arrows?: boolean;
 }
 
 export interface MapMarker {
@@ -185,6 +187,35 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
     for (const p of pieces.filter((p) => p.top)) {
       if (p.casing) L.polyline(p.pts, p.casing).addTo(g);
       L.polyline(p.pts, p.line).addTo(g);
+    }
+    // Chevrons every ~110 px of screen distance; a path crossing itself stays readable
+    const arrowIcon = L.divIcon({
+      className: 'dir-arrow',
+      html: '<svg viewBox="0 0 20 20" width="26" height="26"><path d="M5 3 L15 10 L5 17 L8 10 Z" fill="#fff" stroke="#0b1a22" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+      iconSize: [26, 26],
+      iconAnchor: [13, 13],
+    });
+    for (const l of layers) {
+      if (!l.arrows) continue;
+      const p = l.coords.map(toPx);
+      const step = 110;
+      let next = step / 2;
+      let travelled = 0;
+      for (let i = 1; i < p.length; i++) {
+        const dx = p[i].x - p[i - 1].x;
+        const dy = p[i].y - p[i - 1].y;
+        const len = Math.hypot(dx, dy);
+        while (len > 0 && travelled + len >= next) {
+          const f = (next - travelled) / len;
+          const ll = L.CRS.EPSG3857.pointToLatLng(L.point(p[i - 1].x + dx * f, p[i - 1].y + dy * f), zoom);
+          const m = L.marker(ll, { icon: arrowIcon, interactive: false, keyboard: false });
+          m.addTo(g);
+          const svg = m.getElement()?.querySelector('svg');
+          if (svg) svg.style.transform = `rotate(${(Math.atan2(dy, dx) * 180) / Math.PI}deg)`;
+          next += step;
+        }
+        travelled += len;
+      }
     }
     for (const mk of markers) {
       L.circleMarker([mk.at[1], mk.at[0]], {

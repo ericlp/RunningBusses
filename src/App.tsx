@@ -54,7 +54,7 @@ const pt = (p: { lat: number; lon: number }): [number, number] => [p.lon, p.lat]
 function legLayers(legs: Leg[]): { layers: MapLayer[]; markers: MapMarker[] } {
   const layers: MapLayer[] = [];
   legs.forEach((leg, i) => {
-    if (leg.kind === 'line') layers.push({ coords: orientedCoordinates(leg), tone: 'highlight', weight: 6, casing: true, opacity: 1 });
+    if (leg.kind === 'line') layers.push({ coords: orientedCoordinates(leg), tone: 'highlight', weight: 6, casing: true, opacity: 1, arrows: true });
     const a = legEnd(leg);
     const b = legs[i + 1] && legStart(legs[i + 1]);
     if (a && b) layers.push({ coords: [pt(a), pt(b)], tone: 'connector', weight: 4, dashed: true, opacity: 1 });
@@ -413,7 +413,7 @@ export function App() {
       } else {
         tappable = visible;
         if (selected) {
-          layers.push({ coords: selected.coordinates, tone: 'highlight', weight: 6, casing: true, opacity: 1 });
+          layers.push({ coords: selected.coordinates, tone: 'highlight', weight: 6, casing: true, opacity: 1, arrows: true });
           markers = [
             { at: selected.coordinates[0], color: 'start' },
             { at: selected.coordinates[selected.coordinates.length - 1], color: 'end' },
