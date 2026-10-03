@@ -100,6 +100,7 @@ export const fr: Dict = {
   'strip.removeFirst': 'Retirer {label} au début',
   'strip.removeLast': 'Retirer {label} à la fin',
 
+  'panel.reverseHint': "Rien près de la fin – inverser le sens",
   'panel.undo': 'Annuler la dernière',
   'panel.reverse': 'Inverser le sens',
   'panel.manual': 'Étape manuelle',

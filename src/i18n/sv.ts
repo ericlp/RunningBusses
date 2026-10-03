@@ -99,6 +99,7 @@ export const sv = {
   'strip.removeFirst': 'Ta bort {label} från början',
   'strip.removeLast': 'Ta bort {label} från slutet',
 
+  'panel.reverseHint': "Inget nära slutet – vänd riktning",
   'panel.undo': 'Ångra senaste',
   'panel.reverse': 'Vänd riktning',
   'panel.manual': 'Manuell sträcka',

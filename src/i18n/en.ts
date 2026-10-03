@@ -100,6 +100,7 @@ export const en: Dict = {
   'strip.removeFirst': 'Remove {label} from the start',
   'strip.removeLast': 'Remove {label} from the end',
 
+  'panel.reverseHint': "Nothing near the end – reverse direction",
   'panel.undo': 'Undo last',
   'panel.reverse': 'Reverse direction',
   'panel.manual': 'Manual leg',
