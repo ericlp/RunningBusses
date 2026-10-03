@@ -10,3 +10,5 @@ Dragging the handle now resizes the sheet live (follows the finger) and animates
 
 When the sheet is minimised and a route is selected in browse mode, the sheet grows just enough to show the selected route card.
 The minimised card is a single row: badge, from → to, km, close.
+
+Inputs use 16px on phones so iOS does not zoom when they are focused.
