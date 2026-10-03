@@ -1,3 +1,4 @@
+import { lineLabel, localeTag, t } from '../i18n';
 import type { RouteStatus } from './course';
 import type { Category, Line, Tag } from './types';
 
@@ -24,7 +25,7 @@ export function applyFilters(lines: Line[], f: Filters, statusOf: (key: string) 
       if (f.status === 'completed' && st !== 'Completed') return false;
     }
     if (f.category !== 'all' && l.category !== f.category) return false;
-    if (f.tags.length && !f.tags.some((t) => l.tags.includes(t))) return false;
+    if (f.tags.length && !f.tags.some((x) => l.tags.includes(x))) return false;
     if (f.minKm !== null && l.lengthM < f.minKm * 1000) return false;
     if (f.maxKm !== null && l.lengthM > f.maxKm * 1000) return false;
     return true;
@@ -37,6 +38,7 @@ export function searchLines(lines: Line[], query: string): Line[] {
   return lines.filter(
     (l) =>
       l.label.toLowerCase().includes(q) ||
+      lineLabel(l).toLowerCase().includes(q) ||
       l.from.toLowerCase().includes(q) ||
       l.to.toLowerCase().includes(q) ||
       l.via.some((v) => v.toLowerCase().includes(q)),
@@ -48,24 +50,9 @@ export function sortLines(lines: Line[]): Line[] {
 }
 
 export function formatKm(m: number): string {
-  return `${(m / 1000).toLocaleString('sv-SE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
+  return `${(m / 1000).toLocaleString(localeTag(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
 }
 
-export const tagLabels: Record<Tag, string> = {
-  'call-ordered': 'Anropsstyrd',
-  loop: 'Slinga',
-  'one-way': 'Enkelriktad',
-  retur: 'Retur',
-};
-
-export const categoryLabels: Record<Category, string> = {
-  stadsbuss: 'Stadsbuss',
-  stombuss: 'Stombuss',
-};
-
-export const statusFilterLabels: Record<StatusFilter, string> = {
-  all: 'Alla',
-  unplanned: 'Ej planerade',
-  incomplete: 'Ej genomförda (inkl. ej planerade)',
-  completed: 'Genomförda',
-};
+export const tagLabel = (tag: Tag): string => t(`tag.${tag}`);
+export const categoryLabel = (c: Category): string => t(`category.${c}`);
+export const statusFilterLabel = (s: StatusFilter): string => t(`statusFilter.${s}`);

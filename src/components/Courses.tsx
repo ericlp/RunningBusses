@@ -8,49 +8,50 @@ import {
   legLabel,
   legStartName,
   legEndName,
-  routeStatusLabels,
+  routeStatusLabel,
   type Course,
   type Leg,
   type Option,
   type RouteInfo,
 } from '../domain/course';
-import { categoryLabels, formatKm, tagLabels } from '../domain/filter';
+import { categoryLabel, formatKm, tagLabel } from '../domain/filter';
+import { lineLabel, t, tn } from '../i18n';
 import type { Line } from '../domain/types';
 import { useState } from 'react';
 
 export function LineCard({ line, info, onClose }: { line: Line; info: RouteInfo; onClose: () => void }) {
   return (
-    <article aria-label={`Linje ${line.label}`}>
+    <article aria-label={t('card.aria', { label: lineLabel(line) })}>
       <div className="card-title">
-        <span className="badge">{line.label}</span>
+        <span className="badge">{lineLabel(line)}</span>
         <span className="name">
           {line.from} → {line.to}
         </span>
-        <button className="chip" onClick={onClose} aria-label="Stäng linjekort">
+        <button className="chip" onClick={onClose} aria-label={t('card.close')}>
           ×
         </button>
       </div>
       <div className="stats">
         <div className="stat">
           <b>{formatKm(line.lengthM)}</b>
-          <span>Sträcka</span>
+          <span>{t('card.distance')}</span>
         </div>
         <div className="stat">
           <b>{line.via.length}</b>
-          <span>Hållplatser</span>
+          <span>{t('card.stops')}</span>
         </div>
       </div>
       <div className="chips">
-        <span className={`tag status-${info.status}`}>{routeStatusLabels[info.status]}</span>
-        {info.courseName && <span className="tag">Bana: {info.courseName}</span>}
-        <span className="tag">{categoryLabels[line.category]}</span>
-        {line.tags.map((t) => (
-          <span className="tag" key={t}>
-            {tagLabels[t]}
+        <span className={`tag status-${info.status}`}>{routeStatusLabel(info.status)}</span>
+        {info.courseName && <span className="tag">{t('card.course', { name: info.courseName })}</span>}
+        <span className="tag">{categoryLabel(line.category)}</span>
+        {line.tags.map((tag) => (
+          <span className="tag" key={tag}>
+            {tagLabel(tag)}
           </span>
         ))}
       </div>
-      <p className="via">Via {line.via.filter((_, i) => i % Math.ceil(line.via.length / 6) === 0).join(', ')}</p>
+      <p className="via">{t('card.via', { stops: line.via.filter((_, i) => i % Math.ceil(line.via.length / 6) === 0).join(', ') })}</p>
     </article>
   );
 }
@@ -73,9 +74,9 @@ export function CourseList({ courses, selectedId, draftLegs, draftEditingId, onS
   return (
     <div>
       <button className="primary" onClick={onCreate}>
-        {editing ? `Fortsätt redigera "${editing.name}"` : draftLegs > 0 ? `Fortsätt utkast (${draftLegs} ${draftLegs === 1 ? 'etapp' : 'etapper'})` : 'Skapa bana'}
+        {editing ? t('courses.resumeEdit', { name: editing.name }) : draftLegs > 0 ? tn('courses.resumeDraft', draftLegs) : t('courses.create')}
       </button>
-      {courses.length === 0 && <p className="muted">Inga banor än. Skapa en bana genom att koppla ihop linjer.</p>}
+      {courses.length === 0 && <p className="muted">{t('courses.empty')}</p>}
       <ul className="courses">
         {courses.map((c) => {
           const s = courseStats(c.legs);
@@ -85,7 +86,7 @@ export function CourseList({ courses, selectedId, draftLegs, draftEditingId, onS
               <button className="course-main" aria-pressed={selected} onClick={() => onSelect(selected ? null : c.id)}>
                 <span className="course-head">
                   <b>{c.name}</b>
-                  <span className={`tag ${c.status === 'Completed' ? 'status-Completed' : ''}`}>{c.status === 'Completed' ? 'Genomförd' : 'Ej genomförd'}</span>
+                  <span className={`tag ${c.status === 'Completed' ? 'status-Completed' : ''}`}>{c.status === 'Completed' ? t('courses.statusDone') : t('courses.statusOpen')}</span>
                 </span>
                 <span className="seq">
                   {c.legs.map((l, i) => (
@@ -104,8 +105,8 @@ export function CourseList({ courses, selectedId, draftLegs, draftEditingId, onS
                   <ol className="legs">
                     {c.legs.map((l, i) => (
                       <li key={i}>
-                        <b>{legLabel(l)}</b>: {legStartName(l)} → {legEndName(l)}, {l.kind === 'manual' && l.lengthM === null ? 'okänd sträcka' : formatKm(l.kind === 'manual' ? (l.lengthM ?? 0) : l.line.lengthM)}
-                        {s.gaps.find((g) => g.afterIndex === i) && <div className="gap">Glapp till nästa: {formatDistance(s.gaps.find((g) => g.afterIndex === i)!.m)}</div>}
+                        <b>{legLabel(l)}</b>: {legStartName(l)} → {legEndName(l)}, {l.kind === 'manual' && l.lengthM === null ? t('courses.unknownDistance') : formatKm(l.kind === 'manual' ? (l.lengthM ?? 0) : l.line.lengthM)}
+                        {s.gaps.find((g) => g.afterIndex === i) && <div className="gap">{t('courses.gapNext', { dist: formatDistance(s.gaps.find((g) => g.afterIndex === i)!.m) })}</div>}
                       </li>
                     ))}
                   </ol>
@@ -116,7 +117,7 @@ export function CourseList({ courses, selectedId, draftLegs, draftEditingId, onS
                       </button>
                     )}
                     <button className="chip" onClick={() => onToggleComplete(c)}>
-                      {c.status === 'Completed' ? 'Markera som ej genomförd' : 'Markera som genomförd'}
+                      {c.status === 'Completed' ? t('courses.markUndone') : t('courses.markDone')}
                     </button>
                     <button className="chip danger" onClick={() => onDelete(c)}>
                       Ta bort
@@ -152,19 +153,19 @@ export function BuilderStrip({ name, legs, onName, onSave, onCancel, saving, can
   return (
     <div className="strip">
       <div className="strip-head">
-        <input value={name} placeholder="Namn på banan" aria-label="Namn på banan" onChange={(e) => onName(e.target.value)} />
+        <input value={name} placeholder={t('strip.name')} aria-label={t('strip.name')} onChange={(e) => onName(e.target.value)} />
         <span className="strip-total">{legs.length ? formatTotal(s) : '0,0 km'}</span>
         <button className="primary compact" disabled={!canSave || saving} onClick={onSave}>
-          {saving ? 'Sparar…' : editing ? 'Spara ändringar' : 'Spara'}
+          {saving ? t('strip.saving') : editing ? t('strip.saveChanges') : t('strip.save')}
         </button>
-        <button className="chip" onClick={onCancel} aria-label="Stäng och behåll utkastet">
-          Stäng
+        <button className="chip" onClick={onCancel} aria-label={t('strip.closeAria')}>
+          {t('strip.close')}
         </button>
       </div>
-      <div className="strip-cards" role="list" aria-label="Etapper">
+      <div className="strip-cards" role="list" aria-label={t('strip.legs')}>
         <div className="start" role="listitem">
-          <span className="muted">Start</span>
-          <b>{s.startName ?? 'Välj första linje'}</b>
+          <span className="muted">{t('strip.start')}</span>
+          <b>{s.startName ?? t('strip.pickFirst')}</b>
         </div>
         {legs.map((l, i) => {
           const gap = s.gaps.find((g) => g.afterIndex === i - 1);
@@ -172,7 +173,7 @@ export function BuilderStrip({ name, legs, onName, onSave, onCancel, saving, can
             <div className="leg-wrap" key={i} role="listitem">
               {gap && <span className="connector">↔ {formatDistance(gap.m)}</span>}
               {editing && canSplitAt(legs, i) && (
-                <button className="chip split" onClick={() => onSplit(i)} aria-label={`Dela banan före ${legLabel(l)}`}>
+                <button className="chip split" onClick={() => onSplit(i)} aria-label={t('strip.splitAria', { label: legLabel(l) })}>
                   ✂ Dela
                 </button>
               )}
@@ -180,12 +181,12 @@ export function BuilderStrip({ name, legs, onName, onSave, onCancel, saving, can
                 <span className="leg-top">
                   <span className="badge small">{legLabel(l)}</span>
                   {i === 0 && canRemoveFirst(legs) && (
-                    <button className="x" onClick={onRemoveFirst} aria-label={`Ta bort ${legLabel(l)} från början`}>
+                    <button className="x" onClick={onRemoveFirst} aria-label={t('strip.removeFirst', { label: legLabel(l) })}>
                       ×
                     </button>
                   )}
                   {i === legs.length - 1 && canRemoveLast(legs) && (
-                    <button className="x" onClick={onRemoveLast} aria-label={`Ta bort ${legLabel(l)} från slutet`}>
+                    <button className="x" onClick={onRemoveLast} aria-label={t('strip.removeLast', { label: legLabel(l) })}>
                       ×
                     </button>
                   )}
@@ -222,7 +223,7 @@ export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUn
   const submit = () => {
     const v = km.trim() === '' ? null : Number(km.replace(',', '.'));
     if (v !== null && (!Number.isFinite(v) || v < 0)) return;
-    onAddManual(label.trim() || 'Manuell sträcka', v === null ? null : Math.round(v * 1000));
+    onAddManual(label.trim() || t('panel.manualDefault'), v === null ? null : Math.round(v * 1000));
     setLabel('');
     setKm('');
     setManualOpen(false);
@@ -231,49 +232,49 @@ export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUn
     <div>
       <div className="actions">
         <button className="chip" onClick={onUndo} disabled={!hasLegs}>
-          Ångra senaste
+          {t('panel.undo')}
         </button>
         {canReverse && (
           <button className="chip" onClick={onReverse}>
-            ⇄ Vänd riktning
+            ⇄ {t('panel.reverse')}
           </button>
         )}
         {hasLegs && (
           <button className="chip" onClick={() => setManualOpen((o) => !o)} aria-expanded={manualOpen}>
-            + Manuell sträcka
+            + {t('panel.manual')}
           </button>
         )}
         <button className="chip danger" onClick={onDiscard}>
-          {editing ? 'Förkasta ändringar' : 'Förkasta utkast'}
+          {editing ? t('panel.discardChanges') : t('panel.discardDraft')}
         </button>
         <label className="radius">
           Radie
-          <input type="number" inputMode="numeric" min={50} max={5000} step={50} value={radiusM} onChange={(e) => onRadius(Number(e.target.value))} aria-label="Radie i meter" />
+          <input type="number" inputMode="numeric" min={50} max={5000} step={50} value={radiusM} onChange={(e) => onRadius(Number(e.target.value))} aria-label={t('panel.radiusAria')} />
           m
         </label>
       </div>
       {manualOpen && (
         <div className="field manual">
-          <input placeholder="Namn (t.ex. Linje 14)" aria-label="Namn på manuell sträcka" value={label} onChange={(e) => setLabel(e.target.value)} />
-          <input inputMode="decimal" placeholder="km" aria-label="Sträcka i km" value={km} onChange={(e) => setKm(e.target.value)} />
+          <input placeholder={t('panel.manualName')} aria-label={t('panel.manualNameAria')} value={label} onChange={(e) => setLabel(e.target.value)} />
+          <input inputMode="decimal" placeholder={t('panel.manualKm')} aria-label={t('panel.manualKmAria')} value={km} onChange={(e) => setKm(e.target.value)} />
           <button className="chip" onClick={submit}>
-            Lägg till
+            {t('panel.add')}
           </button>
         </div>
       )}
-      <p className="muted">{hasLegs ? `Nästa linje – ${options.length} inom ${radiusM} m:` : 'Tryck på en linje på kartan eller välj här. Välj också vilken ände du startar från.'}</p>
-      {hasLegs && options.length === 0 && <p>Ingen ledig linje inom {radiusM} m. Öka radien, lägg till en manuell sträcka eller spara banan.</p>}
+      <p className="muted">{hasLegs ? t('panel.next', { n: options.length, radius: radiusM }) : t('panel.first')}</p>
+      {hasLegs && options.length === 0 && <p>{t('panel.none', { radius: radiusM })}</p>}
       <ul className="list">
         {options.map((o) => (
           <li key={`${o.line.key}-${o.reversed}`}>
             <button onClick={() => onPick(o)}>
-              <span className="badge">{o.line.label}</span>
+              <span className="badge">{lineLabel(o.line)}</span>
               <span>
                 {o.reversed ? o.line.to : o.line.from} → {o.reversed ? o.line.from : o.line.to}
                 {o.gapM !== null && (
                   <>
                     <br />
-                    <span className="sub">Glapp {formatDistance(o.gapM)}</span>
+                    <span className="sub">{t('panel.gap', { dist: formatDistance(o.gapM) })}</span>
                   </>
                 )}
               </span>
@@ -301,19 +302,19 @@ interface SplitProps {
 /** Preview of a split: two new, not completed courses, each with its own name and total. */
 export function SplitDialog({ first, second, name1, name2, onName1, onName2, onConfirm, onCancel, saving }: SplitProps) {
   const parts = [
-    { legs: first, name: name1, set: onName1, label: 'Bana 1' },
-    { legs: second, name: name2, set: onName2, label: 'Bana 2' },
+    { legs: first, name: name1, set: onName1, label: t('split.part1') },
+    { legs: second, name: name2, set: onName2, label: t('split.part2') },
   ];
   return (
     <div className="modal-back">
-      <div className="modal" role="dialog" aria-modal="true" aria-label="Dela bana">
-        <h2>Dela bana</h2>
-        <p className="muted">Båda delarna blir ej genomförda. Glappet mellan dem räknas inte med.</p>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={t('split.title')}>
+        <h2>{t('split.title')}</h2>
+        <p className="muted">{t('split.note')}</p>
         {parts.map((p) => {
           const s = courseStats(p.legs);
           return (
             <div key={p.label} className="split-part">
-              <input value={p.name} aria-label={`Namn på ${p.label}`} onChange={(e) => p.set(e.target.value)} />
+              <input value={p.name} aria-label={t('split.nameAria', { label: p.label })} onChange={(e) => p.set(e.target.value)} />
               <div className="seq">
                 {p.legs.map((l, i) => (
                   <span className="badge small" key={i}>
@@ -330,10 +331,10 @@ export function SplitDialog({ first, second, name1, name2, onName1, onName2, onC
         })}
         <div className="actions">
           <button className="primary compact" onClick={onConfirm} disabled={saving || !name1.trim() || !name2.trim()}>
-            {saving ? 'Sparar…' : 'Dela'}
+            {saving ? t('strip.saving') : t('split.confirm')}
           </button>
           <button className="chip" onClick={onCancel}>
-            Avbryt
+            {t('split.cancel')}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { haversineM, type LatLon } from './geo';
+import { lineLabel, localeTag, t } from '../i18n';
 import type { Line } from './types';
 
 export type CourseStatus = 'NotCompleted' | 'Completed';
@@ -83,7 +84,7 @@ export function legEndName(leg: Leg): string {
 }
 
 export function legLabel(leg: Leg): string {
-  return leg.kind === 'manual' ? leg.label : leg.line.label;
+  return leg.kind === 'manual' ? leg.label : lineLabel(leg.line);
 }
 
 export function legLengthM(leg: Leg): number {
@@ -116,14 +117,14 @@ export function courseStats(legs: Leg[]): CourseStats {
 
 export function formatDistance(m: number): string {
   if (m < 1000) return `${Math.round(m)} m`;
-  return `${(m / 1000).toLocaleString('sv-SE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
+  return `${(m / 1000).toLocaleString(localeTag(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
 }
 
 /** "9,7 km (200 m)": the bracket shows the summed gaps, only when they exceed 100 m. */
 export function formatTotal(s: CourseStats): string {
   const base = formatDistance(s.totalM);
   const text = s.gapM > GAP_NOTE_THRESHOLD_M ? `${base} (${formatDistance(s.gapM)})` : base;
-  return s.incomplete ? `minst ${text}` : text;
+  return s.incomplete ? t('total.atLeast', { text }) : text;
 }
 
 /** Legs that can come next. With no legs, or after a manual leg, any unused line qualifies in both directions. */
@@ -182,11 +183,7 @@ export function sequenceLabel(legs: Leg[]): string {
   return legs.map(legLabel).join(' → ');
 }
 
-export const routeStatusLabels: Record<RouteStatus, string> = {
-  NotPlanned: 'Ej planerad',
-  NotCompleted: 'Planerad, ej genomförd',
-  Completed: 'Genomförd',
-};
+export const routeStatusLabel = (s: RouteStatus): string => t(`routeStatus.${s}`);
 
 const hasLine = (legs: Leg[]) => legs.some((l) => l.kind === 'line');
 

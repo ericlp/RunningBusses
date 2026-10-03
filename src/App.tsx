@@ -23,7 +23,8 @@ import {
   type Option,
   type RouteStatus,
 } from './domain/course';
-import { applyFilters, categoryLabels, defaultFilters, formatKm, searchLines, sortLines, statusFilterLabels, tagLabels, type Filters, type StatusFilter } from './domain/filter';
+import { applyFilters, categoryLabel, defaultFilters, formatKm, searchLines, sortLines, statusFilterLabel, tagLabel, type Filters, type StatusFilter } from './domain/filter';
+import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
 import type { Category, Dataset, Line, Tag } from './domain/types';
 
 type Mode = 'browse' | 'plan' | 'build';
@@ -63,6 +64,8 @@ function legLayers(legs: Leg[]): { layers: MapLayer[]; markers: MapMarker[] } {
 const legCoords = (legs: Leg[]) => legs.flatMap((l) => (l.kind === 'line' ? l.line.coordinates : []));
 
 export function App() {
+  const { pref } = useLang();
+  const [showSettings, setShowSettings] = useState(false);
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +101,7 @@ export function App() {
         setDraft(stale ? null : d);
         setReady(true);
       })
-      .catch(() => setToast('Kunde inte läsa sparade banor. Ändringar sparas inte förrän det fungerar.'));
+      .catch(() => setToast(t('toast.loadCourses')));
   }, []);
 
   useEffect(() => {
@@ -138,7 +141,7 @@ export function App() {
       setCourses(next);
       return true;
     } catch {
-      setToast('Kunde inte spara. Ändringen gjordes inte.');
+      setToast(t('toast.save'));
       return false;
     }
   };
@@ -164,7 +167,7 @@ export function App() {
   const optionItem = (o: Option): ChooserItem => ({
     id: `${o.line.key}-${o.reversed}`,
     badge: o.line.label,
-    text: `${o.reversed ? o.line.to : o.line.from} → ${o.reversed ? o.line.from : o.line.to}${o.gapM !== null ? ` · glapp ${formatDistance(o.gapM)}` : ''}`,
+    text: `${o.reversed ? o.line.to : o.line.from} → ${o.reversed ? o.line.from : o.line.to}${o.gapM !== null ? t('option.gap', { dist: formatDistance(o.gapM) }) : ''}`,
     km: formatKm(o.line.lengthM),
     pick: () => addOption(o),
   });
@@ -212,7 +215,7 @@ export function App() {
 
   const startEdit = (c: Course) => {
     if (c.status === 'Completed') return;
-    if (draft && draft.editingId !== c.id && draft.legs.length > 0 && !confirm('Du har ett osparat utkast. Förkasta det och redigera den här banan?')) return;
+    if (draft && draft.editingId !== c.id && draft.legs.length > 0 && !confirm(t('confirm.discardOther'))) return;
     if (draft?.editingId !== c.id) setDraft({ name: c.name, legs: c.legs, editingId: c.id });
     setChooser(null);
     setMode('build');
@@ -225,7 +228,7 @@ export function App() {
   };
 
   const discardDraft = () => {
-    if (legs.length > 0 && !confirm('Förkasta utkastet? Det går inte att ångra.')) return;
+    if (legs.length > 0 && !confirm(t('confirm.discardDraft'))) return;
     setDraft(null);
     closeBuild();
   };
@@ -238,7 +241,7 @@ export function App() {
       const existing = courses.find((c) => c.id === draft.editingId);
       if (!existing || existing.status === 'Completed') {
         setSaving(false);
-        setToast('Banan finns inte längre eller är genomförd. Ändringarna sparades inte.');
+        setToast(t('toast.courseGoneUnsaved'));
         return;
       }
       const updated: Course = { ...existing, name: draft.name.trim() || existing.name, legs: draft.legs, updatedAt: now };
@@ -254,7 +257,7 @@ export function App() {
     }
     const course: Course = {
       id: crypto.randomUUID(),
-      name: draft.name.trim() || `Bana ${courses.length + 1}`,
+      name: draft.name.trim() || t('course.defaultName', { n: courses.length + 1 }),
       status: 'NotCompleted',
       createdAt: now,
       updatedAt: now,
@@ -272,7 +275,7 @@ export function App() {
   };
 
   const openSplit = (at: number) => {
-    const base = draft?.name.trim() || 'Bana';
+    const base = draft?.name.trim() || t('course.baseName');
     setSplit({ at, name1: `${base} 1`, name2: `${base} 2` });
   };
 
@@ -280,7 +283,7 @@ export function App() {
     if (!split || !draft?.editingId) return;
     const existing = courses.find((c) => c.id === draft.editingId);
     if (!existing || existing.status === 'Completed') {
-      setToast('Banan finns inte längre eller är genomförd.');
+      setToast(t('toast.courseGone'));
       setSplit(null);
       return;
     }
@@ -305,16 +308,15 @@ export function App() {
   const toggleComplete = async (c: Course) => {
     const completing = c.status !== 'Completed';
     const msg = completing
-      ? `Markera "${c.name}" som genomförd? Alla dess linjer räknas då som genomförda.`
-      : `Markera "${c.name}" som ej genomförd? Dess linjer räknas då som planerade men ej genomförda.`;
+      ? t('confirm.complete', { name: c.name })
+      : t('confirm.uncomplete', { name: c.name });
     if (!confirm(msg)) return;
     const now = new Date().toISOString();
     await commit(courses.map((x) => (x.id === c.id ? { ...x, status: completing ? 'Completed' : 'NotCompleted', completedAt: completing ? now : null, updatedAt: now } : x)));
   };
 
   const deleteCourse = async (c: Course) => {
-    const extra = c.status === 'Completed' ? ' Banan är genomförd, så linjerna blir ej planerade igen.' : ' Dess linjer blir ej planerade.';
-    if (!confirm(`Ta bort "${c.name}"?${extra}`)) return;
+    if (!confirm(t(c.status === 'Completed' ? 'confirm.deleteDone' : 'confirm.deleteOpen', { name: c.name }))) return;
     if (await commit(courses.filter((x) => x.id !== c.id))) setSelectedCourseId(null);
   };
 
@@ -374,34 +376,37 @@ export function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>Busslöpning Göteborg</h1>
+        <h1>{t('app.title')}</h1>
         {mode !== 'build' && (
           <>
             <button aria-pressed={mode === 'browse'} onClick={() => switchMode('browse')}>
-              Karta
+              {t('nav.map')}
             </button>
             <button aria-pressed={mode === 'plan'} onClick={() => switchMode('plan')}>
-              Planera
+              {t('nav.plan')}
             </button>
           </>
         )}
         <button aria-pressed={showFilters} onClick={() => setShowFilters((s) => !s)}>
-          Filter
+          {t('nav.filter')}
+        </button>
+        <button aria-label={t('nav.settings')} onClick={() => setShowSettings(true)}>
+          ⚙
         </button>
       </header>
       <main className="main">
         {error && !dataset ? (
           <div className="status">
             <div>
-              <p>Kunde inte hämta linjedata.</p>
+              <p>{t('load.error')}</p>
               <p className="muted">{error}</p>
               <button className="chip" onClick={() => location.reload()}>
-                Försök igen
+                {t('load.retry')}
               </button>
             </div>
           </div>
         ) : !dataset ? (
-          <div className="status">Laddar linjer…</div>
+          <div className="status">{t('load.loading')}</div>
         ) : (
           <MapView layers={layers} markers={markers} tappable={tappable} fit={fit} onTap={onTap} />
         )}
@@ -425,10 +430,10 @@ export function App() {
         {noticeOpen && mode !== 'build' && (
           <div className="notice" role="note">
             <span>
-              Linjerna visar bussens väg och är bara en referens. Alla vägar, tunnlar och bussleder går inte att springa på.
-              {offline && ' Du är offline – visar sparad data.'}
+              {t('notice.text')}
+              {offline && t('notice.offline')}
             </span>
-            <button aria-label="Stäng" onClick={() => setNoticeOpen(false)}>
+            <button aria-label={t('common.close')} onClick={() => setNoticeOpen(false)}>
               ×
             </button>
           </div>
@@ -455,8 +460,8 @@ export function App() {
         )}
 
         {chooser && (
-          <div className="chooser" role="dialog" aria-label="Välj linje">
-            <p className="muted">Flera alternativ här – välj ett:</p>
+          <div className="chooser" role="dialog" aria-label={t('chooser.aria')}>
+            <p className="muted">{t('chooser.title')}</p>
             <ul className="list">
               {chooser.map((c) => (
                 <li key={c.id}>
@@ -469,43 +474,43 @@ export function App() {
               ))}
             </ul>
             <button className="chip" onClick={() => setChooser(null)}>
-              Stäng
+              {t('common.close')}
             </button>
           </div>
         )}
 
         {dataset && (
-          <section className={`sheet ${mode}`} aria-label={mode === 'build' ? 'Bygg bana' : mode === 'plan' ? 'Banor' : 'Linjer'}>
+          <section className={`sheet ${mode}`} aria-label={mode === 'build' ? t('sheet.build') : mode === 'plan' ? t('sheet.plan') : t('sheet.browse')}>
             <div className="sheet-handle" />
             <div className="sheet-body">
               {showFilters && (
                 <div className="filters">
-                  <div className="chips" role="group" aria-label="Kategori">
+                  <div className="chips" role="group" aria-label={t('filter.category')}>
                     {(['stadsbuss', 'stombuss', 'all'] as const).map((c) => (
                       <button key={c} className="chip" aria-pressed={filters.category === c} onClick={() => setFilters((f) => ({ ...f, category: c }))}>
-                        {c === 'all' ? 'Alla' : categoryLabels[c as Category]}
+                        {c === 'all' ? t('filter.all') : categoryLabel(c as Category)}
                       </button>
                     ))}
                   </div>
                   {mode !== 'build' && (
-                    <div className="chips" role="group" aria-label="Status">
+                    <div className="chips" role="group" aria-label={t('filter.status')}>
                       {STATUS_FILTERS.map((s) => (
                         <button key={s} className="chip" aria-pressed={filters.status === s} onClick={() => setFilters((f) => ({ ...f, status: s }))}>
-                          {statusFilterLabels[s]}
+                          {statusFilterLabel(s)}
                         </button>
                       ))}
                     </div>
                   )}
-                  <div className="chips" role="group" aria-label="Egenskaper">
+                  <div className="chips" role="group" aria-label={t('filter.tags')}>
                     {ALL_TAGS.map((t) => (
                       <button key={t} className="chip" aria-pressed={filters.tags.includes(t)} onClick={() => toggleTag(t)}>
-                        {tagLabels[t]}
+                        {tagLabel(t)}
                       </button>
                     ))}
                   </div>
                   <div className="field">
-                    <input inputMode="decimal" placeholder="Min km" aria-label="Minsta sträcka i km" value={filters.minKm ?? ''} onChange={(e) => setFilters((f) => ({ ...f, minKm: num(e.target.value) }))} />
-                    <input inputMode="decimal" placeholder="Max km" aria-label="Största sträcka i km" value={filters.maxKm ?? ''} onChange={(e) => setFilters((f) => ({ ...f, maxKm: num(e.target.value) }))} />
+                    <input inputMode="decimal" placeholder={t('filter.minKm')} aria-label={t('filter.minKmAria')} value={filters.minKm ?? ''} onChange={(e) => setFilters((f) => ({ ...f, minKm: num(e.target.value) }))} />
+                    <input inputMode="decimal" placeholder={t('filter.maxKm')} aria-label={t('filter.maxKmAria')} value={filters.maxKm ?? ''} onChange={(e) => setFilters((f) => ({ ...f, maxKm: num(e.target.value) }))} />
                   </div>
                 </div>
               )}
@@ -546,10 +551,10 @@ export function App() {
                 <>
                   {selected && <LineCard line={selected} info={routeInfo(selected.key, courses)} onClose={() => setSelectedKey(null)} />}
                   <div className="field">
-                    <input type="search" placeholder="Sök linje eller hållplats" aria-label="Sök linje eller hållplats" value={query} onChange={(e) => setQuery(e.target.value)} />
+                    <input type="search" placeholder={t('search.placeholder')} aria-label={t('search.placeholder')} value={query} onChange={(e) => setQuery(e.target.value)} />
                   </div>
                   <p className="muted">
-                    {listed.length} av {dataset.lines.length} linjer · data {dataset.feedVersion}
+                    {t('list.count', { shown: listed.length, total: dataset.lines.length, version: dataset.feedVersion })}
                   </p>
                   <ul className="list">
                     {listed.map((l) => {
@@ -557,11 +562,11 @@ export function App() {
                       return (
                         <li key={l.key}>
                           <button onClick={() => pickLine(l)} aria-current={l.key === selectedKey}>
-                            <span className="badge">{l.label}</span>
+                            <span className="badge">{lineLabel(l)}</span>
                             <span>
                               {l.from} → {l.to}
                               <br />
-                              <span className="sub">{[st === 'Completed' ? '✓ Genomförd' : st === 'NotCompleted' ? 'Planerad' : '', ...l.tags.map((t) => tagLabels[t])].filter(Boolean).join(' · ')}</span>
+                              <span className="sub">{[st === 'Completed' ? t('list.completed') : st === 'NotCompleted' ? t('list.planned') : '', ...l.tags.map((tag) => tagLabel(tag))].filter(Boolean).join(' · ')}</span>
                             </span>
                             <span className="km">{formatKm(l.lengthM)}</span>
                           </button>
@@ -571,9 +576,31 @@ export function App() {
                   </ul>
                 </>
               )}
-              {mode === 'build' && <p className="muted">Banans delsträckor: {stats.gaps.length ? `${stats.gaps.length} glapp, ${formatDistance(stats.gapM)}` : 'inga glapp'}</p>}
+              {mode === 'build' && <p className="muted">{stats.gaps.length ? tn('panel.gaps', stats.gaps.length, { dist: formatDistance(stats.gapM) }) : t('panel.gapsNone')}</p>}
             </div>
           </section>
+        )}
+        {showSettings && dataset && (
+          <div className="modal-back" onClick={() => setShowSettings(false)}>
+            <div className="modal" role="dialog" aria-modal="true" aria-label={t('settings.title')} onClick={(e) => e.stopPropagation()}>
+              <h2>{t('settings.title')}</h2>
+              <label className="field">
+                <span>{t('settings.language')}</span>
+                <select value={pref} onChange={(e) => setLangPref(e.target.value as LangPref)}>
+                  <option value="auto">{t('settings.auto')}</option>
+                  {LANGS.map((l) => (
+                    <option key={l} value={l}>
+                      {LANG_NAMES[l]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="muted">{t('settings.data', { version: dataset.feedVersion })}</p>
+              <button className="chip" onClick={() => setShowSettings(false)}>
+                {t('common.close')}
+              </button>
+            </div>
+          </div>
         )}
       </main>
     </div>

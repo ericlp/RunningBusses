@@ -67,6 +67,7 @@ button {
 .app {
   display: grid;
   grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
   height: 100%;
 }
 
@@ -85,9 +86,14 @@ button {
   font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: 0.01em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .topbar button {
+  flex: none;
   background: transparent;
   border: 0;
   color: #fff;
