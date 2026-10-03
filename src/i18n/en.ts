@@ -58,6 +58,7 @@ export const en: Dict = {
 
   'search.placeholder': 'Search route or stop',
   'list.count': '{shown} of {total} routes · data {version}',
+  'list.hideCompleted': "Hide completed",
   'list.completed': '✓ Completed',
   'list.planned': 'Planned',
 

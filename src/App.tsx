@@ -412,6 +412,10 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, dataset, visible, selected, selectedKey, selectedCourse, courses, others, legs, options, filters]);
 
+  useEffect(() => {
+    if (selectedKey) document.querySelector('.list [aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [selectedKey]);
+
   const stats = courseStats(legs);
   const activeFilters = Number(filters.category !== defaultFilters.category) + Number(filters.status !== defaultFilters.status) + filters.tags.length + Number(filters.minKm !== null || filters.maxKm !== null);
 
@@ -626,6 +630,13 @@ export function App() {
                       ))}
                     </select>
                   </div>
+                  <button
+                    className="chip check"
+                    aria-pressed={filters.status === 'incomplete' || filters.status === 'unplanned'}
+                    onClick={() => setFilters((f) => ({ ...f, status: f.status === 'incomplete' || f.status === 'unplanned' ? 'all' : 'incomplete' }))}
+                  >
+                    {t('list.hideCompleted')}
+                  </button>
                   <p className="muted">
                     {t('list.count', { shown: listed.length, total: dataset.lines.length, version: dataset.feedVersion })}
                   </p>

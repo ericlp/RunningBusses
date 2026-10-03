@@ -58,6 +58,7 @@ export const fr: Dict = {
 
   'search.placeholder': 'Rechercher une ligne ou un arrêt',
   'list.count': '{shown} sur {total} lignes · données {version}',
+  'list.hideCompleted': "Masquer les terminées",
   'list.completed': '✓ Terminée',
   'list.planned': 'Planifiée',
 

@@ -856,3 +856,18 @@ button {
   background: var(--bg);
   color: var(--text);
 }
+
+.list button[aria-current='true'] {
+  background: color-mix(in srgb, var(--vt-blue) 16%, transparent);
+  box-shadow: inset 4px 0 0 var(--vt-blue-strong);
+  padding: 6px 8px 6px 10px;
+  margin-left: -4px;
+  width: calc(100% + 8px);
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.list button[aria-current='true'] .badge {
+  outline: 3px solid var(--vt-blue);
+  outline-offset: 1px;
+}

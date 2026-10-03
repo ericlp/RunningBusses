@@ -57,6 +57,7 @@ export const sv = {
 
   'search.placeholder': 'Sök linje eller hållplats',
   'list.count': '{shown} av {total} linjer · data {version}',
+  'list.hideCompleted': "Dölj genomförda",
   'list.completed': '✓ Genomförd',
   'list.planned': 'Planerad',
 
