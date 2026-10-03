@@ -32,6 +32,16 @@ export function applyFilters(lines: Line[], f: Filters, statusOf: (key: string) 
   });
 }
 
+/** Which chips would still show something, given the other active filters. A chip that is already on stays usable. */
+export function facetAvailability(lines: Line[], f: Filters, statusOf: (key: string) => RouteStatus) {
+  const any = (g: Filters) => applyFilters(lines, g, statusOf).length > 0;
+  return {
+    category: (c: Category | 'all') => f.category === c || any({ ...f, category: c }),
+    status: (s: StatusFilter) => f.status === s || any({ ...f, status: s }),
+    tag: (tag: Tag) => f.tags.includes(tag) || any({ ...f, tags: [tag] }),
+  };
+}
+
 export function searchLines(lines: Line[], query: string): Line[] {
   const q = query.trim().toLowerCase();
   if (!q) return lines;

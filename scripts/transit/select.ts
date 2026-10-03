@@ -44,7 +44,11 @@ export function planRoutes(patterns: Pattern[], lengthDifference: number): Plann
   const base = (p: Pattern, extra: Tag[] = []): Tag[] => {
     const tags: Tag[] = [...extra];
     if (callOrdered) tags.push('call-ordered');
-    if (p.from === p.to) tags.push('loop');
+    if (p.from === p.to) {
+      // a loop is by nature one-way, so it only carries the more specific tag
+      tags.push('loop');
+      return tags.filter((t) => t !== 'one-way');
+    }
     return tags;
   };
 

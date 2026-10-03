@@ -146,9 +146,9 @@ export const fr: Dict = {
 
   'settings.title': 'Réglages',
   'settings.language': 'Langue',
-  'settings.auto': 'Automatique (langue du navigateur)',
+  'settings.auto': 'Automatique',
   'settings.theme': 'Apparence',
-  'settings.themeAuto': "Automatique (réglage de l'appareil)",
+  'settings.themeAuto': 'Automatique',
   'settings.themeLight': 'Clair',
   'settings.themeDark': 'Sombre',
   'settings.border': "Contour des lignes",

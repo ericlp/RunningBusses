@@ -23,7 +23,7 @@ import {
   type Option,
   type RouteStatus,
 } from './domain/course';
-import { applyFilters, categoryLabel, defaultFilters, formatKm, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
+import { applyFilters, categoryLabel, facetAvailability, defaultFilters, formatKm, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { BackupSection } from './components/Backup';
 import type { Key } from './i18n/sv';
@@ -417,6 +417,7 @@ export function App() {
   }, [selectedKey]);
 
   const stats = courseStats(legs);
+  const avail = useMemo(() => (dataset ? facetAvailability(dataset.lines, filters, statusOf) : null), [dataset, filters, statuses]);
   const activeFilters = Number(filters.category !== defaultFilters.category) + Number(filters.status !== defaultFilters.status) + filters.tags.length + Number(filters.minKm !== null || filters.maxKm !== null);
 
   return (
@@ -544,7 +545,7 @@ export function App() {
                     <h3>{t('filter.category')}</h3>
                     <div className="chips">
                     {(['stadsbuss', 'stombuss', 'all'] as const).map((c) => (
-                      <button key={c} className="chip radio" aria-pressed={filters.category === c} onClick={() => setFilters((f) => ({ ...f, category: f.category === c ? defaultFilters.category : c }))}>
+                      <button key={c} className="chip radio" disabled={avail ? !avail.category(c) : false} data-default={c === defaultFilters.category} aria-pressed={filters.category === c} onClick={() => setFilters((f) => ({ ...f, category: f.category === c ? defaultFilters.category : c }))}>
                         {c === 'all' ? t('filter.all') : categoryLabel(c as Category)}
                       </button>
                     ))}
@@ -555,7 +556,7 @@ export function App() {
                     <h3>{t('filter.status')}</h3>
                     <div className="chips">
                       {STATUS_FILTERS.map((s) => (
-                        <button key={s} className="chip radio" aria-pressed={filters.status === s} onClick={() => setFilters((f) => ({ ...f, status: f.status === s ? defaultFilters.status : s }))}>
+                        <button key={s} className="chip radio" disabled={avail ? !avail.status(s) : false} data-default={s === defaultFilters.status} aria-pressed={filters.status === s} onClick={() => setFilters((f) => ({ ...f, status: f.status === s ? defaultFilters.status : s }))}>
                           {statusFilterLabel(s)}
                         </button>
                       ))}
@@ -566,7 +567,7 @@ export function App() {
                     <h3>{t('filter.tags')}</h3>
                     <div className="chips">
                     {ALL_TAGS.map((t) => (
-                      <button key={t} className="chip check" aria-pressed={filters.tags.includes(t)} onClick={() => toggleTag(t)}>
+                      <button key={t} className="chip check" disabled={avail ? !avail.tag(t) : false} aria-pressed={filters.tags.includes(t)} onClick={() => toggleTag(t)}>
                         {tagLabel(t)}
                       </button>
                     ))}

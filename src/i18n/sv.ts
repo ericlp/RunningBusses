@@ -145,9 +145,9 @@ export const sv = {
 
   'settings.title': 'Inställningar',
   'settings.language': 'Språk',
-  'settings.auto': 'Automatiskt (webbläsarens språk)',
+  'settings.auto': 'Automatiskt',
   'settings.theme': 'Utseende',
-  'settings.themeAuto': 'Automatiskt (enhetens inställning)',
+  'settings.themeAuto': 'Automatiskt',
   'settings.themeLight': 'Ljust',
   'settings.themeDark': 'Mörkt',
   'settings.border': "Linjekant",

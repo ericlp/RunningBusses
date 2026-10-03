@@ -59,9 +59,10 @@ describe('planRoutes', () => {
     expect(r).toHaveLength(2);
   });
 
-  it('tags one-way loops and call-ordered lines', () => {
+  it('tags loops (without one-way) and call-ordered lines', () => {
     const r = planRoutes([pat({ direction: '1', from: 'X', to: 'X', callOrdered: true })], 0.12);
-    expect(r[0].tags).toEqual(expect.arrayContaining(['one-way', 'loop', 'call-ordered']));
+    expect(r[0].tags).toEqual(expect.arrayContaining(['loop', 'call-ordered']));
+    expect(r[0].tags).not.toContain('one-way');
   });
 
   it('prefers ordinary service over call-ordered for the path', () => {
