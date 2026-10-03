@@ -1,5 +1,6 @@
 :root {
   --vt-blue: #009ddb;
+  --vt-blue-strong: #006f9b; /* white text on this passes WCAG AA (5.7:1); the brighter brand blue does not */
   --vt-dark: #003f58;
   --bg: #f7f7fa;
   --surface: #ffffff;
@@ -49,6 +50,7 @@ body {
 button,
 input,
 select {
+  min-height: 44px;
   font: inherit;
   color: inherit;
 }
@@ -102,7 +104,7 @@ button {
 }
 
 .topbar button[aria-pressed='true'] {
-  background: var(--vt-blue);
+  background: var(--vt-blue-strong);
 }
 
 .main {
@@ -201,7 +203,7 @@ button {
   height: 36px;
   padding: 0 10px;
   border-radius: 8px;
-  background: var(--vt-blue);
+  background: var(--vt-blue-strong);
   color: #fff;
   font-weight: 800;
   font-size: 1.1rem;
@@ -240,15 +242,15 @@ button {
 
 .chip {
   padding: 0 12px;
-  min-height: 36px;
-  border-radius: 18px;
+  min-height: 44px;
+  border-radius: 22px;
   border: 1px solid var(--border);
   background: transparent;
 }
 
 .chip[aria-pressed='true'] {
-  background: var(--vt-blue);
-  border-color: var(--vt-blue);
+  background: var(--vt-blue-strong);
+  border-color: var(--vt-blue-strong);
   color: #fff;
 }
 
@@ -353,7 +355,7 @@ button {
   width: 100%;
   border: 0;
   border-radius: 10px;
-  background: var(--vt-blue);
+  background: var(--vt-blue-strong);
   color: #fff;
   font-weight: 800;
   padding: 0 16px;

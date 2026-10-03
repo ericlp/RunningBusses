@@ -1,0 +1,43 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch();
+const errs = [];
+const fail = (m) => { console.log('FAIL', m); process.exitCode = 1; };
+for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { width: 1280, height: 800 }]]) {
+  const ctx = await b.newContext({ viewport: vp, locale: 'sv-SE' });
+  const p = await ctx.newPage();
+  p.on('pageerror', (e) => errs.push(e.message));
+  await p.goto('http://localhost:4173/');
+  await p.waitForSelector('.list button');
+  await p.click('text=Planera');
+  await p.click('text=Skapa bana');
+  await p.waitForSelector('.strip');
+  // first leg: pick the first option, then the first suggested continuation
+  await p.click('.list button >> nth=0');
+  await p.waitForTimeout(300);
+  const nextText = await p.textContent('.sheet-body p.muted');
+  console.log(name, 'after 1:', nextText);
+  const n = await p.locator('.list button').count();
+  if (n > 0) await p.click('.list button >> nth=0');
+  await p.waitForTimeout(500);
+  await p.screenshot({ path: `.cache/${name}-build.png` });
+  await p.click('.strip >> text=Spara');
+  await p.waitForSelector('.course');
+  await p.screenshot({ path: `.cache/${name}-plan.png` });
+  const total = await p.textContent('.course .total');
+  console.log(name, 'saved course total:', total);
+  await p.reload();
+  await p.click('text=Planera');
+  await p.waitForSelector('.course');
+  console.log(name, 'persisted after reload:', await p.locator('.course').count());
+  p.once('dialog', (d) => d.accept());
+  await p.click('.course-main');
+  await p.click('text=Markera som genomförd');
+  await p.waitForSelector('.status-Completed');
+  await p.click('text=Karta');
+  await p.waitForSelector('.list button');
+  console.log(name, 'completed in list:', await p.locator('.list .sub:has-text("Genomförd")').count());
+  console.log(name, 'overflowX', await p.evaluate(() => document.documentElement.scrollWidth > innerWidth));
+  await ctx.close();
+}
+console.log('errors', errs);
+await b.close();

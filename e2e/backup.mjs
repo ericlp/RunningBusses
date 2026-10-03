@@ -1,0 +1,43 @@
+import { chromium } from 'playwright';
+import fs from 'fs';
+const b = await chromium.launch();
+const ctx = await b.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 }, acceptDownloads: true });
+const p = await ctx.newPage();
+let fails = 0; const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
+await p.goto('http://localhost:4173/'); await p.waitForSelector('.badge');
+await p.click('text=Planera'); await p.click('text=Skapa bana');
+await p.click('.sheet .list button >> nth=0');
+await p.waitForTimeout(300);
+const first = p.locator('.sheet .list button').first(); 
+if (await p.locator('.sheet .list button').count()) await first.click().catch(()=>{});
+await p.click('button:has-text("Spara")'); await p.waitForTimeout(500);
+await p.click('[aria-label="Inställningar"]');
+const [dl] = await Promise.all([p.waitForEvent('download'), p.click('button:text-is("Exportera")')]);
+await dl.saveAs('/tmp/rb-bk.json');
+const data = JSON.parse(fs.readFileSync('/tmp/rb-bk.json', 'utf8'));
+ok(data.courses.length === 1, 'export has 1 course');
+// merge of identical copy
+await p.setInputFiles('input[type=file]', '/tmp/rb-bk.json');
+await p.waitForSelector('.import-preview');
+ok(await p.locator('.import-preview').innerText().then(t => t.includes('1 bana')), 'preview shows 1 bana');
+ok(await p.locator('.conflict').count() === 0, 'identical = no conflict');
+ok(!(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)), 'no overflow');
+// changed same id -> conflict
+data.courses[0].name = 'Ändrad'; fs.writeFileSync('/tmp/rb-bk2.json', JSON.stringify(data));
+await p.setInputFiles('input[type=file]', '/tmp/rb-bk2.json');
+await p.waitForSelector('.conflict');
+ok(await p.locator('button:text-is("Importera")').isDisabled().catch(()=>true), 'apply disabled until resolved');
+await p.click('text=Använd importerad');
+await p.click('button.primary:has-text("Importera"), .chip.primary:has-text("Importera")'); await p.waitForSelector('text=Importen är klar.');
+await p.click('button:text-is("Stäng")'); await p.click('text=Planera').catch(()=>{});
+ok(await p.locator('.course-main:has-text("Ändrad")').count() === 1, 'imported name applied');
+// replace with garbage
+fs.writeFileSync('/tmp/rb-bad.json', '{"format":"x"}');
+await p.click('[aria-label="Inställningar"]');
+await p.setInputFiles('input[type=file]', '/tmp/rb-bad.json');
+await p.waitForSelector('[role=status]');
+ok((await p.locator('[role=status]').innerText()).includes('ingen säkerhetskopia'), 'bad file rejected');
+// recovery exists
+const [d2] = await Promise.all([p.waitForEvent('download'), p.click('text=Hämta kopia')]);
+ok(!!d2, 'recovery download');
+await b.close(); process.exit(fails);
