@@ -25,6 +25,7 @@ import {
 } from './domain/course';
 import { applyFilters, categoryLabel, facetAvailability, defaultFilters, formatKm, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
+import { courseToGpx, gpxFileName } from './domain/gpx';
 import { Tour, type TourStep } from './components/Tour';
 import { BackupSection } from './components/Backup';
 import type { Key } from './i18n/sv';
@@ -387,6 +388,15 @@ export function App() {
     if (await commit(courses.map((x) => (x.id === c.id ? { ...x, status: 'Completed', completedAt: date || today(), pinned: undefined, updatedAt: now } : x)))) setCompleting(null);
   };
 
+  const exportGpx = (c: Course) => {
+    const url = URL.createObjectURL(new Blob([courseToGpx(c)], { type: 'application/gpx+xml' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = gpxFileName(c);
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const deleteCourse = async (c: Course) => {
     if (!confirm(t(c.status === 'Completed' ? 'confirm.deleteDone' : 'confirm.deleteOpen', { name: c.name }))) return;
     if (await commit(courses.filter((x) => x.id !== c.id))) setSelectedCourseId(null);
@@ -664,6 +674,7 @@ export function App() {
                   onToggleComplete={toggleComplete}
                   onDelete={deleteCourse}
                   onRefresh={refreshCourse}
+                  onExportGpx={exportGpx}
                   lines={dataset?.lines ?? []}
                 />
               )}

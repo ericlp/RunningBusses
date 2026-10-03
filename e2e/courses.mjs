@@ -30,6 +30,8 @@ for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { 
   await p.waitForSelector('.course');
   console.log(name, 'persisted after reload:', await p.locator('.course').count());
   await p.click('.course-main');
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.click('text=Exportera GPX')]);
+  console.log(name, 'gpx file:', dl.suggestedFilename());
   await p.click('text=Markera som genomförd');
   await p.click('.modal button.primary');
   await p.waitForSelector('.status-Completed');

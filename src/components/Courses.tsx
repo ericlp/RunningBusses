@@ -69,11 +69,12 @@ interface CourseListProps {
   onToggleComplete: (c: Course) => void;
   onDelete: (c: Course) => void;
   onRefresh: (c: Course) => void;
+  onExportGpx: (c: Course) => void;
   /** Line keys currently in the dataset, to warn about lines that have disappeared. */
   lines: Line[];
 }
 
-export function CourseList({ courses, lines, onRefresh, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
+export function CourseList({ courses, lines, onRefresh, onExportGpx, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
   const editing = courses.find((c) => c.id === draftEditingId);
   return (
     <div>
@@ -127,6 +128,9 @@ export function CourseList({ courses, lines, onRefresh, selectedId, draftLegs, d
                         {t('courses.edit')}
                       </button>
                     )}
+                    <button className="chip" onClick={() => onExportGpx(c)}>
+                      {t('courses.gpx')}
+                    </button>
                     <button className="chip" onClick={() => onToggleComplete(c)}>
                       {c.status === 'Completed' ? t('courses.markUndone') : t('courses.markDone')}
                     </button>
