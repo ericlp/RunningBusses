@@ -77,9 +77,18 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false);
   useEffect(() => {
     if (!showSettings) return;
+    setShowFilters(false);
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setShowSettings(false);
+    const onPop = () => setShowSettings(false);
+    history.pushState({ rbSettings: true }, '');
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('popstate', onPop);
+      // closed by other means: drop the entry we added so Back doesn't need an extra press
+      if (history.state?.rbSettings) history.back();
+    };
   }, [showSettings]);
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [offline, setOffline] = useState(false);
