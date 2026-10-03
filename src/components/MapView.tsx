@@ -126,8 +126,12 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
     () =>
       overlap === 'stack'
         ? null
-        : splitByOverlap(layers.filter((l) => l.key && RAINBOW_TONES.includes(l.tone)).map((l) => ({ key: l.key!, coords: l.coords }))),
-    [layers, overlap],
+        : splitByOverlap(
+            layers.filter((l) => l.key && RAINBOW_TONES.includes(l.tone)).map((l) => ({ key: l.key!, coords: l.coords })),
+            // lines closer than ~4 px would visibly touch, so the sharing distance follows the zoom
+            Math.min(40, Math.max(10, 4 * ((40075016 * Math.cos((57.7 * Math.PI) / 180)) / (256 * 2 ** zoom)))),
+          ),
+    [layers, overlap, zoom],
   );
 
   useEffect(() => {
@@ -162,13 +166,13 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
       const weight = (l.weight ?? 3) * zoomScale(zoom);
       const outline = BORDER_PX[border] + (l.casing ? 2 : 0);
       const opacity = l.opacity ?? 0.9;
-      const parts = runs && l.key && runs.has(l.key) ? runs.get(l.key)! : [{ coords: l.coords, group: [l.key ?? ''] }];
+      const parts = runs && l.key && runs.has(l.key) ? runs.get(l.key)! : [{ coords: l.coords, group: [l.key ?? ''], flip: false }];
       for (const part of parts) {
         const n = part.group.length;
         const i = part.group.indexOf(l.key!);
         const side = overlap === 'side' && n > 1;
         const stripe = overlap === 'stripes' && n > 1;
-        const pts = side ? shifted(part.coords, (i - (n - 1) / 2) * (weight + Math.min(2, BORDER_PX[border]))) : toLatLngs(part.coords);
+        const pts = side ? shifted(part.coords, (part.flip ? -1 : 1) * (i - (n - 1) / 2) * (weight + Math.min(2, BORDER_PX[border]))) : toLatLngs(part.coords);
         const dash = Math.max(8, weight * 1.6);
         pieces.push({
           pts,

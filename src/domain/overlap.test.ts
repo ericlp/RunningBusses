@@ -25,3 +25,28 @@ describe('splitByOverlap', () => {
     expect(runs.get('a')!.every((r) => r.group.length === 1)).toBe(true);
   });
 });
+
+describe('splitByOverlap direction and sparse roads', () => {
+  it('flags the line that runs against the first one', () => {
+    const a = { key: 'a', coords: road(57.7, 11.9, 11.95) };
+    const b = { key: 'b', coords: road(57.7, 11.9, 11.95).reverse() };
+    const runs = splitByOverlap([a, b]);
+    expect(runs.get('a')!.every((r) => !r.flip)).toBe(true);
+    expect(runs.get('b')!.some((r) => r.flip)).toBe(true);
+  });
+
+  it('finds sharing along a long segment with no vertices in between', () => {
+    const a = { key: 'a', coords: [[11.9, 57.7], [11.96, 57.7]] as [number, number][] };
+    const b = { key: 'b', coords: road(57.7, 11.92, 11.94) };
+    const runs = splitByOverlap([a, b]);
+    expect(runs.get('a')!.some((r) => r.group.join('+') === 'a+b')).toBe(true);
+    expect(runs.get('a')!.some((r) => r.group.length === 1)).toBe(true);
+  });
+
+  it('uses a wider sharing distance when asked', () => {
+    const a = { key: 'a', coords: road(57.7, 11.9, 11.95) };
+    const b = { key: 'b', coords: road(57.70025, 11.9, 11.95) }; // ~28 m apart
+    expect(splitByOverlap([a, b], 10).get('a')!.every((r) => r.group.length === 1)).toBe(true);
+    expect(splitByOverlap([a, b], 30).get('a')!.some((r) => r.group.length === 2)).toBe(true);
+  });
+});
