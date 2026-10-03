@@ -40,7 +40,8 @@ let mapStyle = read(MAP_KEY, MAP_STYLES, 'soft');
 let border = read(BORDER_KEY, BORDERS, 'normal');
 let lineColors = read(COLORS_KEY, LINE_COLORS, 'status');
 let panSpeed = read(PAN_KEY, PAN_SPEEDS, 'normal');
-let overlap = read(OVERLAP_KEY, OVERLAPS, 'side');
+// small screens default to stripes: side-by-side lines take too much room there
+let overlap = read(OVERLAP_KEY, OVERLAPS, window.matchMedia('(max-width: 640px)').matches ? 'stripes' : 'side');
 let showLocation = localStorage.getItem('rb.location') === 'on';
 let snapshot = '';
 const listeners = new Set<() => void>();
