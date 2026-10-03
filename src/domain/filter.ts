@@ -1,17 +1,28 @@
+import type { RouteStatus } from './course';
 import type { Category, Line, Tag } from './types';
+
+/** `incomplete` means not completed, which includes lines that are not planned. */
+export type StatusFilter = 'all' | 'unplanned' | 'incomplete' | 'completed';
 
 export interface Filters {
   category: Category | 'all';
+  status: StatusFilter;
   /** Show only lines with at least one of these tags; empty means no tag filter. */
   tags: Tag[];
   minKm: number | null;
   maxKm: number | null;
 }
 
-export const defaultFilters: Filters = { category: 'stadsbuss', tags: [], minKm: null, maxKm: null };
+export const defaultFilters: Filters = { category: 'stadsbuss', status: 'all', tags: [], minKm: null, maxKm: null };
 
-export function applyFilters(lines: Line[], f: Filters): Line[] {
+export function applyFilters(lines: Line[], f: Filters, statusOf: (key: string) => RouteStatus = () => 'NotPlanned'): Line[] {
   return lines.filter((l) => {
+    if (f.status !== 'all') {
+      const st = statusOf(l.key);
+      if (f.status === 'unplanned' && st !== 'NotPlanned') return false;
+      if (f.status === 'incomplete' && st === 'Completed') return false;
+      if (f.status === 'completed' && st !== 'Completed') return false;
+    }
     if (f.category !== 'all' && l.category !== f.category) return false;
     if (f.tags.length && !f.tags.some((t) => l.tags.includes(t))) return false;
     if (f.minKm !== null && l.lengthM < f.minKm * 1000) return false;
@@ -50,4 +61,11 @@ export const tagLabels: Record<Tag, string> = {
 export const categoryLabels: Record<Category, string> = {
   stadsbuss: 'Stadsbuss',
   stombuss: 'Stombuss',
+};
+
+export const statusFilterLabels: Record<StatusFilter, string> = {
+  all: 'Alla',
+  unplanned: 'Ej planerade',
+  incomplete: 'Ej genomförda (inkl. ej planerade)',
+  completed: 'Genomförda',
 };

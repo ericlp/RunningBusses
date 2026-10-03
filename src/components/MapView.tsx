@@ -3,9 +3,35 @@ import L from 'leaflet';
 import type { Line } from '../domain/types';
 import { linesNear } from '../domain/hit';
 
+export type Tone = 'base' | 'planned' | 'done' | 'highlight' | 'candidate' | 'connector';
+
+export interface MapLayer {
+  coords: [number, number][];
+  tone: Tone;
+  weight?: number;
+  opacity?: number;
+  dashed?: boolean;
+  casing?: boolean;
+}
+
+export interface MapMarker {
+  /** [lon, lat] */
+  at: [number, number];
+  color: 'start' | 'end';
+}
+
+export interface Fit {
+  coords: [number, number][];
+  /** Changing the sequence number triggers a new zoom, even for the same coordinates. */
+  seq: number;
+  topInset: number;
+}
+
 interface Props {
-  lines: Line[];
-  selected: Line | null;
+  layers: MapLayer[];
+  markers: MapMarker[];
+  tappable: Line[];
+  fit: Fit | null;
   onTap: (hits: Line[]) => void;
 }
 
@@ -13,25 +39,27 @@ const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const GOTHENBURG: L.LatLngExpression = [57.7089, 11.9746];
 
-const cssVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-const toLatLngs = (l: Line) => l.coordinates.map(([lon, lat]) => [lat, lon] as L.LatLngTuple);
+const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const toneColor = (t: Tone): string =>
+  ({ base: css('--line'), planned: css('--vt-blue'), done: '#2e9e4f', highlight: css('--highlight'), candidate: '#f08c00', connector: '#d6342c' })[t];
+const toLatLngs = (c: [number, number][]) => c.map(([lon, lat]) => [lat, lon] as L.LatLngTuple);
 
-export function MapView({ lines, selected, onTap }: Props) {
+export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
-  const layers = useRef<L.LayerGroup | null>(null);
-  const latest = useRef({ lines, onTap });
-  latest.current = { lines, onTap };
+  const group = useRef<L.LayerGroup | null>(null);
+  const latest = useRef({ tappable, onTap });
+  latest.current = { tappable, onTap };
 
   useEffect(() => {
     const m = L.map(el.current!, { center: GOTHENBURG, zoom: 12, zoomControl: false, preferCanvas: true });
     L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19 }).addTo(m);
     L.control.zoom({ position: 'bottomright' }).addTo(m);
-    layers.current = L.layerGroup().addTo(m);
+    group.current = L.layerGroup().addTo(m);
     m.on('click', (e: L.LeafletMouseEvent) => {
-      // 14 px tolerance converted to metres at the tap latitude
+      // 14 px tap tolerance converted to metres at this latitude and zoom
       const mPerPx = (40075016 * Math.cos((e.latlng.lat * Math.PI) / 180)) / (256 * 2 ** m.getZoom());
-      latest.current.onTap(linesNear(latest.current.lines, e.latlng.lat, e.latlng.lng, 14 * mPerPx));
+      latest.current.onTap(linesNear(latest.current.tappable, e.latlng.lat, e.latlng.lng, 14 * mPerPx));
     });
     map.current = m;
     return () => {
@@ -41,34 +69,37 @@ export function MapView({ lines, selected, onTap }: Props) {
   }, []);
 
   useEffect(() => {
-    const g = layers.current!;
+    const g = group.current!;
     g.clearLayers();
-    const base = cssVar('--line');
-    const hi = cssVar('--highlight');
-    const dim = selected !== null;
-    for (const l of lines) {
-      if (l.key === selected?.key) continue;
-      L.polyline(toLatLngs(l), { color: base, weight: 3, opacity: dim ? 0.45 : 0.85, interactive: false }).addTo(g);
+    for (const l of layers) {
+      const pts = toLatLngs(l.coords);
+      const color = toneColor(l.tone);
+      const weight = l.weight ?? 3;
+      if (l.casing) L.polyline(pts, { color: '#fff', weight: weight + 4, opacity: 0.9, interactive: false }).addTo(g);
+      L.polyline(pts, { color, weight, opacity: l.opacity ?? 0.9, dashArray: l.dashed ? '8 8' : undefined, interactive: false }).addTo(g);
     }
-    if (selected) {
-      const pts = toLatLngs(selected);
-      L.polyline(pts, { color: '#fff', weight: 10, opacity: 0.9, interactive: false }).addTo(g);
-      L.polyline(pts, { color: hi, weight: 6, interactive: false }).addTo(g);
-      L.circleMarker(pts[0], { radius: 8, color: '#fff', weight: 3, fillColor: '#2e9e4f', fillOpacity: 1 }).addTo(g);
-      L.circleMarker(pts[pts.length - 1], { radius: 8, color: '#fff', weight: 3, fillColor: '#d6342c', fillOpacity: 1 }).addTo(g);
+    for (const mk of markers) {
+      L.circleMarker([mk.at[1], mk.at[0]], {
+        radius: 8,
+        color: '#fff',
+        weight: 3,
+        fillColor: mk.color === 'start' ? '#2e9e4f' : '#d6342c',
+        fillOpacity: 1,
+        interactive: false,
+      }).addTo(g);
     }
-  }, [lines, selected]);
+  }, [layers, markers]);
 
   useEffect(() => {
-    if (selected && map.current) {
-      const wide = window.innerWidth >= 900;
-      map.current.fitBounds(L.latLngBounds(toLatLngs(selected)), {
-        paddingTopLeft: [wide ? 410 : 20, wide ? 80 : 70],
-        paddingBottomRight: [20, wide ? 20 : 300],
-        maxZoom: 15,
-      });
-    }
-  }, [selected]);
+    if (!fit || !map.current || fit.coords.length === 0) return;
+    const wide = window.innerWidth >= 900;
+    map.current.fitBounds(L.latLngBounds(toLatLngs(fit.coords)), {
+      paddingTopLeft: [wide ? 410 : 20, fit.topInset],
+      paddingBottomRight: [20, wide ? 20 : 300],
+      maxZoom: 15,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fit?.seq]);
 
   return <div className="map" ref={el} />;
 }

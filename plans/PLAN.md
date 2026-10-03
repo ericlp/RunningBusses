@@ -125,3 +125,4 @@ Deliberately postponed: multi-tab write protection and anything else not needed 
 Phase 0 has been done and building starts with Phase 1; this file is now frozen except for corrections. Each change gets `plans/NNN-title.md`, linked here.
 
 - [001 – Phase 0 data findings](001-phase0-data-findings.md): feed structure, the 49 lines, direction-specific routes, categories and tags.
+- [002 – Phase 2: courses](002-phase2-courses.md): what was built, manual legs, draft handling.
