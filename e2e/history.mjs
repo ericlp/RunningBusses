@@ -14,7 +14,8 @@ await p.waitForSelector('.course');
 
 // navigate link
 await open();
-const nav = await p.locator('.details a:text-is("Navigera till start")').getAttribute('href');
+await p.click('.details button:text-is("Navigera till start")');
+const nav = await p.locator('.details a:text-is("Google Maps")').getAttribute('href');
 ok(/google\.com\/maps\/dir\/.*destination=5\d\.\d+,1\d\.\d+/.test(nav ?? ''), 'navigate link has coordinates');
 
 // history: complete, then uncomplete (undo toast dismissed by completing flow)

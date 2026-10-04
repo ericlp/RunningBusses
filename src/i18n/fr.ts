@@ -311,4 +311,11 @@ export const fr: Dict = {
   'legend.aria': 'Légende des couleurs de ligne',
   'settings.progress': 'Comptés dans la progression',
   'settings.progressHelp': 'Les catégories prises en compte dans le panneau de progression. Au moins une doit rester sélectionnée.',
+  'nav.google': 'Google Maps',
+  'nav.vasttrafik': 'Västtrafik vers {name}',
+  'nav.copied': 'L’arrêt "{name}" est copié. Collez-le dans le champ Arrivée.',
+  'settings.navProvider': 'Naviguer vers le départ avec',
+  'settings.navAsk': 'Demander à chaque fois',
+  'settings.navGoogle': 'Google Maps',
+  'settings.navVasttrafik': 'Västtrafik',
 };

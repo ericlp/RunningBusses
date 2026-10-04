@@ -15,6 +15,8 @@ export const PAN_SPEEDS: readonly PanSpeed[] = ['off', 'fast', 'normal', 'slow']
 export const PAN_SECONDS: Record<PanSpeed, number> = { off: 0, fast: 0.6, normal: 1.4, slow: 2.6 };
 export type Overlap = 'side' | 'stripes' | 'stack';
 export const OVERLAPS: readonly Overlap[] = ['side', 'stripes', 'stack'];
+export type NavProvider = 'ask' | 'google' | 'vasttrafik';
+export const NAV_PROVIDERS: readonly NavProvider[] = ['ask', 'google', 'vasttrafik'];
 export const THEMES: readonly ThemePref[] = ['auto', 'light', 'dark'];
 export const MAP_STYLES: readonly MapStyle[] = ['standard', 'soft', 'grey'];
 
@@ -24,6 +26,7 @@ const BORDER_KEY = 'rb.border';
 const PAN_KEY = 'rb.panSpeed';
 const OVERLAP_KEY = 'rb.overlap';
 const COLORS_KEY = 'rb.lineColors';
+const NAV_KEY = 'rb.navProvider';
 
 function read<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   try {
@@ -42,6 +45,7 @@ let lineColors = read(COLORS_KEY, LINE_COLORS, 'status');
 let panSpeed = read(PAN_KEY, PAN_SPEEDS, 'normal');
 // small screens default to stripes: side-by-side lines take too much room there
 let overlap = read(OVERLAP_KEY, OVERLAPS, window.matchMedia('(max-width: 640px)').matches ? 'stripes' : 'side');
+let navProvider = read(NAV_KEY, NAV_PROVIDERS, 'ask');
 let showLocation = localStorage.getItem('rb.location') === 'on';
 let snapshot = '';
 const listeners = new Set<() => void>();
@@ -52,7 +56,7 @@ function apply() {
   const root = document.documentElement;
   root.dataset.theme = resolvedTheme();
   root.dataset.map = mapStyle;
-  snapshot = `${theme}|${mapStyle}|${border}|${lineColors}|${panSpeed}|${overlap}|${showLocation}|${resolvedTheme()}`;
+  snapshot = `${theme}|${mapStyle}|${border}|${lineColors}|${panSpeed}|${overlap}|${showLocation}|${navProvider}|${resolvedTheme()}`;
   listeners.forEach((l) => l());
 }
 media.addEventListener('change', apply);
@@ -104,6 +108,12 @@ export function setOverlap(next: Overlap) {
   apply();
 }
 
+export function setNavProvider(next: NavProvider) {
+  navProvider = next;
+  save(NAV_KEY, next);
+  apply();
+}
+
 export function setShowLocation(next: boolean) {
   showLocation = next;
   save('rb.location', next ? 'on' : 'off');
@@ -118,5 +128,5 @@ export function useAppearance() {
     },
     () => snapshot,
   );
-  return { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation, resolved: resolvedTheme() };
+  return { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation, navProvider, resolved: resolvedTheme() };
 }

@@ -36,7 +36,7 @@ import { REPO_URL, Tour, type TourStep } from './components/Tour';
 import { BackupSection } from './components/Backup';
 import { decodeShare, payloadFromHash, type ShareError, type Shared } from './domain/share';
 import type { Key } from './i18n/sv';
-import { BORDERS, LINE_COLORS, OVERLAPS, setOverlap, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setShowLocation, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type Overlap, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
+import { BORDERS, LINE_COLORS, NAV_PROVIDERS, OVERLAPS, setOverlap, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setShowLocation, setNavProvider, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type NavProvider, type Overlap, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
 import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
 import { CATEGORIES, type Category, type Dataset, type Line, type Tag } from './domain/types';
 
@@ -91,7 +91,7 @@ const initialView = viewFromHash(location.hash);
 
 export function App() {
   const { pref } = useLang();
-  const { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation } = useAppearance();
+  const { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation, navProvider } = useAppearance();
   const [showSettings, setShowSettings] = useState(false);
   const syncPayload = useRef<string | null>(initialSyncPayload);
   const deepLinked = useRef(initialView.line !== null);
@@ -1182,6 +1182,16 @@ export function App() {
                   {PAN_SPEEDS.map((v) => (
                     <option key={v} value={v}>
                       {t(`settings.pan${v[0].toUpperCase()}${v.slice(1)}` as Key)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>{t('settings.navProvider')}</span>
+                <select value={navProvider} onChange={(e) => setNavProvider(e.target.value as NavProvider)}>
+                  {NAV_PROVIDERS.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`settings.nav${v[0].toUpperCase()}${v.slice(1)}` as Key)}
                     </option>
                   ))}
                 </select>
