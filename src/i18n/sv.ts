@@ -228,11 +228,8 @@ export const sv = {
   'backup.import': 'Importera…',
   'backup.recovery': 'Hämta kopia före senaste import',
   'backup.noRecovery': 'Ingen import har gjorts än.',
-  'backup.mode': 'Importläge',
-  'backup.merge': 'Slå ihop',
-  'backup.replace': 'Ersätt allt',
-  'backup.replaceNote': 'Dina {n} banor på den här enheten ersätts. En kopia sparas först.',
-  'backup.mergeSummary': '{added} läggs till, {skipped} är redan lika eller behålls.',
+  'backup.mode': 'Hur ska banorna importeras?',
+  'backup.mergeSummary': '{added} nya, {skipped} har du redan, {conflicts} att lösa.',
   'backup.conflictSame': '"{name}" finns här men är ändrad. Vilken version vill du behålla?',
   'backup.conflictOwn': '"{name}" använder linjer som redan ingår i {local}. Bara en av banorna kan behållas.',
   'backup.keepLocal': 'Behåll min',
@@ -305,6 +302,11 @@ export const sv = {
   'stats.logCompleted': 'Genomförd',
   'stats.logUncompleted': 'Inte längre genomförd',
   'backup.previewTitle': 'Importera',
+  'backup.replaceSummary': 'Dina {n} banor tas bort och {m} importeras. En kopia sparas först.',
+  'backup.modeReplaceText': 'Dina banor tas bort och filens banor används i stället.',
+  'backup.modeReplace': 'Ersätt alla mina banor',
+  'backup.modeMergeText': 'Du behåller dina banor och får de nya tillagda.',
+  'backup.modeMerge': 'Lägg till i mina banor',
 } as const;
 
 export type Key = keyof typeof sv;

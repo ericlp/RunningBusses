@@ -22,6 +22,13 @@ await p.waitForSelector('.import-preview');
 ok(await p.locator('[role=dialog].import-preview').count() === 1 && await p.locator('.modal:not(.import-preview) .import-preview').count() === 0, 'import preview is its own dialog');
 ok(await p.locator('.import-preview').innerText().then(t => t.includes('1 bana')), 'preview shows 1 bana');
 ok(await p.locator('.conflict').count() === 0, 'identical = no conflict');
+ok(await p.locator('.import-preview .primary').count() === 1, 'exactly one primary action');
+ok(await p.locator('.import-preview input[type=radio]').count() === 2 && await p.locator('.import-preview input[type=radio]:checked + span').innerText().then(t => t.includes('Lägg till i mina banor')), 'two options, merge selected by default');
+ok(await p.locator('.import-preview .choice .muted').count() === 2, 'both options are explained');
+ok(await p.locator('.import-preview').innerText().then(t => t.includes('1 har du redan')), 'merge summary counts');
+await p.click('.import-preview .choice:has-text("Ersätt alla mina banor")');
+ok(await p.locator('.import-preview').innerText().then(t => t.includes('tas bort och 1 importeras')), 'replace summary changes');
+await p.click('.import-preview .choice:has-text("Lägg till i mina banor")');
 ok(!(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)), 'no overflow');
 // changed same id -> conflict
 data.courses[0].name = 'Ändrad'; fs.writeFileSync('/tmp/rb-bk2.json', JSON.stringify(data));

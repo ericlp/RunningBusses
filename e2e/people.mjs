@@ -45,7 +45,7 @@ ok(link.includes('#sync='), 'single course link copied');
 const ctx2 = await b.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 } });
 const q = await ctx2.newPage();
 await q.goto(link); await q.waitForSelector('.import-preview');
-ok(await q.locator('.import-preview button:text-is("Ersätt")').count() === 0, 'partial link cannot replace');
+ok(await q.locator('.import-preview input[type=radio]').count() === 0, 'partial link cannot replace');
 await q.click('.import-preview .primary'); await q.waitForSelector('text=Importen är klar.');
 await q.waitForSelector('.course');
 ok((await q.locator('.course-main').innerText()).includes('Sprungen av Anna'), 'participants arrive with the course');

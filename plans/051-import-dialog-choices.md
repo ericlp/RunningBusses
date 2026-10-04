@@ -1,6 +1,6 @@
 # 051 – Clearer merge/replace choice when importing
 
-Status: todo, design agreed.
+Status: done.
 
 In the import dialog (046) "Slå ihop" and "Ersätt" are toggle buttons that look like actions next to the real apply button, and it is unclear how they differ.
 

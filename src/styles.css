@@ -1119,3 +1119,9 @@ button {
   border: 1px solid #231f20;
   box-shadow: none;
 }
+
+.choices { display: grid; gap: 8px; margin: 8px 0; }
+.choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border: 1px solid var(--border, #c8d0d6); border-radius: 10px; cursor: pointer; }
+.choice:has(input:checked) { border-color: var(--vt-blue); box-shadow: 0 0 0 1px var(--vt-blue); }
+.choice input { margin-top: 3px; }
+.choice strong, .choice .muted { display: block; }

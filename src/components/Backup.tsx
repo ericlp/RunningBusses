@@ -173,22 +173,25 @@ export function BackupSection({ courses, people, log, radiusM, feedVersion, inco
               </div>
           <p>{fromLink ? tn('share.preview', backup.courses.length) : tn('backup.preview', backup.courses.length, { date: backup.exportedAt.slice(0, 10) })}</p>
           {skipped.length > 0 && <p role="alert">{tn('share.skipped', skipped.length, { names: skipped.map((n) => `"${n}"`).join(', ') })}</p>}
-          <div className="chips" role="group" aria-label={t('backup.mode')}>
-            <button className="chip" aria-pressed={mode === 'merge'} onClick={() => setMode('merge')}>
-              {t('backup.merge')}
-            </button>
-            {!partial && (
-              <button className="chip" aria-pressed={mode === 'replace'} onClick={() => setMode('replace')}>
-                {t('backup.replace')}
-              </button>
-            )}
-          </div>
+          {!partial && (
+            <div className="choices" role="radiogroup" aria-label={t('backup.mode')}>
+              {(['merge', 'replace'] as const).map((m) => (
+                <label className="choice" key={m}>
+                  <input type="radio" name="import-mode" checked={mode === m} onChange={() => setMode(m)} />
+                  <span>
+                    <strong>{t(m === 'merge' ? 'backup.modeMerge' : 'backup.modeReplace')}</strong>
+                    <span className="muted">{t(m === 'merge' ? 'backup.modeMergeText' : 'backup.modeReplaceText')}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
           {partial && <p className="muted">{t('share.partialNote')}</p>}
           {mode === 'replace' ? (
-            <p className="muted">{t('backup.replaceNote', { n: courses.length })}</p>
+            <p className="muted">{t('backup.replaceSummary', { n: courses.length, m: backup.courses.length })}</p>
           ) : (
             <>
-              <p className="muted">{t('backup.mergeSummary', { added: merge.added, skipped: merge.skipped })}</p>
+              <p className="muted">{t('backup.mergeSummary', { added: merge.added, skipped: merge.skipped, conflicts: merge.conflicts.length })}</p>
               {merge.conflicts.map((c) => {
                 const key = choiceKey(c.kind, c.imported.id);
                 const names = c.local.map((x) => `"${x.name}"`).join(', ');
