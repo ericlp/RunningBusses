@@ -23,8 +23,8 @@ await B.p.goto(link); await B.p.waitForSelector('.import-preview');
 ok((await B.p.locator('.import-preview').innerText()).includes('Länken innehåller 1 bana'), 'preview shows the shared course');
 ok(!link.includes('#') || !(await B.p.evaluate(() => location.hash)), 'fragment removed from the address bar');
 ok(await B.p.locator('.course-main').count() === 0, 'nothing saved before confirming');
-await B.p.click('.chip.primary:has-text("Importera")'); await B.p.waitForSelector('text=Importen är klar.');
-await B.p.click('button:text-is("Stäng")'); await B.p.click('text=Planera').catch(() => {});
+await B.p.click('.import-preview .primary'); await B.p.waitForSelector('text=Importen är klar.');
+await B.p.click('[aria-label="Stäng"]'); await B.p.click('text=Planera').catch(() => {});
 ok(await B.p.locator('.course-main').count() === 1, 'course imported after confirming');
 
 // pasting a link into the address bar of the open app

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import type { Line } from '../domain/types';
+import type { StopPoint } from '../domain/stops';
 import { linesNear } from '../domain/hit';
 import { splitByOverlap } from '../domain/overlap';
 import { BORDER_PX, PAN_SECONDS, currentPanSpeed, useAppearance } from '../appearance';
@@ -38,6 +39,8 @@ export interface Fit {
 interface Props {
   layers: MapLayer[];
   markers: MapMarker[];
+  /** Stops of the highlighted route(s); shown from a mid zoom level, named from a close one. */
+  stops: StopPoint[];
   tappable: Line[];
   fit: Fit | null;
   onTap: (hits: Line[]) => void;
@@ -47,6 +50,8 @@ const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 // Lines grow with zoom so they stay distinct from the street network
 const zoomScale = (z: number) => Math.min(2.4, Math.max(1, 1 + (z - 12) * 0.3));
+const STOP_MIN_ZOOM = 13;
+const STOP_NAME_ZOOM = 16;
 const GOTHENBURG: L.LatLngExpression = [57.7089, 11.9746];
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -62,7 +67,7 @@ function rainbow(key: string, dark: boolean): string {
 const RAINBOW_TONES: Tone[] = ['base', 'planned', 'done', 'candidate'];
 const toLatLngs = (c: [number, number][]) => c.map(([lon, lat]) => [lat, lon] as L.LatLngTuple);
 
-export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
+export function MapView({ layers, markers, stops, tappable, fit, onTap }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const group = useRef<L.LayerGroup | null>(null);
@@ -73,7 +78,8 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
 
   useEffect(() => {
     const m = L.map(el.current!, { center: GOTHENBURG, zoom: 12, zoomControl: false, renderer: L.canvas({ padding: 0.8 }) });
-    L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19 }).addTo(m);
+    // crossOrigin makes tile responses readable, so the service worker can cache them without opaque-response overhead
+    L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19, crossOrigin: true }).addTo(m);
     m.on('zoomend', () => setZoom(m.getZoom()));
     let frame = 0;
     m.on('mousemove', (e: L.LeafletMouseEvent) => {
@@ -236,6 +242,22 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
         travelled += len;
       }
     }
+    if (zoom >= STOP_MIN_ZOOM) {
+      for (const st of stops) {
+        const dot = L.circleMarker([st.at[1], st.at[0]], {
+          radius: 4.5,
+          color: resolved === 'dark' ? '#0b1a22' : '#231f20',
+          weight: 2,
+          fillColor: '#fff',
+          fillOpacity: 1,
+          bubblingMouseEvents: false,
+        });
+        // a tap or hover names the stop; close up the names stay visible
+        dot.bindTooltip(st.name, { direction: 'top', offset: [0, -6], permanent: zoom >= STOP_NAME_ZOOM, className: 'stop-label' });
+        dot.on('click', () => dot.openTooltip());
+        dot.addTo(g);
+      }
+    }
     for (const mk of markers) {
       L.circleMarker([mk.at[1], mk.at[0]], {
         radius: 8,
@@ -246,7 +268,7 @@ export function MapView({ layers, markers, tappable, fit, onTap }: Props) {
         interactive: false,
       }).addTo(g);
     }
-  }, [layers, runs, markers, zoom, resolved, border, lineColors, overlap]);
+  }, [layers, runs, markers, stops, zoom, resolved, border, lineColors, overlap]);
 
   useEffect(() => {
     if (!fit || !map.current || fit.coords.length === 0) return;

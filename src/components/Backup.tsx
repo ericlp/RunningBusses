@@ -1,17 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { choiceKey, makeBackup, mergeCourses, parseBackup, type Backup, type Choice } from '../domain/backup';
 import type { Course } from '../domain/course';
-import { encodeShare, shareUrl, SHARE_WARN_CHARS, type ShareError, type Shared } from '../domain/share';
+import { knownPeople } from '../domain/stats';
+import { mergeLog, type LogEntry } from '../domain/log';
+import type { ShareError, Shared } from '../domain/share';
+import { sendShareLink } from './shareLink';
 import { t, tn } from '../i18n';
 
 interface Props {
   courses: Course[];
+  /** Everyone on the people list, including those named on courses. */
+  people: string[];
+  log: LogEntry[];
   radiusM: number;
   feedVersion: string;
   /** A courses link that was opened: the result of reading it. Handled like an imported file. */
   incoming: { shared: Shared | null; error: ShareError | null } | null;
   /** Persists the result (recovery copy first). Resolves false if it could not be saved. */
-  onApply: (courses: Course[], radiusM: number | null) => Promise<boolean>;
+  onApply: (courses: Course[], radiusM: number | null, people: string[], log: LogEntry[]) => Promise<boolean>;
   loadRecoveryCourses: () => Promise<Course[] | null>;
 }
 
@@ -26,13 +32,14 @@ function download(name: string, data: unknown) {
 
 const stamp = () => new Date().toISOString().slice(0, 10);
 
-export function BackupSection({ courses, radiusM, feedVersion, incoming, onApply, loadRecoveryCourses }: Props) {
+export function BackupSection({ courses, people, log, radiusM, feedVersion, incoming, onApply, loadRecoveryCourses }: Props) {
   const [backup, setBackup] = useState<Backup | null>(null);
   const [mode, setMode] = useState<'merge' | 'replace'>('merge');
   const [choices, setChoices] = useState<Record<string, Choice>>({});
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [fromLink, setFromLink] = useState(false);
+  const [partial, setPartial] = useState(false);
   const [skipped, setSkipped] = useState<string[]>([]);
 
   useEffect(() => {
@@ -40,6 +47,7 @@ export function BackupSection({ courses, radiusM, feedVersion, incoming, onApply
     setChoices({});
     setMode('merge');
     setFromLink(true);
+    setPartial(!!incoming.shared?.partial);
     if (incoming.shared) {
       setSkipped(incoming.shared.skipped);
       setBackup(incoming.shared.backup.courses.length ? incoming.shared.backup : null);
@@ -56,19 +64,7 @@ export function BackupSection({ courses, radiusM, feedVersion, incoming, onApply
       setMsg(t('share.none'));
       return;
     }
-    const url = shareUrl(await encodeShare(courses, feedVersion));
-    const warn = url.length > SHARE_WARN_CHARS ? ' ' + t('share.long') : '';
-    try {
-      if (how === 'share' && navigator.share) {
-        await navigator.share({ title: t('app.title'), url });
-        setMsg(warn.trim() || null);
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      setMsg(t('share.copied') + warn);
-    } catch (e) {
-      if ((e as Error).name !== 'AbortError') setMsg(t('share.failed'));
-    }
+    setMsg(await sendShareLink(courses, feedVersion, how));
   };
 
   const merge = useMemo(() => (backup ? mergeCourses(courses, backup.courses, choices) : null), [backup, courses, choices]);
@@ -78,6 +74,7 @@ export function BackupSection({ courses, radiusM, feedVersion, incoming, onApply
     setBackup(null);
     setChoices({});
     setFromLink(false);
+    setPartial(false);
     setSkipped([]);
     if (!file) return;
     const r = parseBackup(await file.text());
@@ -92,7 +89,10 @@ export function BackupSection({ courses, radiusM, feedVersion, incoming, onApply
     if (!backup || !merge) return;
     if (mode === 'replace' && !confirm(t('backup.confirmReplace', { n: courses.length }))) return;
     setBusy(true);
-    const ok = await onApply(mode === 'replace' ? backup.courses : merge.courses, mode === 'replace' && !fromLink ? backup.radiusM : null);
+    const next = mode === 'replace' ? backup.courses : merge.courses;
+    const nextPeople = mode === 'replace' ? knownPeople(backup.people, next) : knownPeople([...people, ...backup.people], next);
+    const nextLog = mode === 'replace' ? backup.log : mergeLog(log, backup.log);
+    const ok = await onApply(next, mode === 'replace' && !fromLink ? backup.radiusM : null, nextPeople, nextLog);
     setBusy(false);
     if (ok) {
       setMsg(t('backup.done'));
@@ -107,7 +107,7 @@ export function BackupSection({ courses, radiusM, feedVersion, incoming, onApply
       <h3>{t('backup.title')}</h3>
       <p className="muted">{t('backup.help')}</p>
       <div className="chips">
-        <button className="chip" onClick={() => download(`busslopning-${stamp()}.json`, makeBackup(courses, radiusM))}>
+        <button className="chip" onClick={() => download(`busslopning-${stamp()}.json`, makeBackup(courses, radiusM, people, log))}>
           {t('backup.export')}
         </button>
         {typeof navigator.share === 'function' && (
@@ -126,7 +126,7 @@ export function BackupSection({ courses, radiusM, feedVersion, incoming, onApply
           className="chip"
           onClick={async () => {
             const r = await loadRecoveryCourses();
-            if (r) download(`busslopning-fore-import-${stamp()}.json`, makeBackup(r, radiusM));
+            if (r) download(`busslopning-fore-import-${stamp()}.json`, makeBackup(r, radiusM, people, log));
             else setMsg(t('backup.noRecovery'));
           }}
         >
@@ -142,10 +142,13 @@ export function BackupSection({ courses, radiusM, feedVersion, incoming, onApply
             <button className="chip" aria-pressed={mode === 'merge'} onClick={() => setMode('merge')}>
               {t('backup.merge')}
             </button>
-            <button className="chip" aria-pressed={mode === 'replace'} onClick={() => setMode('replace')}>
-              {t('backup.replace')}
-            </button>
+            {!partial && (
+              <button className="chip" aria-pressed={mode === 'replace'} onClick={() => setMode('replace')}>
+                {t('backup.replace')}
+              </button>
+            )}
           </div>
+          {partial && <p className="muted">{t('share.partialNote')}</p>}
           {mode === 'replace' ? (
             <p className="muted">{t('backup.replaceNote', { n: courses.length })}</p>
           ) : (

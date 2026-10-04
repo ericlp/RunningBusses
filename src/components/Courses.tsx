@@ -14,6 +14,7 @@ import {
   type Option,
   type RouteInfo,
 } from '../domain/course';
+import { courseStart, directionsUrl } from '../domain/navigate';
 import { missingLineKeys } from '../domain/reconcile';
 import { categoryLabel, formatKm, tagLabel } from '../domain/filter';
 import { lineLabel, t, tn } from '../i18n';
@@ -21,7 +22,8 @@ import { badgeStyle } from '../domain/color';
 import type { Line } from '../domain/types';
 import { useState } from 'react';
 
-export function LineCard({ line, info, onClose }: { line: Line; info: RouteInfo; onClose: () => void }) {
+export function LineCard({ line, info, onClose, onShareCourse }: { line: Line; info: RouteInfo; onClose: () => void; onShareCourse?: () => void }) {
+  const [lon, lat] = line.coordinates[0];
   return (
     <article className="line-card" aria-label={t('card.aria', { label: lineLabel(line) })}>
       <div className="card-title">
@@ -54,6 +56,16 @@ export function LineCard({ line, info, onClose }: { line: Line; info: RouteInfo;
           </span>
         ))}
       </div>
+      <div className="actions">
+        <a className="chip" href={directionsUrl({ lat, lon })} target="_blank" rel="noreferrer">
+          {t('courses.navigate')}
+        </a>
+        {info.courseId && onShareCourse && (
+          <button className="chip" onClick={onShareCourse}>
+            {t('courses.share')}
+          </button>
+        )}
+      </div>
       <p className="via">{t('card.via', { stops: line.via.filter((_, i) => i % Math.ceil(line.via.length / 6) === 0).join(', ') })}</p>
     </article>
   );
@@ -72,11 +84,13 @@ interface CourseListProps {
   onDelete: (c: Course) => void;
   onRefresh: (c: Course) => void;
   onExportGpx: (c: Course) => void;
+  onShare: (c: Course) => void;
+  onEditRun: (c: Course) => void;
   /** Line keys currently in the dataset, to warn about lines that have disappeared. */
   lines: Line[];
 }
 
-export function CourseList({ courses, lines, onRefresh, onExportGpx, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
+export function CourseList({ courses, lines, onRefresh, onExportGpx, onShare, onEditRun, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
   const editing = courses.find((c) => c.id === draftEditingId);
   return (
     <div>
@@ -107,6 +121,7 @@ export function CourseList({ courses, lines, onRefresh, onExportGpx, selectedId,
                   {s.startName} → {s.endName}
                 </span>
                 <span className="total">{formatTotal(s)}</span>
+                {c.status === 'Completed' && c.participants && c.participants.length > 0 && <span className="muted">{t('courses.runBy', { names: c.participants.join(', ') })}</span>}
               </button>
               {selected && (
                 <div className="details">
@@ -130,6 +145,19 @@ export function CourseList({ courses, lines, onRefresh, onExportGpx, selectedId,
                         {t('courses.edit')}
                       </button>
                     )}
+                    {courseStart(c.legs) && (
+                      <a className="chip" href={directionsUrl(courseStart(c.legs)!)} target="_blank" rel="noreferrer">
+                        {t('courses.navigate')}
+                      </a>
+                    )}
+                    {c.status === 'Completed' && (
+                      <button className="chip" onClick={() => onEditRun(c)}>
+                        {t('courses.editRun')}
+                      </button>
+                    )}
+                    <button className="chip" onClick={() => onShare(c)}>
+                      {t('courses.share')}
+                    </button>
                     <button className="chip" onClick={() => onExportGpx(c)}>
                       {t('courses.gpx')}
                     </button>

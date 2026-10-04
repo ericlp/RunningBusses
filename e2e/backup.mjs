@@ -28,8 +28,8 @@ await p.setInputFiles('input[type=file]', '/tmp/rb-bk2.json');
 await p.waitForSelector('.conflict');
 ok(await p.locator('button:text-is("Importera")').isDisabled().catch(()=>true), 'apply disabled until resolved');
 await p.click('text=Använd importerad');
-await p.click('button.primary:has-text("Importera"), .chip.primary:has-text("Importera")'); await p.waitForSelector('text=Importen är klar.');
-await p.click('button:text-is("Stäng")'); await p.click('text=Planera').catch(()=>{});
+await p.click('.import-preview .primary'); await p.waitForSelector('text=Importen är klar.');
+await p.click('[aria-label="Stäng"]'); await p.click('text=Planera').catch(()=>{});
 ok(await p.locator('.course-main:has-text("Ändrad")').count() === 1, 'imported name applied');
 // replace with garbage
 fs.writeFileSync('/tmp/rb-bad.json', '{"format":"x"}');

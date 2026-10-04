@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapView, type Fit, type MapLayer, type MapMarker, type Tone } from './components/MapView';
 import { BuilderPanel, BuilderStrip, CourseList, LineCard, SplitDialog } from './components/Courses';
+import { StatsPanel } from './components/Stats';
+import { sendShareLink } from './components/shareLink';
 import { loadDataset } from './data/dataset';
-import { DEFAULT_RADIUS_M, loadCourses, loadDraft, loadRadius, loadRecovery, saveCourses, saveRecovery, saveDraft, saveRadius, type Draft } from './data/store';
+import { DEFAULT_RADIUS_M, loadCourses, loadDraft, loadLog, loadPeople, loadRadius, loadRecovery, saveCourses, saveLog, savePeople, saveRecovery, saveDraft, saveRadius, type Draft } from './data/store';
 import {
   courseStats,
   legEnd,
@@ -26,6 +28,9 @@ import {
 import { applyFilters, categoryLabel, facetAvailability, defaultFilters, formatKm, loadFilters, loadSort, saveFilters, saveSort, sameCategories, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
 import { badgeStyle } from './domain/color';
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
+import { legStops, lineStops, type StopPoint } from './domain/stops';
+import { addEntry, makeEntry, removeEntry, type LogEntry } from './domain/log';
+import { addPerson, knownPeople } from './domain/stats';
 import { courseToGpx, gpxFileName } from './domain/gpx';
 import { REPO_URL, Tour, type TourStep } from './components/Tour';
 import { BackupSection } from './components/Backup';
@@ -139,6 +144,8 @@ export function App() {
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [storedPeople, setStoredPeople] = useState<string[]>([]);
+  const [log, setLog] = useState<LogEntry[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [ready, setReady] = useState(false);
   const [radiusM, setRadiusM] = useState(loadRadius);
@@ -158,7 +165,8 @@ export function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [fit, setFit] = useState<Fit | null>(null);
-  const [completing, setCompleting] = useState<{ course: Course; date: string } | null>(null);
+  const [completing, setCompleting] = useState<{ course: Course; date: string; participants: string[]; newName: string; editOnly: boolean } | null>(null);
+  const [undo, setUndo] = useState<{ text: string; course: Course; entryId: string } | null>(null);
   const [split, setSplit] = useState<{ at: number; name1: string; name2: string } | null>(null);
 
   useEffect(() => {
@@ -168,9 +176,11 @@ export function App() {
         setOffline(r.offline);
       })
       .catch((e) => setError(String(e.message ?? e)));
-    Promise.all([loadCourses(), loadDraft()])
-      .then(([c, d]) => {
+    Promise.all([loadCourses(), loadDraft(), loadPeople().catch(() => [] as string[]), loadLog().catch(() => [] as LogEntry[])])
+      .then(([c, d, p, lg]) => {
         setCourses(c);
+        setLog(lg);
+        setStoredPeople(p);
         // an edit draft is only meaningful while its course still exists and is not completed
         const stale = d?.editingId && !c.some((x) => x.id === d.editingId && x.status !== 'Completed');
         setDraft(stale ? null : d);
@@ -201,6 +211,35 @@ export function App() {
       return () => clearTimeout(t);
     }
   }, [toast]);
+
+  useEffect(() => {
+    if (!undo) return;
+    const timer = setTimeout(() => setUndo(null), 8000);
+    return () => clearTimeout(timer);
+  }, [undo]);
+
+  const people = useMemo(() => knownPeople(storedPeople, courses), [storedPeople, courses]);
+  const addPersonName = async (name: string): Promise<string[]> => {
+    const next = addPerson(people, name);
+    if (next.length === people.length) return people;
+    try {
+      await savePeople(next);
+      setStoredPeople(next);
+      return next;
+    } catch {
+      setToast(t('toast.save'));
+      return people;
+    }
+  };
+  const removePersonName = async (name: string) => {
+    const next = storedPeople.filter((p) => p.toLowerCase() !== name.toLowerCase());
+    try {
+      await savePeople(next);
+      setStoredPeople(next);
+    } catch {
+      setToast(t('toast.save'));
+    }
+  };
 
   const statuses = useMemo(() => routeStatuses(courses), [courses]);
   const statusOf = (key: string): RouteStatus => statuses.get(key)?.status ?? 'NotPlanned';
@@ -431,13 +470,16 @@ export function App() {
     }
   };
 
-  const applyImport = async (next: Course[], radius: number | null): Promise<boolean> => {
+  const applyImport = async (next: Course[], radius: number | null, nextPeople: string[], nextLog: LogEntry[]): Promise<boolean> => {
     try {
       await saveRecovery({ savedAt: new Date().toISOString(), courses });
     } catch {
       return false;
     }
     if (!(await commit(next))) return false;
+    // the people list is rebuilt from the courses anyway, so a failure here loses nothing
+    savePeople(nextPeople).then(() => setStoredPeople(nextPeople)).catch(() => undefined);
+    saveLog(nextLog).then(() => setLog(nextLog)).catch(() => undefined);
     if (radius !== null) setRadius(radius);
     // a draft that edits a course which no longer exists or is now completed would be stale
     if (draft?.editingId && !next.some((x) => x.id === draft.editingId && x.status !== 'Completed')) setDraft(null);
@@ -462,19 +504,64 @@ export function App() {
 
   const toggleComplete = async (c: Course) => {
     if (c.status !== 'Completed') {
-      setCompleting({ course: c, date: today() });
+      // start from this course's earlier runners, else from whoever ran the latest completed course
+      const last = [...courses].filter((x) => x.status === 'Completed' && x.participants?.length).sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))[0];
+      setCompleting({ course: c, date: today(), participants: c.participants ?? last?.participants ?? [], newName: '', editOnly: false });
       return;
     }
     if (!confirm(t('confirm.uncomplete', { name: c.name }))) return;
     const now = new Date().toISOString();
-    await commit(courses.map((x) => (x.id === c.id ? { ...x, status: 'NotCompleted', completedAt: null, pinned: true, updatedAt: now } : x)));
+    if (await commit(courses.map((x) => (x.id === c.id ? { ...x, status: 'NotCompleted', completedAt: null, pinned: true, updatedAt: now } : x)))) {
+      const entry = makeEntry('uncompleted', c);
+      writeLog(addEntry(log, entry));
+      setUndo({ text: t('toast.uncompleted', { name: c.name }), course: c, entryId: entry.id });
+    }
+  };
+
+  // the log is history only: a failed write must not block completing a course
+  const writeLog = (next: LogEntry[]) => {
+    setLog(next);
+    saveLog(next).catch(() => undefined);
+  };
+
+  const editRun = (c: Course) => setCompleting({ course: c, date: c.completedAt?.slice(0, 10) || today(), participants: c.participants ?? [], newName: '', editOnly: true });
+
+  const addCompletingPerson = async () => {
+    if (!completing || !completing.newName.trim()) return;
+    const added = addPerson([], completing.newName)[0];
+    if (!added) return;
+    const all = await addPersonName(added);
+    const stored = all.find((p) => p.toLowerCase() === added.toLowerCase()) ?? added;
+    setCompleting((x) => x && { ...x, newName: '', participants: x.participants.some((p) => p.toLowerCase() === stored.toLowerCase()) ? x.participants : [...x.participants, stored] });
   };
 
   const confirmComplete = async () => {
     if (!completing) return;
-    const { course: c, date } = completing;
+    const { course: c, date, participants, editOnly } = completing;
     const now = new Date().toISOString();
-    if (await commit(courses.map((x) => (x.id === c.id ? { ...x, status: 'Completed', completedAt: date || today(), pinned: undefined, updatedAt: now } : x)))) setCompleting(null);
+    const ordered = people.filter((p) => participants.includes(p));
+    const done = (x: Course): Course => ({ ...x, status: 'Completed', completedAt: date || today(), pinned: undefined, participants: ordered.length ? ordered : undefined, updatedAt: now });
+    if (await commit(courses.map((x) => (x.id === c.id ? done(x) : x)))) {
+      setCompleting(null);
+      if (!editOnly) {
+        const entry = makeEntry('completed', done(c), new Date(now));
+        writeLog(addEntry(log, entry));
+        setUndo({ text: t('toast.completed', { name: c.name }), course: c, entryId: entry.id });
+      }
+    }
+  };
+
+  const undoLast = async () => {
+    if (!undo) return;
+    const { course, entryId } = undo;
+    setUndo(null);
+    if (await commit(courses.map((x) => (x.id === course.id ? course : x)))) writeLog(removeEntry(log, entryId));
+  };
+
+  const shareCourse = async (c: Course) => {
+    if (!dataset) return;
+    const msg = await sendShareLink([c], dataset.feedVersion, typeof navigator.share === 'function' ? 'share' : 'copy', true);
+    if (msg) setToast(msg);
   };
 
   const exportGpx = (c: Course) => {
@@ -500,8 +587,9 @@ export function App() {
   const toggleTag = (t: Tag) => setFilters((f) => ({ ...f, tags: f.tags.includes(t) ? f.tags.filter((x) => x !== t) : [...f.tags, t] }));
   const num = (v: string) => (v === '' ? null : Number(v.replace(',', '.')));
 
-  const { layers, markers, tappable } = useMemo(() => {
+  const { layers, markers, stops, tappable } = useMemo(() => {
     const layers: MapLayer[] = [];
+    let stops: StopPoint[] = [];
     let markers: MapMarker[] = [];
     let tappable: Line[] = [];
     if (mode === 'build') {
@@ -519,6 +607,7 @@ export function App() {
       const d = legLayers(legs);
       layers.push(...d.layers);
       markers = d.markers;
+      stops = legStops(legs);
     } else {
       const shown = visible.filter((l) => l.key !== selectedKey);
       for (const l of shown) {
@@ -531,6 +620,7 @@ export function App() {
           const d = legLayers(selectedCourse.legs);
           layers.push(...d.layers);
           markers = d.markers;
+          stops = legStops(selectedCourse.legs);
         }
       } else {
         tappable = visible;
@@ -540,10 +630,11 @@ export function App() {
             { at: selected.coordinates[0], color: 'start' },
             { at: selected.coordinates[selected.coordinates.length - 1], color: 'end' },
           ];
+          stops = lineStops(selected);
         }
       }
     }
-    return { layers, markers, tappable };
+    return { layers, markers, stops, tappable };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, dataset, visible, selected, selectedKey, selectedCourse, courses, others, legs, options, filters]);
 
@@ -596,7 +687,7 @@ export function App() {
         ) : !dataset ? (
           <div className="status">{t('load.loading')}</div>
         ) : (
-          <MapView layers={layers} markers={markers} tappable={tappable} fit={fit} onTap={onTap} />
+          <MapView layers={layers} markers={markers} stops={stops} tappable={tappable} fit={fit} onTap={onTap} />
         )}
 
         {mode === 'build' && (
@@ -632,16 +723,56 @@ export function App() {
             {toast}
           </div>
         )}
+        {undo && !toast && (
+          <div className="toast info" role="status">
+            {undo.text}
+            <button className="chip" onClick={() => void undoLast()}>
+              {t('toast.undo')}
+            </button>
+          </div>
+        )}
 
         {completing && (
           <div className="modal-back">
-            <div className="modal" role="dialog" aria-modal="true" aria-label={t('complete.title')}>
-              <h2>{t('complete.title')}</h2>
-              <p className="muted">{t('confirm.complete', { name: completing.course.name })}</p>
+            <div className="modal" role="dialog" aria-modal="true" aria-label={completing.editOnly ? t('complete.editTitle') : t('complete.title')}>
+              <h2>{completing.editOnly ? t('complete.editTitle') : t('complete.title')}</h2>
+              <p className="muted">{completing.editOnly ? completing.course.name : t('confirm.complete', { name: completing.course.name })}</p>
               <label className="field">
                 <span>{t('complete.date')}</span>
                 <input type="date" value={completing.date} max={today()} onChange={(e) => setCompleting((x) => x && { ...x, date: e.target.value })} />
               </label>
+              <fieldset className="people-pick">
+                <legend>{t('complete.people')}</legend>
+                {people.length === 0 && <p className="muted">{t('complete.noPeople')}</p>}
+                <div className="chips">
+                  {people.map((p) => {
+                    const on = completing.participants.includes(p);
+                    return (
+                      <button
+                        key={p}
+                        className="chip check"
+                        aria-pressed={on}
+                        onClick={() => setCompleting((x) => x && { ...x, participants: on ? x.participants.filter((q) => q !== p) : [...x.participants, p] })}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="field person-add">
+                  <input
+                    value={completing.newName}
+                    maxLength={40}
+                    placeholder={t('complete.newPerson')}
+                    aria-label={t('complete.newPerson')}
+                    onChange={(e) => setCompleting((x) => x && { ...x, newName: e.target.value })}
+                    onKeyDown={(e) => e.key === 'Enter' && void addCompletingPerson()}
+                  />
+                  <button className="chip" onClick={() => void addCompletingPerson()} disabled={!completing.newName.trim()}>
+                    {t('stats.addPerson')}
+                  </button>
+                </div>
+              </fieldset>
               <div className="actions">
                 <button className="primary compact" onClick={confirmComplete} disabled={saving || !completing.date}>
                   {t('complete.confirm')}
@@ -853,6 +984,8 @@ export function App() {
               )}
 
               {mode === 'plan' && (
+                <>
+                <StatsPanel courses={courses} lines={dataset?.lines ?? []} people={people} log={log} onAddPerson={(n) => void addPersonName(n)} onRemovePerson={(n) => void removePersonName(n)} />
                 <CourseList
                   courses={courses}
                   selectedId={selectedCourseId}
@@ -865,13 +998,24 @@ export function App() {
                   onDelete={deleteCourse}
                   onRefresh={refreshCourse}
                   onExportGpx={exportGpx}
+                  onShare={shareCourse}
+                  onEditRun={editRun}
                   lines={dataset?.lines ?? []}
                 />
+                </>
               )}
 
               {mode === 'browse' && (
                 <>
-                  {selected && <LineCard line={selected} info={routeInfo(selected.key, courses)} onClose={() => setSelectedKey(null)} />}
+                  {selected && <LineCard
+                      line={selected}
+                      info={routeInfo(selected.key, courses)}
+                      onClose={() => setSelectedKey(null)}
+                      onShareCourse={() => {
+                        const c = courses.find((x) => x.id === routeInfo(selected.key, courses).courseId);
+                        if (c) void shareCourse(c);
+                      }}
+                    />}
                   <div className="field">
                     <input type="search" placeholder={t('search.placeholder')} aria-label={t('search.placeholder')} value={query} onChange={(e) => setQuery(e.target.value)} />
                     <select aria-label={t('sort.label')} value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)}>
@@ -1011,7 +1155,8 @@ export function App() {
               >
                 {t('tour.start')}
               </button>
-              <BackupSection courses={courses} radiusM={radiusM} feedVersion={dataset.feedVersion} incoming={incoming} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
+              <BackupSection courses={courses} people={people} log={log} radiusM={radiusM} feedVersion={dataset.feedVersion} incoming={incoming} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
+              <p className="muted">{t('settings.tiles')}</p>
               <p>
                 <a href={REPO_URL} target="_blank" rel="noreferrer">
                   {t('settings.repo')}

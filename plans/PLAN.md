@@ -159,3 +159,12 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [034 – More bus categories](034-more-bus-categories.md): express and industrial buses, multi-select category filter; trams shelved.
 - [035 – Trams](035-trams.md): tram category with fixed line colours drawn as a border around the status line.
 - [036 – Remembered view and links](036-remembered-view.md): filters and sort saved, `#mode=plan` and `#line=` links.
+- [037 – Progress panel](037-progress-panel.md): overall, per-category and per-person progress, latest completed.
+- [038 – People and participants](038-people.md): people list, who ran each course, backup and share support.
+- [039 – Undo for completion](039-undo-completion.md): undo toast when marking completed or not completed.
+- [040 – Share a single course](040-single-course-link.md): per-course link, merge-only on the receiving side.
+- [041 – Offline map tiles](041-offline-tiles.md): viewed OSM tiles cached by the service worker.
+- [042 – Navigate to start](042-navigate-to-start.md): directions link to a course or line start.
+- [043 – Stop markers](043-stop-markers.md): stop markers and names on the map, `viaAt` in the dataset.
+- [044 – Completion log](044-completion-log.md): persistent history of completions, in backup.
+- [045 – Share from the line card](045-share-from-line-card.md): share the line's course from the map.
