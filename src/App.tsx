@@ -528,11 +528,13 @@ export function App() {
 
   const addCompletingPerson = async () => {
     if (!completing || !completing.newName.trim()) return;
-    const added = addPerson([], completing.newName)[0];
+    const typed = completing.newName;
+    const added = addPerson([], typed)[0];
     if (!added) return;
     const all = await addPersonName(added);
     const stored = all.find((p) => p.toLowerCase() === added.toLowerCase()) ?? added;
-    setCompleting((x) => x && { ...x, newName: '', participants: x.participants.some((p) => p.toLowerCase() === stored.toLowerCase()) ? x.participants : [...x.participants, stored] });
+    // keep text typed while the save was pending
+    setCompleting((x) => x && { ...x, newName: x.newName === typed ? '' : x.newName, participants: x.participants.some((p) => p.toLowerCase() === stored.toLowerCase()) ? x.participants : [...x.participants, stored] });
   };
 
   const confirmComplete = async () => {
