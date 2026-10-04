@@ -170,3 +170,11 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [045 – Share from the line card](045-share-from-line-card.md): share the line's course from the map.
 - [046 – Separate import dialog](046-import-dialog.md): import preview opens in its own dialog instead of inside Settings.
 - [047 – A share link opens the course](047-link-opens-course.md): link opens the import dialog directly, then the course on the map.
+
+## Future todos
+
+- [048 – Västtrafik navigation to start](048-vasttrafik-navigation.md)
+- [049 – Distinguish NotPlanned and NotCompleted in status colours](049-status-colours.md)
+- [050 – Categories counted in progress](050-progress-categories.md)
+- [051 – Clearer merge/replace choice when importing](051-import-dialog-choices.md)
+- [052 – Start run mode](052-start-run.md)
