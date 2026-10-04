@@ -1,6 +1,6 @@
 # 048 – Choose navigation provider for "Navigera till start"
 
-Status: todo, design agreed.
+Status: shelved. Built and reverted: vasttrafik.se ignores `from`/`to` query parameters, so the only option was opening the plain planner and copying the stop name, which the user can already do by hand. Revisit if a prefill link or the Planera Resa API (see 052) becomes available.
 
 Today (042) "Navigera till start" opens Google Maps walking directions to the first point of the course.
 
