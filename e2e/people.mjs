@@ -47,7 +47,6 @@ const q = await ctx2.newPage();
 await q.goto(link); await q.waitForSelector('.import-preview');
 ok(await q.locator('.import-preview button:text-is("Ersätt")').count() === 0, 'partial link cannot replace');
 await q.click('.import-preview .primary'); await q.waitForSelector('text=Importen är klar.');
-await q.click('[aria-label="Stäng"]'); await q.click('text=Planera');
 await q.waitForSelector('.course');
 ok((await q.locator('.course-main').innerText()).includes('Sprungen av Anna'), 'participants arrive with the course');
 console.log('errors', errs);

@@ -169,3 +169,4 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [044 – Completion log](044-completion-log.md): persistent history of completions, in backup.
 - [045 – Share from the line card](045-share-from-line-card.md): share the line's course from the map.
 - [046 – Separate import dialog](046-import-dialog.md): import preview opens in its own dialog instead of inside Settings.
+- [047 – A share link opens the course](047-link-opens-course.md): link opens the import dialog directly, then the course on the map.

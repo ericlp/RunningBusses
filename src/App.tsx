@@ -361,9 +361,21 @@ export function App() {
     void decodeShare(payload, dataset.lines).then((r) => {
       if (r.ok) setIncoming({ shared: r.shared, error: null });
       else setIncoming({ shared: null, error: r.error });
-      setShowSettings(true);
     });
   }, [dataset, ready, syncTick]);
+
+  // a shared course opens straight on the map once it is saved
+  const openImported = (imported: Course[]) => {
+    setToast(t('backup.done'));
+    setShowSettings(false);
+    const first = imported[0];
+    if (!first) return;
+    setMode('plan');
+    setChooser(null);
+    setSelectedKey(null);
+    setSelectedCourseId(first.id);
+    fitTo(legCoords(first.legs));
+  };
 
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -1062,6 +1074,21 @@ export function App() {
             </div>
           </section>
         )}
+        {!showSettings && (
+          <BackupSection
+            dialogOnly
+            courses={courses}
+            people={people}
+            log={log}
+            radiusM={radiusM}
+            feedVersion={dataset?.feedVersion ?? ''}
+            incoming={incoming}
+            onConsumed={() => setIncoming(null)}
+            onImported={openImported}
+            onApply={applyImport}
+            loadRecoveryCourses={async () => null}
+          />
+        )}
         {tour && <Tour onStep={onTourStep} onClose={closeTour} />}
 
         {showSettings && dataset && (
@@ -1157,7 +1184,7 @@ export function App() {
               >
                 {t('tour.start')}
               </button>
-              <BackupSection courses={courses} people={people} log={log} radiusM={radiusM} feedVersion={dataset.feedVersion} incoming={incoming} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
+              <BackupSection courses={courses} people={people} log={log} radiusM={radiusM} feedVersion={dataset.feedVersion} incoming={incoming} onConsumed={() => setIncoming(null)} onImported={openImported} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
               <p className="muted">{t('settings.tiles')}</p>
               <p>
                 <a href={REPO_URL} target="_blank" rel="noreferrer">

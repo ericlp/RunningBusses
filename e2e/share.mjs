@@ -21,11 +21,13 @@ ok(link.length < 2000, `link is short (${link.length})`);
 const B = await mk(false);
 await B.p.goto(link); await B.p.waitForSelector('.import-preview');
 ok((await B.p.locator('.import-preview').innerText()).includes('Länken innehåller 1 bana'), 'preview shows the shared course');
+ok(await B.p.locator('[aria-label="Inställningar"][aria-modal], .modal:not(.import-preview)').count() === 0, 'link opens the dialog directly, not Settings');
 ok(!link.includes('#') || !(await B.p.evaluate(() => location.hash)), 'fragment removed from the address bar');
 ok(await B.p.locator('.course-main').count() === 0, 'nothing saved before confirming');
 await B.p.click('.import-preview .primary'); await B.p.waitForSelector('text=Importen är klar.');
-await B.p.click('[aria-label="Stäng"]'); await B.p.click('text=Planera').catch(() => {});
+await B.p.waitForSelector('.course-main');
 ok(await B.p.locator('.course-main').count() === 1, 'course imported after confirming');
+ok(await B.p.locator('.details').count() === 1, 'imported course is opened directly');
 
 // pasting a link into the address bar of the open app
 await B.p.click('[aria-label="Inställningar"]');

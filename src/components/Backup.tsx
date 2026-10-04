@@ -20,6 +20,12 @@ interface Props {
   /** Persists the result (recovery copy first). Resolves false if it could not be saved. */
   onApply: (courses: Course[], radiusM: number | null, people: string[], log: LogEntry[]) => Promise<boolean>;
   loadRecoveryCourses: () => Promise<Course[] | null>;
+  /** Only the import dialog, without the backup controls: used when a link opens outside Settings. */
+  dialogOnly?: boolean;
+  /** Called once a link has been read, so the dialog is not shown again when Settings is opened. */
+  onConsumed?: () => void;
+  /** Called after a link import was saved, with the courses that came from the link. */
+  onImported?: (imported: Course[]) => void;
 }
 
 function download(name: string, data: unknown) {
@@ -33,7 +39,7 @@ function download(name: string, data: unknown) {
 
 const stamp = () => new Date().toISOString().slice(0, 10);
 
-export function BackupSection({ courses, people, log, radiusM, feedVersion, incoming, onApply, loadRecoveryCourses }: Props) {
+export function BackupSection({ courses, people, log, radiusM, feedVersion, incoming, onApply, loadRecoveryCourses, dialogOnly, onConsumed, onImported }: Props) {
   const [backup, setBackup] = useState<Backup | null>(null);
   const [mode, setMode] = useState<'merge' | 'replace'>('merge');
   const [choices, setChoices] = useState<Record<string, Choice>>({});
@@ -58,7 +64,8 @@ export function BackupSection({ courses, people, log, radiusM, feedVersion, inco
       setSkipped([]);
       setMsg(t(`share.err.${incoming.error ?? 'badLink'}`));
     }
-  }, [incoming]);
+    onConsumed?.();
+  }, [incoming]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shareLink = async (how: 'share' | 'copy') => {
     if (!courses.length) {
@@ -96,15 +103,19 @@ export function BackupSection({ courses, people, log, radiusM, feedVersion, inco
     const ok = await onApply(next, mode === 'replace' && !fromLink ? backup.radiusM : null, nextPeople, nextLog);
     setBusy(false);
     if (ok) {
-      setMsg(t('backup.done'));
       setBackup(null);
+      if (fromLink && onImported) {
+        setMsg(null);
+        const ids = new Set(backup.courses.map((c) => c.id));
+        onImported(next.filter((c) => ids.has(c.id)));
+      } else setMsg(t('backup.done'));
     } else setMsg(t('backup.saveFailed'));
   };
 
   const pending = mode === 'merge' && merge ? merge.conflicts.length : 0;
 
   return (
-    <section className="backup">
+    <section className="backup" hidden={dialogOnly}>
       <h3>{t('backup.title')}</h3>
       <p className="muted">{t('backup.help')}</p>
       <div className="chips">
@@ -134,7 +145,22 @@ export function BackupSection({ courses, people, log, radiusM, feedVersion, inco
           {t('backup.recovery')}
         </button>
       </div>
-      {msg && <p role="status">{msg}</p>}
+      {msg && !dialogOnly && <p role="status">{msg}</p>}
+      {msg && dialogOnly && !backup &&
+        createPortal(
+          <div className="modal-back" onClick={() => setMsg(null)}>
+            <div className="modal" role="dialog" aria-modal="true" aria-label={t('backup.previewTitle')} onClick={(e) => e.stopPropagation()}>
+              <div className="modal-head">
+                <h2>{t('backup.previewTitle')}</h2>
+                <button className="chip" aria-label={t('common.close')} onClick={() => setMsg(null)}>
+                  ×
+                </button>
+              </div>
+              <p role="status">{msg}</p>
+            </div>
+          </div>,
+          document.body,
+        )}
       {backup && merge &&
         createPortal(
           <div className="modal-back" onClick={() => setBackup(null)}>
