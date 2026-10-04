@@ -14,6 +14,7 @@ import {
   type Option,
   type RouteInfo,
 } from '../domain/course';
+import { Icon } from './Icon';
 import { courseStart, directionsUrl } from '../domain/navigate';
 import { missingLineKeys } from '../domain/reconcile';
 import { categoryLabel, formatKm, tagLabel } from '../domain/filter';
@@ -58,10 +59,12 @@ export function LineCard({ line, info, onClose, onShareCourse }: { line: Line; i
       </div>
       <div className="actions">
         <a className="chip" href={directionsUrl({ lat, lon })} target="_blank" rel="noreferrer">
+          <Icon name="navigate" />
           {t('courses.navigate')}
         </a>
         {info.courseId && onShareCourse && (
           <button className="chip" onClick={onShareCourse}>
+            <Icon name="share" />
             {t('courses.share')}
           </button>
         )}
@@ -137,34 +140,42 @@ export function CourseList({ courses, lines, onRefresh, onExportGpx, onShare, on
                   <div className="actions">
                     {c.pinned && (
                       <button className="chip" onClick={() => onRefresh(c)}>
+                        <Icon name="refresh" />
                         {t('courses.update')}
                       </button>
                     )}
                     {c.status !== 'Completed' && (
                       <button className="chip" onClick={() => onEdit(c)}>
+                        <Icon name="edit" />
                         {t('courses.edit')}
                       </button>
                     )}
                     {courseStart(c.legs) && (
                       <a className="chip" href={directionsUrl(courseStart(c.legs)!)} target="_blank" rel="noreferrer">
+                        <Icon name="navigate" />
                         {t('courses.navigate')}
                       </a>
                     )}
                     {c.status === 'Completed' && (
                       <button className="chip" onClick={() => onEditRun(c)}>
+                        <Icon name="calendar" />
                         {t('courses.editRun')}
                       </button>
                     )}
                     <button className="chip" onClick={() => onShare(c)}>
+                      <Icon name="share" />
                       {t('courses.share')}
                     </button>
                     <button className="chip" onClick={() => onExportGpx(c)}>
+                      <Icon name="download" />
                       {t('courses.gpx')}
                     </button>
-                    <button className="chip" onClick={() => onToggleComplete(c)}>
+                    <button className={`chip${c.status === 'Completed' ? '' : ' success'}`} onClick={() => onToggleComplete(c)}>
+                      <Icon name={c.status === 'Completed' ? 'undo' : 'check'} />
                       {c.status === 'Completed' ? t('courses.markUndone') : t('courses.markDone')}
                     </button>
                     <button className="chip danger" onClick={() => onDelete(c)}>
+                      <Icon name="trash" />
                       {t('courses.delete')}
                     </button>
                   </div>

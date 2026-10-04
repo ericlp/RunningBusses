@@ -337,6 +337,11 @@ button {
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
   padding: 0 12px;
   min-height: 44px;
   border-radius: 22px;
@@ -508,6 +513,15 @@ button {
 
 .chip:disabled {
   opacity: 0.5;
+}
+
+.chip .icon {
+  flex: none;
+}
+
+.chip.success {
+  color: var(--status-done);
+  border-color: var(--status-done);
 }
 
 .chip.danger {

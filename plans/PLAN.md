@@ -178,3 +178,5 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [050 – Categories counted in progress](050-progress-categories.md)
 - [051 – Clearer merge/replace choice when importing](051-import-dialog-choices.md)
 - [052 – Start run mode](052-start-run.md)
+- [053 – Close the filter panel on outside click](053-close-filter-on-outside-click.md)
+- [054 – Action button icons and tones](054-action-icons.md)
