@@ -311,11 +311,4 @@ export const en: Dict = {
   'legend.aria': 'Line colour legend',
   'settings.progress': 'Counted in progress',
   'settings.progressHelp': 'Which categories the progress panel counts. At least one must be selected.',
-  'nav.google': 'Google Maps',
-  'nav.vasttrafik': 'Västtrafik to {name}',
-  'nav.copied': 'The stop "{name}" is copied. Paste it into the To field.',
-  'settings.navProvider': 'Navigate to start with',
-  'settings.navAsk': 'Ask every time',
-  'settings.navGoogle': 'Google Maps',
-  'settings.navVasttrafik': 'Västtrafik',
 };

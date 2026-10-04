@@ -310,13 +310,6 @@ export const sv = {
   'legend.aria': 'Förklaring av linjefärger',
   'settings.progress': 'Räknas i framsteg',
   'settings.progressHelp': 'Vilka kategorier som räknas i framstegspanelen. Minst en måste vara vald.',
-  'nav.google': 'Google Maps',
-  'nav.vasttrafik': 'Västtrafik till {name}',
-  'nav.copied': 'Hållplatsen "{name}" är kopierad. Klistra in den i fältet Till.',
-  'settings.navProvider': 'Navigera till start med',
-  'settings.navAsk': 'Fråga varje gång',
-  'settings.navGoogle': 'Google Maps',
-  'settings.navVasttrafik': 'Västtrafik',
 } as const;
 
 export type Key = keyof typeof sv;

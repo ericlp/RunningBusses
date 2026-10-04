@@ -14,8 +14,7 @@ import {
   type Option,
   type RouteInfo,
 } from '../domain/course';
-import { courseStart } from '../domain/navigate';
-import { NavigateChip } from './Navigate';
+import { courseStart, directionsUrl } from '../domain/navigate';
 import { missingLineKeys } from '../domain/reconcile';
 import { categoryLabel, formatKm, tagLabel } from '../domain/filter';
 import { lineLabel, t, tn } from '../i18n';
@@ -58,7 +57,9 @@ export function LineCard({ line, info, onClose, onShareCourse }: { line: Line; i
         ))}
       </div>
       <div className="actions">
-        <NavigateChip dest={{ name: line.from, lat, lon }} />
+        <a className="chip" href={directionsUrl({ lat, lon })} target="_blank" rel="noreferrer">
+          {t('courses.navigate')}
+        </a>
         {info.courseId && onShareCourse && (
           <button className="chip" onClick={onShareCourse}>
             {t('courses.share')}
@@ -145,7 +146,9 @@ export function CourseList({ courses, lines, onRefresh, onExportGpx, onShare, on
                       </button>
                     )}
                     {courseStart(c.legs) && (
-                      <NavigateChip dest={courseStart(c.legs)!} />
+                      <a className="chip" href={directionsUrl(courseStart(c.legs)!)} target="_blank" rel="noreferrer">
+                        {t('courses.navigate')}
+                      </a>
                     )}
                     {c.status === 'Completed' && (
                       <button className="chip" onClick={() => onEditRun(c)}>
