@@ -12,6 +12,7 @@ const pat = (o: Partial<Pattern>): Pattern => ({
   lengthM: 5000,
   callOrdered: false,
   via: [],
+  viaAt: [],
   ...o,
 });
 

@@ -16,6 +16,8 @@ export interface Pattern {
   lengthM: number;
   callOrdered: boolean;
   via: string[];
+  /** [lon, lat] of each stop in `via`. */
+  viaAt: [number, number][];
 }
 
 export interface PlannedRoute {

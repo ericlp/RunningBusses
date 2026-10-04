@@ -35,6 +35,9 @@ export function validateDataset(next: Dataset, previous: Dataset | null, opts: O
       errors.push(`${id}: invalid coordinates`);
       continue;
     }
+    if (l.viaAt && (l.viaAt.length !== l.via.length || l.viaAt.some(([lon, lat]) => !Number.isFinite(lon) || !Number.isFinite(lat) || Math.abs(lon) > 180 || Math.abs(lat) > 90))) {
+      errors.push(`${id}: stop positions do not match the stop names`);
+    }
     if (l.lengthM < 300 || l.lengthM > 60000) errors.push(`${id}: implausible length ${l.lengthM} m`);
     const calc = pathLengthM(l.coordinates);
     if (Math.abs(calc - l.lengthM) > Math.max(50, l.lengthM * 0.02)) errors.push(`${id}: stored length ${l.lengthM} m does not match geometry (${Math.round(calc)} m)`);

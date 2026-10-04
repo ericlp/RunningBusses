@@ -27,6 +27,8 @@ export interface Line {
   lengthM: number;
   /** Ordered stop names along the path (parent stations). */
   via: string[];
+  /** [lon, lat] of each stop in `via`; absent in data and saved courses from before stop markers. */
+  viaAt?: [number, number][];
   /** GeoJSON order: [lon, lat]. */
   coordinates: [number, number][];
 }

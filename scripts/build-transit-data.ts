@@ -84,15 +84,21 @@ async function main(): Promise<void> {
   }
   console.log(`${routes.size} routes, ${trips.size} trips on the reference day`);
 
-  const stopRows = new Map<string, { name: string; parent: string }>();
+  const stopRows = new Map<string, { name: string; parent: string; at: [number, number] }>();
   const stopNames = new Map<string, string>();
   for await (const r of readCsv(`${feedDir}/stops.txt`)) {
-    stopRows.set(r.stop_id, { name: r.stop_name, parent: r.parent_station });
+    stopRows.set(r.stop_id, { name: r.stop_name, parent: r.parent_station, at: [Number(r.stop_lon), Number(r.stop_lat)] });
     stopNames.set(r.stop_id, r.stop_name);
   }
   const displayName = (id: string) => {
     const s = stopRows.get(id);
     return (s?.parent && stopNames.get(s.parent)) || s?.name || id;
+  };
+
+  // the parent station's position when there is one, so a station is a single marker
+  const displayAt = (id: string): [number, number] => {
+    const s = stopRows.get(id);
+    return (s?.parent && stopRows.get(s.parent)?.at) || s?.at || [NaN, NaN];
   };
 
   const stopSeq = new Map<string, [number, string][]>();
@@ -120,7 +126,8 @@ async function main(): Promise<void> {
   // Patterns per line number, from the reference-day trips.
   const patternsByNumber = new Map<string, Map<string, Pattern>>();
   for (const [tripId, t] of trips) {
-    const seq = (stopSeq.get(tripId) ?? []).sort((a, b) => a[0] - b[0]).map(([, id]) => displayName(id));
+    const ordered = (stopSeq.get(tripId) ?? []).sort((a, b) => a[0] - b[0]).map(([, id]) => id);
+    const seq = ordered.map(displayName);
     const shape = shapes.get(t.shape);
     if (!seq.length || !shape) continue;
     const info = routes.get(t.route)!;
@@ -130,7 +137,9 @@ async function main(): Promise<void> {
     const existing = byKey.get(key);
     if (existing) existing.trips++;
     else {
-      const via = seq.filter((n, i) => n !== seq[i - 1]);
+      const keep = seq.map((n, i) => n !== seq[i - 1]);
+      const via = seq.filter((_, i) => keep[i]);
+      const viaAt = ordered.filter((_, i) => keep[i]).map(displayAt);
       byKey.set(key, {
         direction: t.direction,
         shapeId: t.shape,
@@ -142,6 +151,7 @@ async function main(): Promise<void> {
         lengthM: shape.lengthM,
         callOrdered: info.callOrdered,
         via,
+        viaAt,
       });
     }
   }
@@ -177,6 +187,7 @@ async function main(): Promise<void> {
         to: p.pattern.to,
         lengthM: Math.round(shape.lengthM),
         via: p.pattern.via,
+        ...(p.pattern.viaAt.every(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat)) ? { viaAt: p.pattern.viaAt.map(([lon, lat]) => [round5(lon), round5(lat)] as [number, number]) } : {}),
         coordinates,
       });
     }
