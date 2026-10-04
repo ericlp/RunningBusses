@@ -57,8 +57,7 @@ Sources: Scope list <https://sv.wikipedia.org/wiki/Busstrafik_i_G%C3%B6teborg#St
 - Stack: React, TypeScript, Vite, Leaflet, IndexedDB (browser storage, no server database).
 
 ### Later and out of scope
-- Stretch: GPX export of a course; archiving a whole set of lines when Västtrafik renumbers them (the user may want to "cry a bit" over the old numbers). No renumbering is expected soon.
-- Out of scope: live bus positions or timetables, pedestrian routing, accounts, per-person completion, live sync between devices, offline map tiles.
+- Out of scope: archiving old line sets when Västtrafik renumbers; live bus positions or timetables, pedestrian routing, accounts, per-person completion, live sync between devices, offline map tiles.
 
 ## User experience
 
@@ -109,7 +108,7 @@ Each phase ends with something usable. A phase is built only after the previous 
 4. **Backup (done, see plan 005).** Export, then replace-import, then merge with conflict choices. A copy of the previous state is kept before an import.
 5. **Monthly refresh (done, see plan 006).** The scheduled job, the update rules above (pinned unlocked courses, missing lines, warnings), a "data from" date in settings.
 6. **Polish (done, see plan 007).** Playwright checks on a phone and a desktop width for the main journeys, touch targets of at least 44 px, keyboard use, contrast, and a walkthrough on a real phone.
-7. **Stretch.** GPX export; archiving renumbered line sets.
+7. **Stretch (done).** GPX export, see plan 025. Archiving renumbered line sets was dropped.
 8. **Language (done).** Browser-preferred language with Swedish, English and French, see plan 003. Preferably done right after Phase 3, before more strings pile up.
 
 Deliberately postponed: multi-tab write protection and anything else not needed to use the app yourselves. Add it when it proves necessary.
