@@ -19,4 +19,7 @@ await chip('Expressbuss').click();
 ok((await chip('Industribuss').getAttribute('aria-pressed')) === 'true', 'one category left');
 await chip('Industribuss').click();
 ok((await chip('Industribuss').getAttribute('aria-pressed')) === 'true', 'last selected category cannot be removed');
+await p.mouse.click(700, 400);
+await p.waitForTimeout(200);
+ok((await p.locator('.filter-panel').count()) === 0, 'clicking the map closes the filter panel');
 await b.close(); process.exit(fails);

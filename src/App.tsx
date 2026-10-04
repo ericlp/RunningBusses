@@ -163,6 +163,14 @@ export function App() {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [chooser, setChooser] = useState<ChooserItem[] | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  useEffect(() => {
+    if (!showFilters) return;
+    const close = (e: PointerEvent) => {
+      if (!(e.target as Element | null)?.closest('.filter-panel, [data-filter-toggle]')) setShowFilters(false);
+    };
+    document.addEventListener('pointerdown', close, true);
+    return () => document.removeEventListener('pointerdown', close, true);
+  }, [showFilters]);
   const [tour, setTour] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
@@ -678,7 +686,7 @@ export function App() {
           </div>
         )}
         <div className="tools">
-          <button className="tool" aria-pressed={showFilters} aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
+          <button className="tool" data-filter-toggle aria-pressed={showFilters} aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
             {t('nav.filter')}
             {activeFilters > 0 && <span className="count">{activeFilters}</span>}
           </button>
