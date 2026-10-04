@@ -1,4 +1,6 @@
 import type { Course, Leg } from './course';
+import { isLogEntry, type LogEntry } from './log';
+import { addPerson, cleanName, MAX_PERSON_NAME } from './stats';
 
 export const BACKUP_FORMAT = 'running-busses-backup';
 export const BACKUP_VERSION = 1;
@@ -9,14 +11,18 @@ export interface Backup {
   version: number;
   exportedAt: string;
   radiusM: number;
+  /** The people list; older backups have none. */
+  people: string[];
+  /** Completion history; older backups have none. */
+  log: LogEntry[];
   courses: Course[];
 }
 
 export type ParseError = 'tooLarge' | 'notJson' | 'notBackup' | 'newerVersion' | 'invalid';
 export type ParseResult = { ok: true; backup: Backup } | { ok: false; error: ParseError; detail?: string };
 
-export function makeBackup(courses: Course[], radiusM: number, now = new Date()): Backup {
-  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: now.toISOString(), radiusM, courses };
+export function makeBackup(courses: Course[], radiusM: number, people: string[] = [], log: LogEntry[] = [], now = new Date()): Backup {
+  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: now.toISOString(), radiusM, people, log, courses };
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -36,6 +42,8 @@ function validLeg(l: unknown): l is Leg {
 
 export const lineKeys = (c: Course): string[] => c.legs.flatMap((l) => (l.kind === 'line' ? [l.line.key] : []));
 
+const validName = (v: unknown): v is string => isStr(v) && v === cleanName(v) && v !== '' && v.length <= MAX_PERSON_NAME;
+
 function validCourse(c: unknown): c is Course {
   if (!isObj(c)) return false;
   return (
@@ -46,6 +54,7 @@ function validCourse(c: unknown): c is Course {
     isStr(c.createdAt) &&
     isStr(c.updatedAt) &&
     (c.completedAt === null || isStr(c.completedAt)) &&
+    (c.participants === undefined || (Array.isArray(c.participants) && c.participants.length <= 100 && c.participants.every(validName))) &&
     Array.isArray(c.legs) &&
     c.legs.length > 0 &&
     c.legs.every(validLeg)
@@ -77,9 +86,12 @@ export function parseBackup(text: string): ParseResult {
     }
   }
   const radius = isNum(data.radiusM) && data.radiusM >= 50 && data.radiusM <= 5000 ? data.radiusM : 500;
+  if (data.people !== undefined && (!Array.isArray(data.people) || data.people.length > 200 || !data.people.every(validName))) return { ok: false, error: 'invalid' };
+  if (data.log !== undefined && (!Array.isArray(data.log) || data.log.length > 2000 || !data.log.every(isLogEntry))) return { ok: false, error: 'invalid' };
+  const people = ((data.people as string[] | undefined) ?? []).reduce<string[]>(addPerson, []);
   return {
     ok: true,
-    backup: { format: BACKUP_FORMAT, version: data.version, exportedAt: isStr(data.exportedAt) ? data.exportedAt : '', radiusM: radius, courses: data.courses as Course[] },
+    backup: { format: BACKUP_FORMAT, version: data.version, exportedAt: isStr(data.exportedAt) ? data.exportedAt : '', radiusM: radius, people, log: (data.log as LogEntry[] | undefined) ?? [], courses: data.courses as Course[] },
   };
 }
 

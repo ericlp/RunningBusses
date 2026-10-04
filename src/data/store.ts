@@ -1,4 +1,5 @@
 import type { Course, Leg } from '../domain/course';
+import { isLogEntry, type LogEntry } from '../domain/log';
 import { idbGet, idbSet } from './idb';
 
 export interface Draft {
@@ -17,6 +18,24 @@ export async function loadCourses(): Promise<Course[]> {
 /** Resolves only after the write has completed, so callers can show "saved" honestly. */
 export function saveCourses(courses: Course[]): Promise<void> {
   return idbSet('courses', courses);
+}
+
+export async function loadPeople(): Promise<string[]> {
+  const v = await idbGet<unknown>('people');
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+}
+
+export function savePeople(people: string[]): Promise<void> {
+  return idbSet('people', people);
+}
+
+export async function loadLog(): Promise<LogEntry[]> {
+  const v = await idbGet<unknown>('log');
+  return Array.isArray(v) ? v.filter(isLogEntry) : [];
+}
+
+export function saveLog(log: LogEntry[]): Promise<void> {
+  return idbSet('log', log);
 }
 
 export async function loadDraft(): Promise<Draft | null> {

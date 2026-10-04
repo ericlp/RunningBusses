@@ -16,6 +16,26 @@ const course = (id: string, keys: string[], name = id): Course => ({
   })),
 });
 
+describe('people in backups', () => {
+  it('round-trips the people list and participants', () => {
+    const c = { ...course('1', ['59']), status: 'Completed' as const, completedAt: '2026-01-01', participants: ['Anna', 'Bo'] };
+    const r = parseBackup(JSON.stringify(makeBackup([c], 500, ['Anna', 'Bo', 'Cy'])));
+    expect(r.ok && r.backup.people).toEqual(['Anna', 'Bo', 'Cy']);
+    expect(r.ok && r.backup.courses[0].participants).toEqual(['Anna', 'Bo']);
+  });
+
+  it('accepts older backups without people', () => {
+    const { people: _drop, ...old } = makeBackup([course('1', ['59'])], 500);
+    expect(parseBackup(JSON.stringify(old))).toMatchObject({ ok: true, backup: { people: [] } });
+  });
+
+  it('rejects malformed people', () => {
+    expect(parseBackup(JSON.stringify({ ...makeBackup([], 500), people: [1] }))).toMatchObject({ error: 'invalid' });
+    const bad = { ...course('1', ['59']), participants: [' x'] };
+    expect(parseBackup(JSON.stringify(makeBackup([bad], 500)))).toMatchObject({ error: 'invalid' });
+  });
+});
+
 describe('parseBackup', () => {
   it('round-trips an export', () => {
     const cs = [course('1', ['59']), course('2', ['69', '70'])];
