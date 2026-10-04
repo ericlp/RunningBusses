@@ -16,7 +16,7 @@ for (const loc of ['sv-SE','en-GB','fr-FR','de-DE']) {
     await p.click('[aria-label="Inställningar"]');
     await p.selectOption('select', 'fr');
     console.log(' after switch:', await p.evaluate(() => document.documentElement.lang), await p.textContent('.modal h2'));
-    await p.reload(); await p.waitForSelector('.badge');
+    await p.reload(); await p.waitForSelector('.sheet');
     console.log(' persisted:', await p.evaluate(() => document.documentElement.lang));
   }
   await ctx.close();

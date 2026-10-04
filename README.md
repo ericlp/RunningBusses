@@ -23,7 +23,11 @@ Source: Trafiklab *GTFS Regional Static* (Västtrafik). Put your key in `.env` (
 
 ## Data on your device
 
-Courses live in the browser (IndexedDB). Use ⚙ → Säkerhetskopia to share a link (courses only) or export a file, and open the link or import the file with merge or replace on another device. A copy from before the last import can be downloaded.
+Courses live in the browser (IndexedDB); filters and sort order are remembered in localStorage. Use ⚙ → Säkerhetskopia to share a link (courses only) or export a file, and open the link or import the file with merge or replace on another device. A copy from before the last import can be downloaded.
+
+## Links
+
+The address shows the current view: `#line=<key>` selects a line and zooms to it, `#mode=plan` opens the course list. Copy the address to share or bookmark it.
 
 ## Plans
 

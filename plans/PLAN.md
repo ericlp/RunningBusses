@@ -131,7 +131,33 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [005 – Phase 4: backup](005-phase4-backup.md): export, replace/merge import with conflict choices, recovery copy.
 - [006 – Phase 5: monthly refresh](006-phase5-monthly-refresh.md): scheduled job, validation, update rules.
 - [007 – Phase 6: polish](007-phase6-polish.md): touch targets, contrast, e2e suite, README.
+- [008 – Topbar and filter separation](008-topbar-filters.md)
+- [009 – Map legibility and hover cursor](009-map-legibility.md)
+- [010 – Theme toggle and map style](010-theme-and-map-style.md)
+- [011 – List sorting and softer dimming](011-sorting-and-dimming.md)
+- [012 – Nearest next route always offered](012-nearest-next.md)
+- [013 – Stronger lines, outline setting, rainbow colouring](013-line-contrast.md)
+- [014 – Compact labels, tighter sort select, eased camera](014-compact-labels-and-camera.md)
+- [015 – Striped overlaps (rainbow mode)](015-striped-overlaps.md)
+- [016 – Filter defaults and radio/checkbox chips](016-filter-defaults-and-markers.md)
+- [017 – Hide-completed toggle and clearer selection](017-hide-completed-and-selection.md)
+- [018 – Overlap style, outline-order fix, plain checkbox](018-overlap-style.md)
+- [019 – 019 Filter polish](019-filter-polish.md)
+- [020 – 020 Show my position](020-my-position.md)
+- [021 – 021 Completion date](021-completion-date.md)
+- [022 – 022 Reverse hint](022-reverse-hint.md)
+- [023 – 023 Direction arrows](023-direction-arrows.md)
+- [024 – ](024-*.md)
+- [025 – 025 GPX export](025-gpx.md)
+- [026 – 026 Icon](026-icon.md)
+- [027 – Side-by-side overlap fixes](027-overlap-sides.md)
+- [028 – Closing settings](028-close-settings.md)
+- [029 – Overlap detection follow-up](029-overlap-review.md)
+- [030 – Overlap default by screen size](030-overlap-default.md)
+- [031 – Phone layout](031-phone-sheet.md)
+- [032 – About](032-about.md)
 - [003 – Preferred language](003-preferred-language.md): done, browser language with Swedish, English and French.
 - [033 – Share link](033-share-link.md): courses-only link to move progress between devices, no backend.
 - [034 – More bus categories](034-more-bus-categories.md): express and industrial buses, multi-select category filter; trams shelved.
 - [035 – Trams](035-trams.md): tram category with fixed line colours drawn as a border around the status line.
+- [036 – Remembered view and links](036-remembered-view.md): filters and sort saved, `#mode=plan` and `#line=` links.

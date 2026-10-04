@@ -23,7 +23,7 @@ import {
   type Option,
   type RouteStatus,
 } from './domain/course';
-import { applyFilters, categoryLabel, facetAvailability, defaultFilters, formatKm, sameCategories, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
+import { applyFilters, categoryLabel, facetAvailability, defaultFilters, formatKm, loadFilters, loadSort, saveFilters, saveSort, sameCategories, searchLines, SORT_KEYS, sortLines, statusFilterLabel, tagLabel, type Filters, type SortKey, type StatusFilter } from './domain/filter';
 import { badgeStyle } from './domain/color';
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { courseToGpx, gpxFileName } from './domain/gpx';
@@ -77,6 +77,12 @@ const legCoords = (legs: Leg[]) => legs.flatMap((l) => (l.kind === 'line' ? l.li
 const initialSyncPayload = payloadFromHash(location.hash);
 if (initialSyncPayload !== null) history.replaceState(null, '', location.pathname + location.search);
 
+function viewFromHash(hash: string): { mode: Mode; line: string | null } {
+  const q = new URLSearchParams(hash.replace(/^#/, ''));
+  return { mode: q.get('mode') === 'plan' ? 'plan' : 'browse', line: q.get('line') };
+}
+const initialView = viewFromHash(location.hash);
+
 export function App() {
   const { pref } = useLang();
   const { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation } = useAppearance();
@@ -125,11 +131,13 @@ export function App() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [ready, setReady] = useState(false);
   const [radiusM, setRadiusM] = useState(loadRadius);
-  const [mode, setMode] = useState<Mode>('browse');
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [mode, setMode] = useState<Mode>(initialView.mode);
+  const [filters, setFilters] = useState<Filters>(loadFilters);
   const [query, setQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SortKey>('number');
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortKey>(loadSort);
+  useEffect(() => saveFilters(filters), [filters]);
+  useEffect(() => saveSort(sortBy), [sortBy]);
+  const [selectedKey, setSelectedKey] = useState<string | null>(initialView.line);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [chooser, setChooser] = useState<ChooserItem[] | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -187,6 +195,22 @@ export function App() {
   const visible = useMemo(() => (dataset ? applyFilters(dataset.lines, filters, statusOf) : []), [dataset, filters, statuses]);
   const listed = useMemo(() => sortLines(searchLines(visible, query), sortBy, statusOf), [visible, query, sortBy, statuses]);
   const selected = useMemo(() => dataset?.lines.find((l) => l.key === selectedKey) ?? null, [dataset, selectedKey]);
+  useEffect(() => {
+    if (mode === 'build' || !ready) return;
+    const q = new URLSearchParams();
+    if (mode === 'plan') q.set('mode', 'plan');
+    if (selected) q.set('line', selected.key);
+    const h = q.toString();
+    // keep a pending #sync= link intact until it is consumed
+    if (payloadFromHash(location.hash) !== null) return;
+    history.replaceState(null, '', location.pathname + location.search + (h ? `#${h}` : ''));
+  }, [mode, selected, ready]);
+  const deepLinked = useRef(initialView.line !== null);
+  useEffect(() => {
+    if (!selected || !deepLinked.current) return;
+    deepLinked.current = false;
+    fitTo(selected.coordinates);
+  }, [selected]);
   const selectedCourse = useMemo(() => courses.find((c) => c.id === selectedCourseId) ?? null, [courses, selectedCourseId]);
 
   const legs = draft?.legs ?? [];

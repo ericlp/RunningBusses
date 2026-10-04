@@ -1,6 +1,6 @@
 import { lineLabel, localeTag, t } from '../i18n';
 import type { RouteStatus } from './course';
-import { compareLineNumbers, type Category, type Line, type Tag } from './types';
+import { CATEGORIES, compareLineNumbers, type Category, type Line, type Tag } from './types';
 
 /** `incomplete` means not completed, which includes lines that are not planned. */
 export type StatusFilter = 'all' | 'unplanned' | 'incomplete' | 'completed';
@@ -16,6 +16,54 @@ export interface Filters {
 }
 
 export const defaultFilters: Filters = { categories: ['stadsbuss'], status: 'incomplete', tags: [], minKm: null, maxKm: null };
+
+const FILTERS_KEY = 'rb.filters';
+const SORT_KEY = 'rb.sort';
+const STATUSES: readonly StatusFilter[] = ['all', 'unplanned', 'incomplete', 'completed'];
+const TAGS: readonly Tag[] = ['call-ordered', 'loop', 'one-way', 'retur'];
+
+export function loadFilters(): Filters {
+  try {
+    const o = JSON.parse(localStorage.getItem(FILTERS_KEY) ?? 'null');
+    if (!o || typeof o !== 'object') return defaultFilters;
+    const categories = CATEGORIES.filter((c) => Array.isArray(o.categories) && o.categories.includes(c));
+    const km = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+    return {
+      categories: categories.length ? categories : defaultFilters.categories,
+      status: STATUSES.includes(o.status) ? o.status : defaultFilters.status,
+      tags: TAGS.filter((x) => Array.isArray(o.tags) && o.tags.includes(x)),
+      minKm: km(o.minKm),
+      maxKm: km(o.maxKm),
+    };
+  } catch {
+    return defaultFilters;
+  }
+}
+
+export function saveFilters(f: Filters): void {
+  try {
+    localStorage.setItem(FILTERS_KEY, JSON.stringify(f));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+export function loadSort(): SortKey {
+  try {
+    const v = localStorage.getItem(SORT_KEY) as SortKey | null;
+    return v && SORT_KEYS.includes(v) ? v : 'number';
+  } catch {
+    return 'number';
+  }
+}
+
+export function saveSort(s: SortKey): void {
+  try {
+    localStorage.setItem(SORT_KEY, s);
+  } catch {
+    /* storage unavailable */
+  }
+}
 
 export function applyFilters(lines: Line[], f: Filters, statusOf: (key: string) => RouteStatus = () => 'NotPlanned'): Line[] {
   return lines.filter((l) => {
