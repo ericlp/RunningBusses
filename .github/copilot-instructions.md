@@ -37,4 +37,4 @@ There is no linter. CI (`deploy.yml`) runs typecheck, test, build, e2e, then dep
 - Any user-visible string goes into all three i18n dictionaries.
 - localStorage keys are prefixed `rb.` (e.g. `rb.filters`, `rb.sort`); stored values are validated on load and fall back to defaults. URL hash state: `#line=<key>`, `#mode=plan`, `#sync=` (share link, consumed first).
 - Design lives in `plans/`: `PLAN.md` is frozen except for corrections; each change gets a small `plans/NNN-title.md` linked from PLAN.md's "Change plans". Read the relevant plan before changing a feature.
-- Commit each feature or fix separately (one logical change per commit, with its plan, tests and i18n keys), not as one large commit. Do not commit until typecheck and tests pass.
+- Commit each feature or fix separately (one logical change per commit, with its plan, tests and i18n keys), not as one large commit. E2E journeys count as tests: before every commit run `npm run typecheck`, `npm test`, `npm run build` and `npm run e2e`, and commit only when all pass. New user-visible features get a journey in `e2e/` (added to `e2e/run.mjs`).
