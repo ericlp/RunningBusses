@@ -31,6 +31,8 @@ export interface Course {
   completedAt: string | null;
   /** Set when a completed course was unlocked: it keeps its old route data until the user updates it. */
   pinned?: boolean;
+  /** Names of the people who ran it (from the shared people list). Older courses have none. */
+  participants?: string[];
   legs: Leg[];
 }
 

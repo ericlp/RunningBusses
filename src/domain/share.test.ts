@@ -38,6 +38,15 @@ describe('share links', () => {
     expect(r.ok && r.shared.feedVersion).toBe('f1');
   });
 
+  it('keeps participants and the partial flag', async () => {
+    const c = course('1', ['59'], { status: 'Completed', completedAt: '2026-01-01', participants: ['Anna', 'Bo'] });
+    const r = await decodeShare(await encodeShare([c], 'f', true), lines);
+    expect(r.ok && r.shared.backup.courses).toEqual([c]);
+    expect(r.ok && r.shared.partial).toBe(true);
+    const all = await decodeShare(await encodeShare([c], 'f'), lines);
+    expect(all.ok && all.shared.partial).toBe(false);
+  });
+
   it('is much smaller than the full backup', async () => {
     const cs = [course('1', ['59', '69', '70'])];
     expect((await encodeShare(cs, 'f')).length).toBeLessThan(JSON.stringify(cs).length / 4);
