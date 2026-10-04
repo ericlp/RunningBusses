@@ -30,4 +30,10 @@ ok(/mode=plan/.test(p.url()), 'plan mode is in the hash');
 const p3 = await ctx.newPage();
 await p3.goto(p.url()); await p3.waitForSelector('.sheet');
 ok((await p3.locator('button[aria-pressed="true"]:has-text("Planera")').count()) === 1, 'plan link opens in plan mode');
+
+// a link pasted into an open tab only changes the hash
+await p.goto('http://localhost:4173/#mode=browse'); await p.waitForSelector('.badge');
+await p.evaluate(() => { location.hash = 'line=34'; });
+await p.waitForTimeout(500);
+ok(/Hjuvik/.test(await p.locator('.sheet').innerText()), 'hash change in an open tab selects the line');
 await b.close(); process.exit(fails);

@@ -7,4 +7,5 @@ Status: done except the real-phone walkthrough.
 - Keyboard: a visible focus ring is asserted.
 - Browser journeys moved from the ignored `.cache/` into `e2e/` (`npm run e2e`): courses, editing, backup, update, i18n, a11y. CI runs them before deploy.
 - README added.
-- Still open: walk through it on a real phone (bottom sheet, map gestures, file download/upload on iOS/Android), and visually check lines 37, 34, 42, 44, 90, 94 and 62.
+- Visual check of lines 34, 37, 42, 44, 62, 62 retur, 90, 94 and 94 retur (screenshots via `#line=` links): each path is one continuous route between its termini, with turnaround loops at the ends and no stray detours. No data changes needed.
+- Still open: walk through it on a real phone (bottom sheet, map gestures, file download/upload on iOS/Android). It needs a physical device and cannot be done from CI.

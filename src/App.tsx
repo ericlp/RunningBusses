@@ -88,12 +88,23 @@ export function App() {
   const { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation } = useAppearance();
   const [showSettings, setShowSettings] = useState(false);
   const syncPayload = useRef<string | null>(initialSyncPayload);
+  const deepLinked = useRef(initialView.line !== null);
+  const modeRef = useRef<Mode>(initialView.mode);
   const [syncTick, setSyncTick] = useState(0);
   useEffect(() => {
     // a link pasted into the address bar of an open tab only changes the hash
     const onHash = () => {
       const p = payloadFromHash(location.hash);
-      if (p === null) return;
+      if (p === null) {
+        // a view link pasted into an open tab; never interrupt a draft
+        const v = viewFromHash(location.hash);
+        if (modeRef.current === 'build') return;
+        deepLinked.current = v.line !== null;
+        setMode(v.mode);
+        setSelectedKey(v.line);
+        setChooser(null);
+        return;
+      }
       syncPayload.current = p;
       history.replaceState(null, '', location.pathname + location.search);
       setSyncTick((n) => n + 1);
@@ -132,6 +143,7 @@ export function App() {
   const [ready, setReady] = useState(false);
   const [radiusM, setRadiusM] = useState(loadRadius);
   const [mode, setMode] = useState<Mode>(initialView.mode);
+  modeRef.current = mode;
   const [filters, setFilters] = useState<Filters>(loadFilters);
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortKey>(loadSort);
@@ -205,7 +217,6 @@ export function App() {
     if (payloadFromHash(location.hash) !== null) return;
     history.replaceState(null, '', location.pathname + location.search + (h ? `#${h}` : ''));
   }, [mode, selected, ready]);
-  const deepLinked = useRef(initialView.line !== null);
   useEffect(() => {
     if (!selected || !deepLinked.current) return;
     deepLinked.current = false;

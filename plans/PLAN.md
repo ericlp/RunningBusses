@@ -108,7 +108,7 @@ Each phase ends with something usable. A phase is built only after the previous 
 3. **Editing.** Edit view, remove from either end, split, reverse, rename, undo, unlock.
 4. **Backup (done, see plan 005).** Export, then replace-import, then merge with conflict choices. A copy of the previous state is kept before an import.
 5. **Monthly refresh (done, see plan 006).** The scheduled job, the update rules above (pinned unlocked courses, missing lines, warnings), a "data from" date in settings.
-6. **Polish (done except the phone walkthrough, see plan 007).** Playwright checks on a phone and a desktop width for the main journeys, touch targets of at least 44 px, keyboard use, contrast, and a walkthrough on a real phone.
+6. **Polish (done except the walkthrough on a real phone, see plan 007; the line visual check is done).** Playwright checks on a phone and a desktop width for the main journeys, touch targets of at least 44 px, keyboard use, contrast, and a walkthrough on a real phone.
 7. **Stretch.** GPX export; archiving renumbered line sets.
 8. **Language (done).** Browser-preferred language with Swedish, English and French, see plan 003. Preferably done right after Phase 3, before more strings pile up.
 
