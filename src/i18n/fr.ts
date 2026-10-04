@@ -305,4 +305,5 @@ export const fr: Dict = {
   'stats.historyEmpty': 'Pas encore d’historique.',
   'stats.logCompleted': 'Terminé',
   'stats.logUncompleted': 'N’est plus terminé',
+  'backup.previewTitle': 'Importer',
 };

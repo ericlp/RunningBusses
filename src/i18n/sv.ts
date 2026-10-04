@@ -304,6 +304,7 @@ export const sv = {
   'stats.historyEmpty': 'Ingen historik ännu.',
   'stats.logCompleted': 'Genomförd',
   'stats.logUncompleted': 'Inte längre genomförd',
+  'backup.previewTitle': 'Importera',
 } as const;
 
 export type Key = keyof typeof sv;

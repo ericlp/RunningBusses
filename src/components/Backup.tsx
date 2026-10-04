@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { choiceKey, makeBackup, mergeCourses, parseBackup, type Backup, type Choice } from '../domain/backup';
 import type { Course } from '../domain/course';
@@ -134,8 +135,16 @@ export function BackupSection({ courses, people, log, radiusM, feedVersion, inco
         </button>
       </div>
       {msg && <p role="status">{msg}</p>}
-      {backup && merge && (
-        <div className="import-preview">
+      {backup && merge &&
+        createPortal(
+          <div className="modal-back" onClick={() => setBackup(null)}>
+            <div className="modal import-preview" role="dialog" aria-modal="true" aria-label={t('backup.previewTitle')} onClick={(e) => e.stopPropagation()}>
+              <div className="modal-head">
+                <h2>{t('backup.previewTitle')}</h2>
+                <button className="chip" aria-label={t('common.close')} onClick={() => setBackup(null)}>
+                  ×
+                </button>
+              </div>
           <p>{fromLink ? tn('share.preview', backup.courses.length) : tn('backup.preview', backup.courses.length, { date: backup.exportedAt.slice(0, 10) })}</p>
           {skipped.length > 0 && <p role="alert">{tn('share.skipped', skipped.length, { names: skipped.map((n) => `"${n}"`).join(', ') })}</p>}
           <div className="chips" role="group" aria-label={t('backup.mode')}>
@@ -181,8 +190,10 @@ export function BackupSection({ courses, people, log, radiusM, feedVersion, inco
               {t('split.cancel')}
             </button>
           </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </section>
   );
 }

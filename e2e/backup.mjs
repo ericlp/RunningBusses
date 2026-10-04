@@ -19,6 +19,7 @@ ok(data.courses.length === 1, 'export has 1 course');
 // merge of identical copy
 await p.setInputFiles('input[type=file]', '/tmp/rb-bk.json');
 await p.waitForSelector('.import-preview');
+ok(await p.locator('[role=dialog].import-preview').count() === 1 && await p.locator('.modal:not(.import-preview) .import-preview').count() === 0, 'import preview is its own dialog');
 ok(await p.locator('.import-preview').innerText().then(t => t.includes('1 bana')), 'preview shows 1 bana');
 ok(await p.locator('.conflict').count() === 0, 'identical = no conflict');
 ok(!(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)), 'no overflow');
