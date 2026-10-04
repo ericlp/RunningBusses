@@ -308,4 +308,5 @@ export const fr: Dict = {
   'backup.modeReplace': 'Remplacer tous mes parcours',
   'backup.modeMergeText': 'Vous gardez vos parcours et les nouveaux sont ajoutés.',
   'backup.modeMerge': 'Ajouter à mes parcours',
+  'legend.aria': 'Légende des couleurs de ligne',
 };

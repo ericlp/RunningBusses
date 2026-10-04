@@ -10,6 +10,9 @@
   --accent: var(--vt-blue);
   --accent-text: #ffffff;
   --line: #1b86b8;
+  --status-unplanned: #7b93a3;
+  --status-planned: #d98200;
+  --status-done: #2e9e4f;
   --highlight: #003f58;
   --shadow: 0 2px 10px rgba(0, 30, 45, 0.18);
   color-scheme: light;
@@ -521,13 +524,13 @@ button {
 }
 
 .status-Completed {
-  background: #2e9e4f;
-  border-color: #2e9e4f;
+  background: var(--status-done);
+  border-color: var(--status-done);
   color: #fff;
 }
 
 .status-NotCompleted {
-  border-color: var(--vt-blue);
+  border-color: var(--status-planned);
 }
 
 .courses {
@@ -859,6 +862,9 @@ button {
   --muted: #9db0ba;
   --border: #28404b;
   --line: #37a6d9;
+  --status-unplanned: #8ea5b4;
+  --status-planned: #ffb020;
+  --status-done: #4cc16e;
   --highlight: #5fd0ff;
   --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
@@ -1125,3 +1131,13 @@ button {
 .choice:has(input:checked) { border-color: var(--vt-blue); box-shadow: 0 0 0 1px var(--vt-blue); }
 .choice input { margin-top: 3px; }
 .choice strong, .choice .muted { display: block; }
+
+.dot { display: inline-block; width: 0.7em; height: 0.7em; border-radius: 50%; margin-right: 4px; vertical-align: baseline; background: var(--status-unplanned); }
+.dot-NotCompleted { background: var(--status-planned); }
+.dot-Completed { background: var(--status-done); }
+.legend { position: absolute; z-index: 450; left: 8px; top: 8px; padding: 6px 10px; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); font-size: 0.8rem; display: grid; gap: 2px; pointer-events: none; }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.legend i { width: 22px; border-top: 0 solid; }
+.legend .l-NotPlanned { border-top-width: 3px; border-color: var(--status-unplanned); }
+.legend .l-NotCompleted { border-top-width: 5px; border-top-style: dashed; border-color: var(--status-planned); }
+.legend .l-Completed { border-top-width: 5px; border-color: var(--status-done); }

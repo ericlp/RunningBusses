@@ -47,6 +47,7 @@ type Mode = 'browse' | 'plan' | 'build';
 const ALL_TAGS: Tag[] = ['call-ordered', 'loop', 'one-way', 'retur'];
 const STATUS_FILTERS: StatusFilter[] = ['all', 'unplanned', 'incomplete', 'completed'];
 const EMPTY_DRAFT: Draft = { name: '', legs: [] };
+import { STATUS_STYLE } from './domain/statusStyle';
 const toneOf: Record<RouteStatus, Tone> = { NotPlanned: 'base', NotCompleted: 'planned', Completed: 'done' };
 
 interface ChooserItem {
@@ -626,7 +627,7 @@ export function App() {
       const shown = visible.filter((l) => l.key !== selectedKey);
       for (const l of shown) {
         const st = statusOf(l.key);
-        layers.push({ coords: l.coordinates, key: l.key, tone: toneOf[st], weight: st === 'NotPlanned' ? 3 : 4, opacity: 1, fixedColor: l.color });
+        layers.push({ coords: l.coordinates, key: l.key, tone: toneOf[st], weight: STATUS_STYLE[st].weight, dashed: STATUS_STYLE[st].dashed && !l.color, opacity: 1, fixedColor: l.color });
       }
       if (mode === 'plan') {
         tappable = courses.flatMap((c) => c.legs.flatMap((l) => (l.kind === 'line' ? [l.line] : [])));
@@ -701,7 +702,19 @@ export function App() {
         ) : !dataset ? (
           <div className="status">{t('load.loading')}</div>
         ) : (
-          <MapView layers={layers} markers={markers} stops={stops} tappable={tappable} fit={fit} onTap={onTap} />
+          <>
+            <MapView layers={layers} markers={markers} stops={stops} tappable={tappable} fit={fit} onTap={onTap} />
+            {lineColors === 'status' && (
+              <div className="legend" aria-label={t('legend.aria')}>
+                {(['NotPlanned', 'NotCompleted', 'Completed'] as const).map((s) => (
+                  <span key={s}>
+                    <i className={`l-${s}`} aria-hidden />
+                    {t(`routeStatus.${s}` as Key)}
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {mode === 'build' && (
@@ -1060,7 +1073,7 @@ export function App() {
                             <span>
                               {l.from} → {l.to}
                               <br />
-                              <span className="sub">{[st === 'Completed' ? t('list.completed') : st === 'NotCompleted' ? t('list.planned') : '', ...l.tags.map((tag) => tagLabel(tag))].filter(Boolean).join(' · ')}</span>
+                              <span className="sub"><span className={`dot dot-${st}`} aria-hidden />{[st === 'Completed' ? t('list.completed') : st === 'NotCompleted' ? t('list.planned') : '', ...l.tags.map((tag) => tagLabel(tag))].filter(Boolean).join(' · ')}</span>
                             </span>
                             <span className="km">{formatKm(l.lengthM)}</span>
                           </button>

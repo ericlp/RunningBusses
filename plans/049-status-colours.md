@@ -1,6 +1,6 @@
 # 049 – Distinguish NotPlanned and NotCompleted in "by status" colours
 
-Status: todo, design agreed.
+Status: done.
 
 Cause: in "by status" mode NotPlanned is `--line` (`#1b86b8`, weight 3) and NotCompleted is `--vt-blue` (`#009ddb`, weight 4): two nearly identical blues, so only Completed (green) stands out. See `toneColor` in `MapView.tsx` and `toneOf` in `App.tsx`.
 

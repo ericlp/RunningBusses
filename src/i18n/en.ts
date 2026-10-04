@@ -308,4 +308,5 @@ export const en: Dict = {
   'backup.modeReplace': 'Replace all my courses',
   'backup.modeMergeText': 'You keep your courses and get the new ones added.',
   'backup.modeMerge': 'Add to my courses',
+  'legend.aria': 'Line colour legend',
 };

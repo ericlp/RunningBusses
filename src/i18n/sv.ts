@@ -307,6 +307,7 @@ export const sv = {
   'backup.modeReplace': 'Ersätt alla mina banor',
   'backup.modeMergeText': 'Du behåller dina banor och får de nya tillagda.',
   'backup.modeMerge': 'Lägg till i mina banor',
+  'legend.aria': 'Förklaring av linjefärger',
 } as const;
 
 export type Key = keyof typeof sv;

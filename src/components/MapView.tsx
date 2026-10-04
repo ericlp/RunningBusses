@@ -56,7 +56,7 @@ const GOTHENBURG: L.LatLngExpression = [57.7089, 11.9746];
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const toneColor = (t: Tone): string =>
-  ({ base: css('--line'), planned: css('--vt-blue'), done: '#2e9e4f', highlight: css('--highlight'), candidate: '#f08c00', connector: '#d6342c' })[t];
+  ({ base: css('--status-unplanned'), planned: css('--status-planned'), done: css('--status-done'), highlight: css('--highlight'), candidate: '#8e44ad', connector: '#d6342c' })[t];
 /** Golden-angle hues keep neighbouring line numbers visually far apart. */
 function rainbow(key: string, dark: boolean): string {
   // names like X40 have no leading number, so they get a number from their letters
