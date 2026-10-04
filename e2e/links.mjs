@@ -36,4 +36,19 @@ await p.goto('http://localhost:4173/#mode=browse'); await p.waitForSelector('.ba
 await p.evaluate(() => { location.hash = 'line=34'; });
 await p.waitForTimeout(500);
 ok(/Hjuvik/.test(await p.locator('.sheet').innerText()), 'hash change in an open tab selects the line');
+
+// Back returns to the previous selection
+const back = await ctx.newPage();
+await back.goto('http://localhost:4173/'); await back.waitForSelector('.badge');
+const rows = back.locator('.sheet .list button');
+await rows.nth(0).click(); await back.waitForTimeout(300);
+const first = back.url().split('#')[1];
+await rows.nth(1).click(); await back.waitForTimeout(300);
+const second = back.url().split('#')[1];
+ok(first && second && first !== second, `two selections give two hashes (${first}, ${second})`);
+await back.goBack(); await back.waitForTimeout(400);
+ok(back.url().split('#')[1] === first, 'Back returns to the previous line');
+ok(await back.locator('.line-card, .card').count() > 0, 'previous line is selected again');
+await back.goForward(); await back.waitForTimeout(400);
+ok(back.url().split('#')[1] === second, 'Forward returns to the next line');
 await b.close(); process.exit(fails);

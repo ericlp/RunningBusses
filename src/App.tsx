@@ -96,6 +96,7 @@ export function App() {
   const syncPayload = useRef<string | null>(initialSyncPayload);
   const deepLinked = useRef(initialView.line !== null);
   const modeRef = useRef<Mode>(initialView.mode);
+  const viewSynced = useRef(false);
   const [syncTick, setSyncTick] = useState(0);
   useEffect(() => {
     // a link pasted into the address bar of an open tab only changes the hash
@@ -265,7 +266,12 @@ export function App() {
     const h = q.toString();
     // keep a pending #sync= link intact until it is consumed
     if (payloadFromHash(location.hash) !== null) return;
-    history.replaceState(null, '', location.pathname + location.search + (h ? `#${h}` : ''));
+    const url = location.pathname + location.search + (h ? `#${h}` : '');
+    if (url === location.pathname + location.search + location.hash) return;
+    // the first sync only normalises the address; later selections are history entries so Back returns to the previous one
+    if (viewSynced.current) history.pushState(null, '', url);
+    else history.replaceState(null, '', url);
+    viewSynced.current = true;
   }, [mode, selected, ready]);
   useEffect(() => {
     if (!selected || !deepLinked.current) return;

@@ -180,3 +180,4 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [052 – Start run mode](052-start-run.md)
 - [053 – Close the filter panel on outside click](053-close-filter-on-outside-click.md)
 - [054 – Action button icons and tones](054-action-icons.md)
+- [055 – Back and Forward follow the selection](055-history-navigation.md)
