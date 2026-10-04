@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Course } from './course';
-import { addPerson, cleanName, computeProgress, knownPeople, unusedPeople } from './stats';
-import type { Line } from './types';
+import { addPerson, cleanName, computeProgress, DEFAULT_PROGRESS_CATEGORIES, knownPeople, loadProgressCategories, saveProgressCategories, toggleProgressCategory, unusedPeople } from './stats';
+import { CATEGORIES, type Line } from './types';
 
 const line = (key: string, lengthM: number, category: Line['category'] = 'stadsbuss'): Line => ({
   key,
@@ -53,7 +53,7 @@ describe('computeProgress', () => {
   const open = course('3', ['69']);
 
   it('counts lines and distance by category', () => {
-    const p = computeProgress([done, later, open], lines);
+    const p = computeProgress([done, later, open], lines, [], 5, CATEGORIES);
     expect(p.total).toMatchObject({ lines: 4, doneLines: 2, plannedLines: 1, lengthM: 14000, doneM: 9000 });
     expect(p.byCategory.map((c) => [c.category, c.doneLines, c.lines])).toEqual([['stadsbuss', 1, 3], ['tram', 1, 1]]);
     expect(p.completedCourses).toBe(2);
@@ -61,12 +61,27 @@ describe('computeProgress', () => {
   });
 
   it('totals per person, most distance first, including people with no runs', () => {
-    const p = computeProgress([done, later, open], lines, ['Anna', 'Bo', 'Cy']);
+    const p = computeProgress([done, later, open], lines, ['Anna', 'Bo', 'Cy'], 5, CATEGORIES);
     expect(p.people).toEqual([
       { name: 'Anna', courses: 2, distanceM: 9000 },
       { name: 'Bo', courses: 1, distanceM: 5000 },
       { name: 'Cy', courses: 0, distanceM: 0 },
     ]);
+  });
+
+  it('counts only stadsbuss by default, in totals, rows and per person', () => {
+    const p = computeProgress([done, later, open], lines, ['Anna', 'Bo']);
+    expect(p.total).toMatchObject({ lines: 3, doneLines: 1, lengthM: 10000, doneM: 5000 });
+    expect(p.byCategory.map((c) => c.category)).toEqual(['stadsbuss']);
+    expect(p.runM).toBe(5000);
+    expect(p.people.map((x) => [x.name, x.distanceM])).toEqual([['Anna', 5000], ['Bo', 5000]]);
+  });
+
+  it('counts only the included legs of a mixed course', () => {
+    const mixed = course('4', ['59', 'T1'], { status: 'Completed', completedAt: '2026-04-01', participants: ['Cy'] });
+    expect(computeProgress([mixed], lines, [], 5, ['stadsbuss']).runM).toBe(5000);
+    expect(computeProgress([mixed], lines, [], 5, ['tram']).runM).toBe(4000);
+    expect(computeProgress([mixed], lines, [], 5, CATEGORIES).runM).toBe(9000);
   });
 
   it('lists recent completions newest first and ignores open courses', () => {
@@ -78,5 +93,30 @@ describe('computeProgress', () => {
     const p = computeProgress([], []);
     expect(p.total.lines).toBe(0);
     expect(p.recent).toEqual([]);
+  });
+});
+
+describe('progress categories setting', () => {
+  const store = new Map<string, string>();
+  Object.defineProperty(globalThis, 'localStorage', { value: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) }, configurable: true });
+
+  it('defaults to stadsbuss and falls back on bad values', () => {
+    store.clear();
+    expect(loadProgressCategories()).toEqual(DEFAULT_PROGRESS_CATEGORIES);
+    store.set('rb.progressCategories', '{not json');
+    expect(loadProgressCategories()).toEqual(['stadsbuss']);
+    store.set('rb.progressCategories', JSON.stringify(['bogus']));
+    expect(loadProgressCategories()).toEqual(['stadsbuss']);
+  });
+
+  it('round-trips a saved choice', () => {
+    saveProgressCategories(['tram', 'express']);
+    expect(loadProgressCategories()).toEqual(['express', 'tram']);
+  });
+
+  it('adds categories in canonical order and keeps the last one', () => {
+    expect(toggleProgressCategory(['stadsbuss'], 'tram')).toEqual(['stadsbuss', 'tram']);
+    expect(toggleProgressCategory(['stadsbuss', 'tram'], 'tram')).toEqual(['stadsbuss']);
+    expect(toggleProgressCategory(['stadsbuss'], 'stadsbuss')).toEqual(['stadsbuss']);
   });
 });

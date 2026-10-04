@@ -4,7 +4,7 @@ import { formatDistance } from '../domain/course';
 import { categoryLabel } from '../domain/filter';
 import { cleanName, computeProgress, MAX_PERSON_NAME, unusedPeople, type CategoryProgress } from '../domain/stats';
 import type { LogEntry } from '../domain/log';
-import type { Line } from '../domain/types';
+import type { Category, Line } from '../domain/types';
 import { t, tn } from '../i18n';
 
 const pct = (done: number, total: number) => (total > 0 ? Math.round((done / total) * 100) : 0);
@@ -36,13 +36,14 @@ interface Props {
   lines: Line[];
   people: string[];
   log: LogEntry[];
+  categories: Category[];
   onAddPerson: (name: string) => void;
   onRemovePerson: (name: string) => void;
 }
 
 /** Overall progress, per-person totals, the latest completed courses, and the people list. */
-export function StatsPanel({ courses, lines, people, log, onAddPerson, onRemovePerson }: Props) {
-  const p = useMemo(() => computeProgress(courses, lines, people), [courses, lines, people]);
+export function StatsPanel({ courses, lines, people, log, categories, onAddPerson, onRemovePerson }: Props) {
+  const p = useMemo(() => computeProgress(courses, lines, people, 5, categories), [courses, lines, people, categories]);
   const removable = useMemo(() => new Set(unusedPeople(people, courses)), [people, courses]);
   const [name, setName] = useState('');
   const submit = () => {

@@ -308,6 +308,8 @@ export const sv = {
   'backup.modeMergeText': 'Du behåller dina banor och får de nya tillagda.',
   'backup.modeMerge': 'Lägg till i mina banor',
   'legend.aria': 'Förklaring av linjefärger',
+  'settings.progress': 'Räknas i framsteg',
+  'settings.progressHelp': 'Vilka kategorier som räknas i framstegspanelen. Minst en måste vara vald.',
 } as const;
 
 export type Key = keyof typeof sv;

@@ -1,6 +1,6 @@
 # 050 – Categories counted in progress
 
-Status: todo, design agreed.
+Status: done.
 
 The progress panel (037) counts all lines. Add a setting for which categories (`stadsbuss | stombuss | express | industri | tram`) it counts. Default: only stadsbuss.
 

@@ -309,4 +309,6 @@ export const fr: Dict = {
   'backup.modeMergeText': 'Vous gardez vos parcours et les nouveaux sont ajoutés.',
   'backup.modeMerge': 'Ajouter à mes parcours',
   'legend.aria': 'Légende des couleurs de ligne',
+  'settings.progress': 'Comptés dans la progression',
+  'settings.progressHelp': 'Les catégories prises en compte dans le panneau de progression. Au moins une doit rester sélectionnée.',
 };

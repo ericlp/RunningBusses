@@ -30,7 +30,7 @@ import { badgeStyle } from './domain/color';
 import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcile';
 import { legStops, lineStops, type StopPoint } from './domain/stops';
 import { addEntry, makeEntry, removeEntry, type LogEntry } from './domain/log';
-import { addPerson, knownPeople } from './domain/stats';
+import { addPerson, knownPeople, loadProgressCategories, saveProgressCategories, toggleProgressCategory } from './domain/stats';
 import { courseToGpx, gpxFileName } from './domain/gpx';
 import { REPO_URL, Tour, type TourStep } from './components/Tour';
 import { BackupSection } from './components/Backup';
@@ -147,6 +147,8 @@ export function App() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [storedPeople, setStoredPeople] = useState<string[]>([]);
   const [log, setLog] = useState<LogEntry[]>([]);
+  const [progressCategories, setProgressCategories] = useState<Category[]>(loadProgressCategories);
+  useEffect(() => saveProgressCategories(progressCategories), [progressCategories]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [ready, setReady] = useState(false);
   const [radiusM, setRadiusM] = useState(loadRadius);
@@ -1012,7 +1014,7 @@ export function App() {
 
               {mode === 'plan' && (
                 <>
-                <StatsPanel courses={courses} lines={dataset?.lines ?? []} people={people} log={log} onAddPerson={(n) => void addPersonName(n)} onRemovePerson={(n) => void removePersonName(n)} />
+                <StatsPanel courses={courses} lines={dataset?.lines ?? []} people={people} log={log} categories={progressCategories} onAddPerson={(n) => void addPersonName(n)} onRemovePerson={(n) => void removePersonName(n)} />
                 <CourseList
                   courses={courses}
                   selectedId={selectedCourseId}
@@ -1184,6 +1186,17 @@ export function App() {
                   ))}
                 </select>
               </label>
+              <div className="field" role="group" aria-label={t('settings.progress')}>
+                <span>{t('settings.progress')}</span>
+                <div className="chips">
+                  {CATEGORIES.map((c) => (
+                    <button key={c} className="chip check" aria-pressed={progressCategories.includes(c)} onClick={() => setProgressCategories((cur) => toggleProgressCategory(cur, c))}>
+                      {categoryLabel(c)}
+                    </button>
+                  ))}
+                </div>
+                <span className="muted">{t('settings.progressHelp')}</span>
+              </div>
               <button className="chip check plain" aria-pressed={showLocation} onClick={() => setShowLocation(!showLocation)}>
                 {t('settings.location')}
               </button>

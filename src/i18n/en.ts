@@ -309,4 +309,6 @@ export const en: Dict = {
   'backup.modeMergeText': 'You keep your courses and get the new ones added.',
   'backup.modeMerge': 'Add to my courses',
   'legend.aria': 'Line colour legend',
+  'settings.progress': 'Counted in progress',
+  'settings.progressHelp': 'Which categories the progress panel counts. At least one must be selected.',
 };
