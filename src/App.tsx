@@ -621,7 +621,7 @@ export function App() {
               {offline && t('notice.offline')}
               {dataset && Date.now() - Date.parse(dataset.generatedAt) > STALE_DAYS * 864e5 && t('notice.stale', { date: dataset.generatedAt.slice(0, 10) })}
             </span>
-            <button aria-label={t('common.close')} onClick={() => setNoticeOpen(false)}>
+            <button className="chip" aria-label={t('common.close')} onClick={() => setNoticeOpen(false)}>
               ×
             </button>
           </div>
@@ -923,8 +923,8 @@ export function App() {
             <div className="modal" role="dialog" aria-modal="true" aria-label={t('settings.title')} onClick={(e) => e.stopPropagation()}>
               <div className="modal-head">
                 <h2>{t('settings.title')}</h2>
-                <button className="tool" aria-label={t('common.close')} onClick={() => setShowSettings(false)}>
-                  ✕
+                <button className="chip" aria-label={t('common.close')} onClick={() => setShowSettings(false)}>
+                  ×
                 </button>
               </div>
               <label className="field">
@@ -1018,9 +1018,6 @@ export function App() {
                 </a>
               </p>
               <p className="muted">{t('settings.data', { version: dataset.feedVersion })} · {t('settings.dataDate', { date: dataset.generatedAt.slice(0, 10) })}</p>
-              <button className="chip" onClick={() => setShowSettings(false)}>
-                {t('common.close')}
-              </button>
             </div>
           </div>
         )}

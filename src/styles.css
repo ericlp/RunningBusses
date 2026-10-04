@@ -202,12 +202,6 @@ button {
   align-items: flex-start;
 }
 
-.notice button {
-  border: 0;
-  background: transparent;
-  font-size: 1.1rem;
-}
-
 .sheet {
   position: absolute;
   z-index: 600;

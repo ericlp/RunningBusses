@@ -171,7 +171,7 @@ export function BackupSection({ courses, radiusM, feedVersion, incoming, onApply
             </>
           )}
           <div className="chips">
-            <button className="chip primary" disabled={busy || pending > 0} onClick={() => void apply()}>
+            <button className="primary compact" disabled={busy || pending > 0} onClick={() => void apply()}>
               {pending > 0 ? tn('backup.resolveFirst', pending) : t('backup.apply')}
             </button>
             <button className="chip" onClick={() => setBackup(null)}>
