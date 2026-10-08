@@ -31,6 +31,8 @@ Existing route keys stay intact. Added lines use `vt.<route_id>` keys (plus `r` 
 
 One representative path is published per line/direction, not every timetable variant. Existing categories prefer the reference Wednesday; other buses and Wednesday-absent lines use patterns weighted by operating days throughout the feed. `npm run data -- --date=YYYYMMDD` overrides the preferred reference day. An eligible timetabled line without usable geometry stops the build before the dataset is written. Regional routes may exceed 60 km; they retain geometry/length checks with a 200 km upper sanity limit.
 
+Publication includes a schema-2 `data/catalog-manifest.json`, a content-addressed complete lightweight catalogue, and one content-addressed geometry file per category in `data/categories/`. SHA-256 descriptors include route counts and byte sizes; the stable release hash excludes generation timestamps. `lines.json` and the schema-1 `manifest.json` remain for existing clients and aggregate validation. Validation checks every split asset and exact aggregate reconstruction, including optional fields and property order. Builds remove only obsolete owned content-addressed files.
+
 ## Data on your device
 
 Courses live in the browser (IndexedDB); filters and sort order are remembered in localStorage. Use ⚙ → Säkerhetskopia to share a link (courses only) or export a file, and open the link or import the file with merge or replace on another device. A copy from before the last import can be downloaded.

@@ -9,6 +9,7 @@ import { type CategoryConfig } from './transit/category';
 import { assertRoutableLines, planRoutes, type Pattern } from './transit/select';
 import { referenceWednesday, serviceDays, tripWeight } from './transit/calendar';
 import { parsePublicLines, selectRoute, type SelectedRoute } from './transit/routes';
+import { writeSplitAssets } from './transit/split';
 
 interface Config {
   routeIdPrefix: string;
@@ -223,6 +224,7 @@ async function main(): Promise<void> {
   mkdirSync(outDir, { recursive: true });
   writeFileSync(`${outDir}/lines.json`, JSON.stringify(dataset));
   writeFileSync(`${outDir}/manifest.json`, JSON.stringify(manifest, null, 2) + '\n');
+  await writeSplitAssets(dataset, outDir);
 
   const counts = [...new Set(lines.map((l) => l.category))].map((c) => `${c} ${lines.filter((l) => l.category === c).length}`);
   console.log(`Wrote ${lines.length} routes (${counts.join(', ')}), hash ${hash}`);

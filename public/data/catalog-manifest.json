@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 2,
+  "release": "cb7ca994d4deb307045b856ee8abb48ba3ac8f9def02b4da83c581023e58eb63",
+  "feedVersion": "2026-10-03",
+  "referenceDate": "20261014",
+  "generatedAt": "2026-10-08T14:56:58.894Z",
+  "lineCount": 805,
+  "catalog": {
+    "file": "catalog.68fc94721ac816c69272b1699a324c514c81493c1a274dfac78fb0ce81564dc4.json",
+    "hash": "68fc94721ac816c69272b1699a324c514c81493c1a274dfac78fb0ce81564dc4",
+    "count": 805,
+    "bytes": 416755
+  },
+  "categories": {
+    "stadsbuss": {
+      "file": "categories/stadsbuss.730a0de9d32323ec425b055b9deebcf7264ae4e471d4d134ff39de0d671e8d2c.json",
+      "hash": "730a0de9d32323ec425b055b9deebcf7264ae4e471d4d134ff39de0d671e8d2c",
+      "count": 51,
+      "bytes": 437420
+    },
+    "stombuss": {
+      "file": "categories/stombuss.1f76c2d373eb21c2f425341cd5e620744edade63040fcdf86aa1c9bd2a5f85dc.json",
+      "hash": "1f76c2d373eb21c2f425341cd5e620744edade63040fcdf86aa1c9bd2a5f85dc",
+      "count": 5,
+      "bytes": 77888
+    },
+    "express": {
+      "file": "categories/express.4b136f39060f0583b22264ad41fd3bb0a71482f92487b2f7da3e52144eeda393.json",
+      "hash": "4b136f39060f0583b22264ad41fd3bb0a71482f92487b2f7da3e52144eeda393",
+      "count": 11,
+      "bytes": 260643
+    },
+    "industri": {
+      "file": "categories/industri.217e61e6187d1a3e531f36f4c0cf3e9cd6cde02cc9ade8dedca5f91bed06baec.json",
+      "hash": "217e61e6187d1a3e531f36f4c0cf3e9cd6cde02cc9ade8dedca5f91bed06baec",
+      "count": 35,
+      "bytes": 399515
+    },
+    "other-bus": {
+      "file": "categories/other-bus.74fc6ea42d5a16ca12c1a882a167f083a55c85f23e98c7eb6ecc0460cdc7aa69.json",
+      "hash": "74fc6ea42d5a16ca12c1a882a167f083a55c85f23e98c7eb6ecc0460cdc7aa69",
+      "count": 689,
+      "bytes": 12133140
+    },
+    "tram": {
+      "file": "categories/tram.d80a52327c7385d1c3f5b24357d91a72c7256cdec04fefd6d13a46f14d46fe45.json",
+      "hash": "d80a52327c7385d1c3f5b24357d91a72c7256cdec04fefd6d13a46f14d46fe45",
+      "count": 14,
+      "bytes": 152615
+    }
+  }
+}

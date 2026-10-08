@@ -42,10 +42,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if git diff --quiet HEAD -- public/data/manifest.json; then
+          if git diff --quiet HEAD -- public/data/catalog-manifest.json; then
             echo "No change in line data."; exit 0
           fi
-          if [ "$(git show HEAD:public/data/manifest.json | node -p 'JSON.parse(require("fs").readFileSync(0)).hash')" = "$(node -p 'require("./public/data/manifest.json").hash')" ]; then
+          if [ "$(git show HEAD:public/data/catalog-manifest.json | node -p 'JSON.parse(require("fs").readFileSync(0)).release')" = "$(node -p 'require("./public/data/catalog-manifest.json").release')" ]; then
             echo "Same line hash; skipping."; git checkout -- public/data; exit 0
           fi
           git config user.name "github-actions[bot]"

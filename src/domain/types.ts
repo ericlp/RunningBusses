@@ -50,3 +50,35 @@ export interface Manifest {
   file: string;
   hash: string;
 }
+
+export type LineMetadata = Omit<Line, 'coordinates' | 'viaAt'>;
+export interface LineGeometry {
+  key: string;
+  coordinates: [number, number][];
+  viaAt?: [number, number][];
+}
+export interface AssetDescriptor {
+  file: string;
+  hash: string;
+  count: number;
+  bytes: number;
+}
+export interface CatalogManifest {
+  schemaVersion: 2;
+  release: string;
+  feedVersion: string;
+  referenceDate: string;
+  generatedAt: string;
+  lineCount: number;
+  catalog: AssetDescriptor;
+  categories: Record<Category, AssetDescriptor>;
+}
+export interface Catalog {
+  schemaVersion: 2;
+  lines: LineMetadata[];
+}
+export interface CategoryPayload {
+  schemaVersion: 2;
+  category: Category;
+  lines: LineGeometry[];
+}
