@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Dataset, Line } from '../../src/domain/types';
 import { validateDataset } from './validate';
+import { pathLengthM } from '../../src/domain/geo';
 
 const line = (key: string, extra: Partial<Line> = {}): Line => ({
   key, number: key, label: key, category: 'stadsbuss', tags: [], from: 'A', to: 'B', lengthM: 1112, via: [],
@@ -25,5 +26,13 @@ describe('validateDataset', () => {
   it('warns about moved ends', () => {
     const moved = line('1', { coordinates: [[11.91, 57.7], [11.91, 57.71]] });
     expect(validateDataset(ds([moved]), ds([line('1')]), opts).warnings[0]).toMatch(/moved/);
+  });
+  it('accepts long regional routes but still rejects implausible lengths and wrong geometry', () => {
+    const coordinates: [number, number][] = [[11.9, 57.7], [11.9, 58.7]];
+    const regional = line('vt.9011014360000000', { category: 'other-bus', coordinates, lengthM: Math.round(pathLengthM(coordinates)) });
+    expect(validateDataset(ds([regional]), null, opts).errors).toEqual([]);
+    expect(validateDataset(ds([{ ...regional, lengthM: 250000 }]), null, opts).errors).toEqual(expect.arrayContaining([expect.stringMatching(/implausible/)]));
+    expect(validateDataset(ds([{ ...regional, lengthM: NaN }]), null, opts).errors).toEqual(expect.arrayContaining([expect.stringMatching(/implausible/)]));
+    expect(validateDataset(ds([{ ...regional, lengthM: 80000 }]), null, opts).errors).toEqual(expect.arrayContaining([expect.stringMatching(/does not match/)]));
   });
 });

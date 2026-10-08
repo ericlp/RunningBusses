@@ -1,5 +1,5 @@
-export type Category = 'stadsbuss' | 'stombuss' | 'express' | 'industri' | 'tram';
-export const CATEGORIES: readonly Category[] = ['stadsbuss', 'stombuss', 'express', 'industri', 'tram'];
+export type Category = 'stadsbuss' | 'stombuss' | 'express' | 'industri' | 'other-bus' | 'tram';
+export const CATEGORIES: readonly Category[] = ['stadsbuss', 'stombuss', 'express', 'industri', 'other-bus', 'tram'];
 
 /** Orders line numbers the way people read them: 9 before 17 before 114 before X1. */
 export const compareLineNumbers = (a: string, b: string): number => a.localeCompare(b, 'en', { numeric: true });
@@ -13,7 +13,7 @@ export interface Stop {
 
 /** One runnable route: a line, or one direction of a line whose directions differ (a "retur"). */
 export interface Line {
-  /** Stable app key, e.g. "59" or "62r". */
+  /** Stable app key: legacy Gothenburg number or namespaced Västtrafik route identity, optionally ending in "r". */
   key: string;
   number: string;
   /** Display name, e.g. "62" or "62 retur". */

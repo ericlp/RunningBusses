@@ -1,4 +1,5 @@
 import type { Line } from './types';
+import { pathBounds } from './geo';
 
 const M_PER_DEG_LAT = 110540;
 const M_PER_DEG_LON = 111320;
@@ -36,17 +37,8 @@ export function linesNear(lines: Line[], lat: number, lon: number, toleranceM: n
   const dLon = toleranceM / (M_PER_DEG_LON * Math.cos((lat * Math.PI) / 180));
   return lines
     .filter((l) => {
-      let minLon = Infinity;
-      let maxLon = -Infinity;
-      let minLat = Infinity;
-      let maxLat = -Infinity;
-      for (const [x, y] of l.coordinates) {
-        if (x < minLon) minLon = x;
-        if (x > maxLon) maxLon = x;
-        if (y < minLat) minLat = y;
-        if (y > maxLat) maxLat = y;
-      }
-      return lon >= minLon - dLon && lon <= maxLon + dLon && lat >= minLat - dLat && lat <= maxLat + dLat;
+      const { west, east, south, north } = pathBounds(l.coordinates);
+      return lon >= west - dLon && lon <= east + dLon && lat >= south - dLat && lat <= north + dLat;
     })
     .map((l) => ({ l, d: distanceToLineM(l, lat, lon) }))
     .filter(({ d }) => d <= toleranceM)

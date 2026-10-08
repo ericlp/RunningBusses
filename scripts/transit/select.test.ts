@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planRoutes, type Pattern } from './select';
+import { assertRoutableLines, planRoutes, type Pattern } from './select';
 
 const pat = (o: Partial<Pattern>): Pattern => ({
   direction: '0',
@@ -17,6 +17,11 @@ const pat = (o: Partial<Pattern>): Pattern => ({
 });
 
 describe('planRoutes', () => {
+  it('blocks publication when an eligible line has no timed shape', () => {
+    expect(planRoutes([], 0.12)).toEqual([]);
+    expect(() => assertRoutableLines(['59 (vt.9011014405900000)'])).toThrow(/59.*Dataset not written/);
+    expect(() => assertRoutableLines([])).not.toThrow();
+  });
   it('keeps one route for a symmetrical line and uses the busier direction', () => {
     const r = planRoutes(
       [

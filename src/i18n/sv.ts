@@ -45,6 +45,7 @@ export const sv = {
   'category.express': 'Expressbuss',
   'category.industri': 'Industribuss',
   'category.tram': 'Spårvagn',
+  'category.other-bus': 'Övriga Västtrafikbussar',
   'tag.call-ordered': 'Anropsstyrd',
   'tag.loop': 'Slinga',
   'tag.one-way': 'Enkelriktad',

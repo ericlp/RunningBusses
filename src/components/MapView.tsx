@@ -4,6 +4,7 @@ import type { Line } from '../domain/types';
 import type { StopPoint } from '../domain/stops';
 import { linesNear } from '../domain/hit';
 import { splitByOverlap } from '../domain/overlap';
+import { boundsIntersect, pathBounds, type GeoBounds } from '../domain/geo';
 import { BORDER_PX, PAN_SECONDS, currentPanSpeed, useAppearance } from '../appearance';
 
 export type Tone = 'base' | 'planned' | 'done' | 'highlight' | 'candidate' | 'connector';
@@ -72,6 +73,7 @@ export function MapView({ layers, markers, stops, tappable, fit, onTap }: Props)
   const map = useRef<L.Map | null>(null);
   const group = useRef<L.LayerGroup | null>(null);
   const [zoom, setZoom] = useState(12);
+  const [viewport, setViewport] = useState<GeoBounds | null>(null);
   const { resolved, border, lineColors, overlap, showLocation } = useAppearance();
   const latest = useRef({ tappable, onTap });
   latest.current = { tappable, onTap };
@@ -81,6 +83,12 @@ export function MapView({ layers, markers, stops, tappable, fit, onTap }: Props)
     // crossOrigin makes tile responses readable, so the service worker can cache them without opaque-response overhead
     L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19, crossOrigin: true }).addTo(m);
     m.on('zoomend', () => setZoom(m.getZoom()));
+    const updateViewport = () => {
+      const bounds = m.getBounds().pad(1);
+      setViewport({ west: bounds.getWest(), east: bounds.getEast(), south: bounds.getSouth(), north: bounds.getNorth() });
+    };
+    m.on('moveend resize', updateViewport);
+    updateViewport();
     let frame = 0;
     m.on('mousemove', (e: L.LeafletMouseEvent) => {
       if (frame) return;
@@ -130,18 +138,23 @@ export function MapView({ layers, markers, stops, tappable, fit, onTap }: Props)
     };
   }, [showLocation]);
 
-  // Lines sharing a road are found once per set of layers
+  const renderedLayers = useMemo(
+    () => layers.filter((layer) => layer.tone === 'highlight' || (viewport && boundsIntersect(pathBounds(layer.coords), viewport))),
+    [layers, viewport],
+  );
+
+  // Lines sharing a road are found once per set of visible layers
   const runs = useMemo(
     () => {
       if (overlap === 'stack') return null;
       // lines closer than ~4 px would visibly touch, so the sharing distance follows the zoom
       const cell = Math.min(40, Math.max(10, 4 * ((40075016 * Math.cos((57.7 * Math.PI) / 180)) / (256 * 2 ** zoom))));
-      const shared = layers.filter((l) => l.key && RAINBOW_TONES.includes(l.tone));
+      const shared = renderedLayers.filter((l) => l.key && RAINBOW_TONES.includes(l.tone));
       const input = (fixed: boolean) => shared.filter((l) => !!l.fixedColor === fixed).map((l) => ({ key: l.key!, coords: l.coords }));
       // trams are thicker and run on their own tracks, so they only share space with each other
       return new Map([...splitByOverlap(input(false), cell), ...splitByOverlap(input(true), cell)]);
     },
-    [layers, overlap, zoom],
+    [renderedLayers, overlap, zoom],
   );
 
   useEffect(() => {
@@ -179,7 +192,7 @@ export function MapView({ layers, markers, stops, tappable, fit, onTap }: Props)
       return { color: pale ? '#231f20' : casingColor, weight: width + px, opacity: Math.min(1, opacity * 0.95), interactive: false };
     };
     const pieces: Piece[] = [];
-    for (const l of layers) {
+    for (const l of renderedLayers) {
       const tram = l.fixedColor && RAINBOW_TONES.includes(l.tone) ? l.fixedColor : null;
       const color = tram ? tram : rainbowOn && l.key && RAINBOW_TONES.includes(l.tone) ? rainbow(l.key, resolved === 'dark') : toneColor(l.tone);
       // trams are all run, so they are drawn as a plain line in their own colour, without a status line
@@ -220,7 +233,7 @@ export function MapView({ layers, markers, stops, tappable, fit, onTap }: Props)
       iconSize: [26, 26],
       iconAnchor: [13, 13],
     });
-    for (const l of layers) {
+    for (const l of renderedLayers) {
       if (!l.arrows) continue;
       const p = l.coords.map(toPx);
       const step = 110;
@@ -268,7 +281,7 @@ export function MapView({ layers, markers, stops, tappable, fit, onTap }: Props)
         interactive: false,
       }).addTo(g);
     }
-  }, [layers, runs, markers, stops, zoom, resolved, border, lineColors, overlap]);
+  }, [renderedLayers, runs, markers, stops, zoom, resolved, border, lineColors, overlap]);
 
   useEffect(() => {
     if (!fit || !map.current || fit.coords.length === 0) return;

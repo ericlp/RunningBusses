@@ -26,6 +26,12 @@ export interface PlannedRoute {
   tags: Tag[];
 }
 
+export function assertRoutableLines(missing: readonly string[]): void {
+  if (missing.length) {
+    throw new Error(`Eligible lines lack a timed route with geometry: ${missing.join(', ')}. Dataset not written.`);
+  }
+}
+
 /** Most frequent weekday pattern; ordinary service is preferred over call-ordered, ties go to the longer path. */
 export function pickMain(patterns: Pattern[]): Pattern | undefined {
   const ordinary = patterns.filter((p) => !p.callOrdered);

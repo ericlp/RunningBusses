@@ -46,6 +46,7 @@ export const fr: Dict = {
   'category.express': 'Bus express',
   'category.industri': 'Bus industriels',
   'category.tram': 'Tramway',
+  'category.other-bus': 'Autres bus Västtrafik',
   'tag.call-ordered': 'Sur réservation',
   'tag.loop': 'Boucle',
   'tag.one-way': 'Sens unique',

@@ -94,6 +94,12 @@ describe('computeProgress', () => {
     expect(p.total.lines).toBe(0);
     expect(p.recent).toEqual([]);
   });
+  it('counts regional buses only when that category is included', () => {
+    const regional = line('vt.9011014405900000', 10000, 'other-bus');
+    const all = [...lines, regional];
+    expect(computeProgress([], all).total.lines).toBe(3);
+    expect(computeProgress([], all, [], 5, ['other-bus']).total).toMatchObject({ lines: 1, lengthM: 10000 });
+  });
 });
 
 describe('progress categories setting', () => {
@@ -112,6 +118,10 @@ describe('progress categories setting', () => {
   it('round-trips a saved choice', () => {
     saveProgressCategories(['tram', 'express']);
     expect(loadProgressCategories()).toEqual(['express', 'tram']);
+  });
+  it('round-trips the regional bus category', () => {
+    saveProgressCategories(['other-bus']);
+    expect(loadProgressCategories()).toEqual(['other-bus']);
   });
 
   it('adds categories in canonical order and keeps the last one', () => {

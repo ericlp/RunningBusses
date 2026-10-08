@@ -41,3 +41,9 @@ export async function* readCsv(path: string): AsyncGenerator<Record<string, stri
     yield rec;
   }
 }
+
+export async function readCsvRows(path: string): Promise<Record<string, string>[]> {
+  const rows: Record<string, string>[] = [];
+  for await (const row of readCsv(path)) rows.push(row);
+  return rows;
+}

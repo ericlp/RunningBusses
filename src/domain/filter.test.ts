@@ -29,6 +29,11 @@ describe('persisted filters and sort', () => {
     expect(loadFilters()).toEqual(f);
     expect(loadSort()).toBe('longest');
   });
+  it('persists the additional bus category without changing defaults', () => {
+    saveFilters({ ...defaultFilters, categories: ['other-bus'] });
+    expect(loadFilters().categories).toEqual(['other-bus']);
+    expect(defaultFilters.categories).toEqual(['stadsbuss']);
+  });
 
   it('drops invalid values instead of trusting storage', () => {
     store.set('rb.filters', JSON.stringify({ categories: ['bogus'], status: 'nope', tags: ['x', 'loop'], minKm: 'a', maxKm: null }));

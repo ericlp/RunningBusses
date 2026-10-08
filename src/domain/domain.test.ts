@@ -48,6 +48,14 @@ describe('applyFilters', () => {
     expect(applyFilters(lines, { ...defaultFilters, categories: ['stadsbuss', 'stombuss'], minKm: 9 }).map((l) => l.key)).toEqual(['2', '3']);
     expect(applyFilters(lines, { ...defaultFilters, maxKm: 3 }).map((l) => l.key)).toEqual(['1']);
   });
+  it('includes all selected buses without including trams or conflating duplicate numbers', () => {
+    const regional = line({ key: 'vt.9011014405900000', number: '59', label: '59', category: 'other-bus' });
+    const city = line({ key: '59', number: '59', label: '59' });
+    const tram = line({ key: '1', category: 'tram' });
+    expect(applyFilters([city, regional, tram], defaultFilters)).toEqual([city]);
+    expect(applyFilters([city, regional, tram], { ...defaultFilters, categories: ['stadsbuss', 'other-bus'] })).toEqual([city, regional]);
+    expect(searchLines([city, regional], '59')).toEqual([city, regional]);
+  });
 });
 
 describe('sortLines by number', () => {

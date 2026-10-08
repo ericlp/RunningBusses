@@ -3,6 +3,34 @@ export interface LatLon {
   lon: number;
 }
 
+export interface GeoBounds {
+  west: number;
+  east: number;
+  south: number;
+  north: number;
+}
+
+const boundsCache = new WeakMap<readonly (readonly [number, number])[], GeoBounds>();
+
+/** Route snapshots are immutable; cache their extents for rendering and hit testing. */
+export function pathBounds(coordinates: readonly (readonly [number, number])[]): GeoBounds {
+  const cached = boundsCache.get(coordinates);
+  if (cached) return cached;
+  const bounds = { west: Infinity, east: -Infinity, south: Infinity, north: -Infinity };
+  for (const [lon, lat] of coordinates) {
+    bounds.west = Math.min(bounds.west, lon);
+    bounds.east = Math.max(bounds.east, lon);
+    bounds.south = Math.min(bounds.south, lat);
+    bounds.north = Math.max(bounds.north, lat);
+  }
+  boundsCache.set(coordinates, bounds);
+  return bounds;
+}
+
+export function boundsIntersect(a: GeoBounds, b: GeoBounds): boolean {
+  return a.west <= b.east && a.east >= b.west && a.south <= b.north && a.north >= b.south;
+}
+
 const R = 6371008.8;
 
 export function haversineM(a: LatLon, b: LatLon): number {
