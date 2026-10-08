@@ -28,7 +28,7 @@ Playwright MCP is configured for this repository in `.github/mcp.json`. Its laun
 - `src/data/`: loading the published dataset, IndexedDB (`idb.ts`) and the store.
 - `src/components/` + `src/App.tsx`: UI (map, course list/editor, backup, tour). `MapView.tsx` is the only place that touches Leaflet; geometry is lon/lat in data and converted for Leaflet there.
 - `src/i18n/`: `sv.ts` is the source of truth (defines `Key`/`Dict`); `en.ts` and `fr.ts` must provide the same keys. Language follows the browser, Swedish fallback. `i18n.test.ts` checks the dictionaries.
-- `public/sw.js`: service worker, network-first for same-origin assets/data, so monthly data changes need no cache bump. OSM tiles are cached only after being viewed (no prefetch), with a 7-day freshness window and an 800-tile limit.
+- `public/sw.js`: service worker, network-first for same-origin assets/data, so monthly data changes need no cache bump. OSM tiles are cached only after being viewed (no prefetch), with local expiry metadata honouring accessible server freshness headers (7-day fallback) and an 800-tile limit. Stale viewed tiles survive HTTP/network failures; storage failures cannot discard successful downloads.
 
 ## Conventions
 

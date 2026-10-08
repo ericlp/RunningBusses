@@ -7,6 +7,8 @@ const TILE_CACHE = 'runningbusses-tiles-v1';
 const TILE_HOST = 'tile.openstreetmap.org';
 const TILE_MAX = 800;
 const TILE_FRESH_MS = 7 * 24 * 60 * 60 * 1000;
+const TILE_FRESH_UNTIL = 'x-rb-tile-fresh-until';
+let tileWrites = Promise.resolve();
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -24,21 +26,58 @@ async function trimTiles(cache) {
   await Promise.all(keys.slice(0, Math.max(0, keys.length - TILE_MAX)).map((k) => cache.delete(k)));
 }
 
-async function tile(request) {
-  const cache = await caches.open(TILE_CACHE);
-  const hit = await cache.match(request);
-  const age = hit ? Date.now() - (Date.parse(hit.headers.get('date') || '') || 0) : Infinity;
-  if (hit && age < TILE_FRESH_MS) return hit;
+function tileExpiry(response) {
+  const now = Date.now();
+  const control = response.headers.get('cache-control') || '';
+  if (/(?:^|,)\s*no-cache\b/i.test(control)) return now;
+  const maxAge = control.match(/(?:^|,)\s*max-age\s*=\s*"?(\d+)"?\s*(?:,|$)/i);
+  if (maxAge) {
+    const date = Date.parse(response.headers.get('date') || '');
+    const age = Number(response.headers.get('age'));
+    const elapsed = Math.max(Number.isFinite(age) && age >= 0 ? age * 1000 : 0, Number.isFinite(date) ? now - date : 0);
+    return now + Math.max(0, Number(maxAge[1]) * 1000 - elapsed);
+  }
+  const expires = Date.parse(response.headers.get('expires') || '');
+  return Number.isFinite(expires) ? expires : now + TILE_FRESH_MS;
+}
+
+async function tile(request, maintenance) {
+  let cache;
+  let hit;
   try {
-    const res = await fetch(request);
-    if (res.ok) {
-      await cache.put(request, res.clone());
-      void trimTiles(cache);
-    }
-    return res;
-  } catch {
+    cache = await caches.open(TILE_CACHE);
+    hit = await cache.match(request);
+  } catch (error) {
+    console.warn('Map tile cache read failed:', request.url, error);
+  }
+  const expiry = Number(hit?.headers.get(TILE_FRESH_UNTIL));
+  if (hit && Number.isFinite(expiry) && expiry > Date.now()) return hit;
+  let res;
+  try {
+    res = await fetch(request);
+  } catch (error) {
+    console.warn('Map tile request failed:', request.url, error);
     return hit || Response.error();
   }
+  if (!res.ok) {
+    console.warn('Map tile HTTP error:', request.url, res.status);
+    return hit || res;
+  }
+  if (cache && !/(?:^|,)\s*no-store\b/i.test(res.headers.get('cache-control') || '')) {
+    const copy = res.clone();
+    const headers = new Headers(copy.headers);
+    headers.set(TILE_FRESH_UNTIL, String(tileExpiry(copy)));
+    const saved = new Response(copy.body, { status: copy.status, statusText: copy.statusText, headers });
+    // Serialize writes and trimming so overlapping requests cannot race eviction.
+    tileWrites = tileWrites.then(async () => {
+      await cache.put(request, saved);
+      await trimTiles(cache);
+    }).catch((error) => {
+      console.warn('Map tile cache save/trim failed:', request.url, error);
+    });
+    maintenance.push(tileWrites);
+  }
+  return res;
 }
 
 self.addEventListener('fetch', (event) => {
@@ -46,7 +85,10 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (request.method !== 'GET') return;
   if (url.hostname === TILE_HOST) {
-    event.respondWith(tile(request));
+    const maintenance = [];
+    const response = tile(request, maintenance);
+    event.respondWith(response);
+    event.waitUntil(response.then(() => Promise.all(maintenance)));
     return;
   }
   if (url.origin !== self.location.origin) return;
