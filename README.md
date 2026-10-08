@@ -17,6 +17,8 @@ Node is managed with [mise](https://mise.jdx.dev): `mise install`, then `mise ex
 | `npm run data` | rebuild `public/data` from the Trafiklab feed |
 | `npm run data:validate -- --previous=old-lines.json` | check a rebuilt dataset |
 
+Copilot CLI loads this repository's Playwright MCP configuration from `.github/mcp.json`. After installing dependencies, run `npx playwright install chromium`. The launcher resolves the browser from the project's Playwright installation, without machine-specific paths. MCP browsers run headless with isolated storage, and output is saved under `.cache/playwright-mcp/`.
+
 ## Transit data
 
 Source: Trafiklab *GTFS Regional Static* (Västtrafik). Put your key in `.env` (`TRAFIKLAB_API_KEY`, see `.env.example`; never commit it). The GitHub Action `Refresh transit data` runs monthly with the repository secret of the same name, validates the result and redeploys only when the lines changed. A manual run can accept removed lines.

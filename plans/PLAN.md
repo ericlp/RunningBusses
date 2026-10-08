@@ -171,6 +171,8 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [046 – Separate import dialog](046-import-dialog.md): import preview opens in its own dialog instead of inside Settings.
 - [047 – A share link opens the course](047-link-opens-course.md): link opens the import dialog directly, then the course on the map.
 
+- [056 - Repository-owned Playwright MCP](056-repository-playwright-mcp.md): shared configuration with a launcher resolving the project's Chromium.
+
 ## Future todos
 
 - [048 – Västtrafik navigation to start](048-vasttrafik-navigation.md)

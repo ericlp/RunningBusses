@@ -14,9 +14,12 @@ Node 24 via mise (`mise install`, `mise exec -- npm ci`).
 - `npm run e2e` – Playwright journeys against `vite preview` on port 4173. Requires `npm run build` first and `npx playwright install chromium`.
   - Single journey: start `npx vite preview --port 4173 --strictPort`, then `node e2e/courses.mjs`. The journeys listed in `e2e/run.mjs` are plain scripts, not a test framework; add new ones to that list.
 - `npm run data` – rebuild `public/data/` from the Trafiklab GTFS feed (needs `TRAFIKLAB_API_KEY` in `.env`; never commit it)
+  - Reuses `.cache/vt/` when present; `npm run data -- --download` fetches a fresh feed. `--date=YYYYMMDD` selects the reference service day.
 - `npm run data:validate -- --previous=old-lines.json` – validate a rebuilt dataset
 
 There is no linter. CI (`deploy.yml`) runs typecheck, test, build, e2e, then deploys.
+
+Playwright MCP is configured for this repository in `.github/mcp.json`. Its launcher uses the project's installed Chromium, so run `npm ci` and `npx playwright install chromium` before using it. Browsers are headless and isolated; MCP output goes to `.cache/playwright-mcp/`.
 
 ## Architecture
 
@@ -25,7 +28,7 @@ There is no linter. CI (`deploy.yml`) runs typecheck, test, build, e2e, then dep
 - `src/data/`: loading the published dataset, IndexedDB (`idb.ts`) and the store.
 - `src/components/` + `src/App.tsx`: UI (map, course list/editor, backup, tour). `MapView.tsx` is the only place that touches Leaflet; geometry is lon/lat in data and converted for Leaflet there.
 - `src/i18n/`: `sv.ts` is the source of truth (defines `Key`/`Dict`); `en.ts` and `fr.ts` must provide the same keys. Language follows the browser, Swedish fallback. `i18n.test.ts` checks the dictionaries.
-- `public/sw.js`: service worker, network-first for fresh data, so monthly data changes need no cache bump.
+- `public/sw.js`: service worker, network-first for same-origin assets/data, so monthly data changes need no cache bump. OSM tiles are cached only after being viewed (no prefetch), with a 7-day freshness window and an 800-tile limit.
 
 ## Conventions
 
@@ -33,8 +36,10 @@ There is no linter. CI (`deploy.yml`) runs typecheck, test, build, e2e, then dep
 - A line is identified by its stable `key` (e.g. `59`, `62r` for a "retur" direction), never by line number alone. Lines carry a `category` (`stadsbuss | stombuss | express | industri | tram`) and `tags` (`call-ordered | loop | one-way | retur`). Trams have fixed colours.
 - Each line belongs to at most one course. Route status (`NotPlanned`/`NotCompleted`/`Completed`) is derived from courses, never stored. Courses store a snapshot of each leg's route; totals are always recomputed, never trusted from imported files.
 - Completed courses are locked; an unlocked course is pinned to its historical data until explicitly updated. Lines missing from new data stay in existing courses with a warning.
+- Backups retain route snapshots; share links encode route keys and rebuild legs from the recipient's dataset. Courses with unknown keys are skipped and reported; partial-course links must merge, not replace.
+- Completion history is separate from current course state: uncompleting or deleting a course does not erase its log. Log entries merge by event ID and are capped at 500.
 - Multi-record storage writes (split, import, update) must be atomic; show "saved" only after the write succeeds.
 - Any user-visible string goes into all three i18n dictionaries.
-- localStorage keys are prefixed `rb.` (e.g. `rb.filters`, `rb.sort`); stored values are validated on load and fall back to defaults. URL hash state: `#line=<key>`, `#mode=plan`, `#sync=` (share link, consumed first).
+- New localStorage keys use the `rb.` prefix (e.g. `rb.filters`, `rb.sort`); preserve existing unprefixed `lang` and `radiusM` keys for compatibility. Stored preferences are validated on load and fall back to defaults. URL hash state: `#line=<key>`, `#mode=plan`, `#sync=` (share link, consumed first).
 - Design lives in `plans/`: `PLAN.md` is frozen except for corrections; each change gets a small `plans/NNN-title.md` linked from PLAN.md's "Change plans". Read the relevant plan before changing a feature.
 - Commit each feature or fix separately (one logical change per commit, with its plan, tests and i18n keys), not as one large commit. E2E journeys count as tests: before every commit run `npm run typecheck`, `npm test`, `npm run build` and `npm run e2e`, and commit only when all pass. New user-visible features get a journey in `e2e/` (added to `e2e/run.mjs`).
