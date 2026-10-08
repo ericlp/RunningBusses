@@ -22,7 +22,7 @@ function cacheAvailability(cached: CachedRelease | undefined): Category[] {
     console.warn('Invalid cached transit availability');
     return [];
   }
-  return CATEGORIES.filter((c) => cached.available.includes(c));
+  return CATEGORIES.filter((c) => cached.manifest.categories[c] !== undefined && cached.available.includes(c));
 }
 
 export interface DataState {
@@ -220,6 +220,7 @@ export class CategoryData {
 
   private async resolvePayload(manifest: CatalogManifest, catalog: Catalog, category: Category, durable = false): Promise<CategoryPayload> {
     const descriptor = manifest.categories[category];
+    if (!descriptor) throw new Error(`Category ${category} is unavailable in this transit release`);
     let text: string | undefined;
     try { text = await idbGet<string>(payloadKey(descriptor.hash)); }
     catch (e) { this.storageFailure(e); if (durable) throw e; }
@@ -278,12 +279,14 @@ export class CategoryData {
 
   private persistCategory(manifest: CatalogManifest, category: Category, text: string): Promise<void> {
     const write = this.cacheWrites.catch(() => undefined).then(async () => {
+      const descriptor = manifest.categories[category];
+      if (!descriptor) throw new Error(`Category ${category} is unavailable in this transit release`);
       let available: Category[] = [];
       await idbUpdate<CachedRelease>(releaseKey(manifest.release), (cached) => {
         if (!cached) throw new Error('Catalogue was not saved');
         const before = cacheAvailability(cached);
         available = CATEGORIES.filter((c) => c === category || before.includes(c));
-        return { value: { ...cached, available }, entries: [[payloadKey(manifest.categories[category].hash), text]] };
+        return { value: { ...cached, available }, entries: [[payloadKey(descriptor.hash), text]] };
       });
       if (manifest.release === this.state.manifest.release) this.update({ cached: available });
     });
@@ -322,12 +325,13 @@ export class CategoryData {
         value: { manifest, catalogText, available: cacheAvailability(previous) },
         entries: [[STAGING, manifest.release]],
       }));
-      for (const category of CATEGORIES) {
+      const categories = CATEGORIES.filter((c) => manifest.categories[c] !== undefined);
+      for (const category of categories) {
         await this.resolvePayload(manifest, catalog, category, true);
         this.update({ installProgress: this.state.installProgress + 1 });
       }
       await idbUpdate<CachedRelease>(releaseKey(manifest.release), (saved) => {
-        if (!saved || !CATEGORIES.every((c) => cacheAvailability(saved).includes(c))) throw new Error('Installation is incomplete');
+        if (!saved || !categories.every((c) => cacheAvailability(saved).includes(c))) throw new Error('Installation is incomplete');
         return { value: saved, entries: [[INSTALLED, manifest.release]], deletes: [STAGING] };
       });
       this.update({ installed: manifest, storageError: false });
@@ -353,7 +357,10 @@ export class CategoryData {
         if (!id) continue;
         protect.add(releaseKey(id));
         const cached = await idbGet<CachedRelease>(releaseKey(id));
-        if (cached) for (const c of CATEGORIES) protect.add(payloadKey(cached.manifest.categories[c].hash));
+        if (cached) for (const c of CATEGORIES) {
+          const descriptor = cached.manifest.categories[c];
+          if (descriptor) protect.add(payloadKey(descriptor.hash));
+        }
       }
       const owned = /^transit\.(?:release|payload)\.[a-f0-9]{64}$/;
       const remove = (await idbKeys()).filter((key) => owned.test(key) && !protect.has(key));

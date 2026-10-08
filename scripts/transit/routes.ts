@@ -53,18 +53,19 @@ export function selectRoute(
 ): SelectedRoute | undefined {
   if (!row.agency_id.endsWith(config.agencyIdSuffix)) return undefined;
   const tram = row.route_type === '900';
-  if (!tram && row.route_type !== '700' && row.route_type !== '1501') return undefined;
+  const ferry = row.route_type === '1000' || row.route_type === '4' || row.route_type === '1200';
+  if (!tram && !ferry && row.route_type !== '700' && row.route_type !== '1501') return undefined;
   const canonical = aliases[row.route_id] ?? row.route_id;
   const scoped = canonical.startsWith(config.routeIdPrefix);
-  const oldCategory = scoped ? categoryOf(row.route_short_name, config.categories, tram) : undefined;
+  const oldCategory = scoped && !ferry ? categoryOf(row.route_short_name, config.categories, tram) : undefined;
   if (tram && !oldCategory) return undefined;
   if (!tram) {
     const line = registry.get(row.route_id);
     const versions = line && publicVersions(line);
     if (line) {
       if (!versions?.length) return undefined;
-    } else if (!/ersätter/i.test(`${row.route_long_name} ${row.route_desc}`)) {
-      throw new Error(`Unclassified bus route ${row.route_id} (${row.route_short_name}): absent from the public line registry`);
+    } else if (ferry || !/ersätter/i.test(`${row.route_long_name} ${row.route_desc}`)) {
+      throw new Error(`Unclassified ${ferry ? 'ferry' : 'bus'} route ${row.route_id} (${row.route_short_name}): absent from the public line registry`);
     }
     const target = aliases[row.route_id] && registry.get(canonical);
     if (aliases[row.route_id] && !target) throw new Error(`Route alias ${row.route_id} → ${canonical} has no official target`);
@@ -77,7 +78,7 @@ export function selectRoute(
   return {
     key: oldCategory ? row.route_short_name : `vt.${canonical}`,
     number: row.route_short_name,
-    category: oldCategory ?? 'other-bus',
+    category: ferry ? 'ferry' : oldCategory ?? 'other-bus',
     callOrdered: row.route_type === '1501',
     tram,
   };

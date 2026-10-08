@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { assembleLine, parseAsset, parseCatalog, parseCategory, parseManifest, splitDataset } from './catalog';
+import { assembleLine, contentHash, parseAsset, parseCatalog, parseCategory, parseManifest, splitDataset } from './catalog';
 import { CATEGORIES, type Dataset } from './types';
 
 const dataset: Dataset = JSON.parse(readFileSync('public/data/lines.json', 'utf8'));
@@ -13,7 +13,10 @@ describe('split transit contract', () => {
     const catalog = parseCatalog(await parseAsset(split.files.get(manifest.catalog.file)!, manifest.catalog), manifest);
     const geometries = new Map();
     for (const c of CATEGORIES) {
-      const payload = parseCategory(await parseAsset(split.files.get(manifest.categories[c].file)!, manifest.categories[c]), c, catalog);
+      const descriptor = manifest.categories[c];
+      expect(descriptor).toBeDefined();
+      if (!descriptor) throw new Error(`Missing generated category ${c}`);
+      const payload = parseCategory(await parseAsset(split.files.get(descriptor.file)!, descriptor), c, catalog);
       for (const l of payload.lines) geometries.set(l.key, l);
     }
     expect(JSON.stringify(catalog.lines.map((l) => assembleLine(l, geometries.get(l.key))))).toBe(JSON.stringify(dataset.lines));
@@ -50,5 +53,16 @@ describe('split transit contract', () => {
       gzipSync(split.files.get(split.manifest.catalog.file)!).length +
       gzipSync(split.files.get(split.manifest.categories.stadsbuss.file)!).length;
     expect(bytes).toBeLessThanOrEqual(gzipSync(JSON.stringify(dataset)).length * 0.1);
+  });
+  it('preserves pre-ferry release hashes without accepting missing bus or tram descriptors', async () => {
+    const legacy = await splitDataset({ ...dataset, lines: dataset.lines.filter((l) => l.category !== 'ferry') });
+    const { ferry: _ferry, ...categories } = legacy.manifest.categories;
+    const { feedVersion, referenceDate, catalog } = legacy.manifest;
+    const release = await contentHash(JSON.stringify({ feedVersion, referenceDate, catalog, categories }));
+    const manifest = { ...legacy.manifest, release, categories };
+    expect(await parseManifest(manifest)).toEqual(manifest);
+    expect(parseCatalog(JSON.parse(legacy.files.get(catalog.file)!), manifest).lines).toHaveLength(manifest.lineCount);
+    await expect(parseManifest({ ...manifest, categories: { ...categories, tram: undefined } })).rejects.toThrow('descriptor');
+    await expect(parseManifest({ ...manifest, categories: { ...categories, ferry: {} } })).rejects.toThrow('descriptor');
   });
 });

@@ -8,7 +8,7 @@ const city = original.lines.find((l) => l.key === '59');
 const regional = original.lines.find((l) => l.category === 'other-bus');
 const tram = original.lines.find((l) => l.category === 'tram');
 const fixture = { ...original, lines: [city, regional, tram] };
-const categories = ['stadsbuss', 'stombuss', 'express', 'industri', 'other-bus', 'tram'];
+const categories = ['stadsbuss', 'stombuss', 'express', 'industri', 'other-bus', 'tram', 'ferry'];
 const browser = await chromium.launch();
 const url = 'http://localhost:4173/';
 const course = (id, lines, extra = {}) => ({

@@ -1324,11 +1324,11 @@ export function App() {
                   <h3>{t('data.offlineTitle')}</h3>
                   <p className="muted">{t('data.offlineHelp')}</p>
                   <p>{dataState.installed ? t(dataState.installed.release === dataState.manifest.release ? 'data.installed' : 'data.olderInstalled', { version: dataState.installed.feedVersion }) : t('data.notInstalled')}</p>
-                  <ul>{CATEGORIES.map((c) => <li key={c}>{categoryLabel(c)}: {t(dataState.cached.includes(c) ? 'data.cached' : 'data.notCached')}</li>)}</ul>
+                  <ul>{CATEGORIES.filter((c) => dataState.manifest.categories[c] !== undefined).map((c) => <li key={c}>{categoryLabel(c)}: {t(dataState.cached.includes(c) ? 'data.cached' : 'data.notCached')}</li>)}</ul>
                   <button className="chip" disabled={dataState.installing || offline} onClick={() => void loader.installAll()}>
                     {t(dataState.installError ? 'load.retry' : dataState.installed && dataState.installed.release !== dataState.manifest.release ? 'data.refresh' : 'data.downloadAll')}
                   </button>
-                  {dataState.installing && <p role="status">{t('data.progress', { done: dataState.installProgress, total: CATEGORIES.length })}</p>}
+                  {dataState.installing && <p role="status">{t('data.progress', { done: dataState.installProgress, total: Object.keys(dataState.manifest.categories).length })}</p>}
                   {dataState.installError && <p role="alert">{t('data.installError')} {dataState.installError}</p>}
                   {dataState.storageError && <p role="alert">{t('data.storageError')}</p>}
                 </section>

@@ -1,15 +1,15 @@
 {
   "schemaVersion": 2,
-  "release": "cb7ca994d4deb307045b856ee8abb48ba3ac8f9def02b4da83c581023e58eb63",
+  "release": "2d2e4226e10fa5cb7f359ee4aee3653193dbfb30e54810ac6798a7227be99c1f",
   "feedVersion": "2026-10-03",
   "referenceDate": "20261014",
-  "generatedAt": "2026-10-08T14:56:58.894Z",
-  "lineCount": 805,
+  "generatedAt": "2026-10-08T16:49:48.817Z",
+  "lineCount": 822,
   "catalog": {
-    "file": "catalog.68fc94721ac816c69272b1699a324c514c81493c1a274dfac78fb0ce81564dc4.json",
-    "hash": "68fc94721ac816c69272b1699a324c514c81493c1a274dfac78fb0ce81564dc4",
-    "count": 805,
-    "bytes": 416755
+    "file": "catalog.432e49b4d5a070a9c5e2d0afac2eb3529a7e8317a0d4408be146739fc5c11e95.json",
+    "hash": "432e49b4d5a070a9c5e2d0afac2eb3529a7e8317a0d4408be146739fc5c11e95",
+    "count": 822,
+    "bytes": 420574
   },
   "categories": {
     "stadsbuss": {
@@ -47,6 +47,12 @@
       "hash": "d80a52327c7385d1c3f5b24357d91a72c7256cdec04fefd6d13a46f14d46fe45",
       "count": 14,
       "bytes": 152615
+    },
+    "ferry": {
+      "file": "categories/ferry.92d73c3fcd83386ac3704a570e5554dc4f2d3a480a6b89a2df61f6d0bda88c77.json",
+      "hash": "92d73c3fcd83386ac3704a570e5554dc4f2d3a480a6b89a2df61f6d0bda88c77",
+      "count": 17,
+      "bytes": 16852
     }
   }
 }

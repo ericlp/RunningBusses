@@ -39,7 +39,8 @@ export function validateDataset(next: Dataset, previous: Dataset | null, opts: O
       errors.push(`${id}: stop positions do not match the stop names`);
     }
     const maxLengthM = l.category === 'other-bus' ? 200000 : 60000;
-    if (!Number.isFinite(l.lengthM) || l.lengthM < 300 || l.lengthM > maxLengthM) errors.push(`${id}: implausible length ${l.lengthM} m`);
+    const minLengthM = l.category === 'ferry' ? 50 : 300;
+    if (!Number.isFinite(l.lengthM) || l.lengthM < minLengthM || l.lengthM > maxLengthM) errors.push(`${id}: implausible length ${l.lengthM} m`);
     const calc = pathLengthM(l.coordinates);
     if (Math.abs(calc - l.lengthM) > Math.max(50, l.lengthM * 0.02)) errors.push(`${id}: stored length ${l.lengthM} m does not match geometry (${Math.round(calc)} m)`);
   }

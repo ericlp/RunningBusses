@@ -42,7 +42,7 @@ export const en: Dict = {
   'load.retry': 'Try again',
   'load.loading': 'Loading routes…',
 
-  'notice.text': 'The lines show the bus route and are only a reference. Not every road, tunnel or busway can be run on.',
+  'notice.text': 'The lines show public transport routes and are only a reference. Not every road, tunnel or busway can be run on. Ferry routes cross water and cannot be run.',
   'notice.offline': ' You are offline – showing saved data.',
 
   'chooser.aria': 'Choose route',
@@ -66,6 +66,7 @@ export const en: Dict = {
   'category.industri': 'Industrial bus',
   'category.tram': 'Tram',
   'category.other-bus': 'Other Västtrafik buses',
+  'category.ferry': 'Ferry',
   'tag.call-ordered': 'On demand',
   'tag.loop': 'Loop',
   'tag.one-way': 'One-way',

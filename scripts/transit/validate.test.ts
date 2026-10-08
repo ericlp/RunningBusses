@@ -35,4 +35,16 @@ describe('validateDataset', () => {
     expect(validateDataset(ds([{ ...regional, lengthM: NaN }]), null, opts).errors).toEqual(expect.arrayContaining([expect.stringMatching(/implausible/)]));
     expect(validateDataset(ds([{ ...regional, lengthM: 80000 }]), null, opts).errors).toEqual(expect.arrayContaining([expect.stringMatching(/does not match/)]));
   });
+  it('accepts short ferry crossings without relaxing bus limits or geometry checks', () => {
+    const coordinates: [number, number][] = [[11.9, 57.7], [11.9, 57.70135]];
+    const ferry = line('vt.362', { category: 'ferry', coordinates, lengthM: Math.round(pathLengthM(coordinates)) });
+    expect(ferry.lengthM).toBeGreaterThanOrEqual(50);
+    expect(ferry.lengthM).toBeLessThan(300);
+    expect(validateDataset(ds([ferry]), null, opts).errors).toEqual([]);
+    expect(validateDataset(ds([{ ...ferry, category: 'stadsbuss' }]), null, opts).errors).toContainEqual(expect.stringMatching(/implausible/));
+    for (const lengthM of [0, 49, 60001, NaN]) {
+      expect(validateDataset(ds([{ ...ferry, lengthM }]), null, opts).errors).toContainEqual(expect.stringMatching(/implausible/));
+    }
+    expect(validateDataset(ds([{ ...ferry, lengthM: 1000 }]), null, opts).errors).toContainEqual(expect.stringMatching(/does not match/));
+  });
 });

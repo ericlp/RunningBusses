@@ -6,10 +6,16 @@ import type { CatalogManifest, Dataset } from '../../src/domain/types';
 
 const dataset: Dataset = {
   schemaVersion: 1, feedVersion: 'one', referenceDate: '20261007', generatedAt: '2026-10-08T00:00:00Z',
-  lines: [{
-    key: '59', number: '59', label: '59', category: 'stadsbuss', tags: [], from: 'A', to: 'B', lengthM: 1000,
-    via: ['A', 'B'], viaAt: [[11, 57], [12, 58]], coordinates: [[11, 57], [12, 58]],
-  }],
+  lines: [
+    {
+      key: '59', number: '59', label: '59', category: 'stadsbuss', tags: [], from: 'A', to: 'B', lengthM: 1000,
+      via: ['A', 'B'], viaAt: [[11, 57], [12, 58]], coordinates: [[11, 57], [12, 58]],
+    },
+    {
+      key: 'vt.362', number: '362', label: '362', category: 'ferry', tags: [], from: 'C', to: 'D', lengthM: 151,
+      via: ['C', 'D'], coordinates: [[11.9, 57.7], [11.9, 57.70135]],
+    },
+  ],
 };
 
 describe('split publication', () => {
@@ -29,6 +35,8 @@ describe('split publication', () => {
       await validateSplitAssets(next, directory);
       expect(existsSync(`${directory}/${first.catalog.file}`)).toBe(false);
       expect(existsSync(`${directory}/${first.categories.stadsbuss.file}`)).toBe(false);
+      expect(first.categories.ferry).toBeDefined();
+      expect(existsSync(`${directory}/${first.categories.ferry!.file}`)).toBe(false);
       for (const file of ['lines.json', 'manifest.json', 'catalog.custom.json', 'categories/custom.json']) expect(existsSync(`${directory}/${file}`)).toBe(true);
       const current: CatalogManifest = JSON.parse(readFileSync(`${directory}/catalog-manifest.json`, 'utf8'));
       writeFileSync(`${directory}/${current.categories.stadsbuss.file}`, '{}');

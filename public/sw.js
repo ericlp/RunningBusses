@@ -13,7 +13,7 @@ let tileWrites = Promise.resolve();
 self.addEventListener('install', () => self.skipWaiting());
 
 const splitData = (url) => url.origin === self.location.origin &&
-  /\/data\/(?:catalog-manifest\.json|catalog\.[a-f0-9]+\.json|categories\/(?:stadsbuss|stombuss|express|industri|other-bus|tram)\.[a-f0-9]+\.json)$/.test(url.pathname);
+  /\/data\/(?:catalog-manifest\.json|catalog\.[a-f0-9]+\.json|categories\/(?:stadsbuss|stombuss|express|industri|other-bus|tram|ferry)\.[a-f0-9]+\.json)$/.test(url.pathname);
 
 async function clearSplitData() {
   try {

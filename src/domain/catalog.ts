@@ -9,7 +9,7 @@ export function assembleLine(metadata: LineMetadata, geometry: CategoryPayload['
   return { ...metadata, ...(geometry.viaAt !== undefined ? { viaAt: geometry.viaAt } : {}), coordinates: geometry.coordinates };
 }
 
-export async function splitDataset(dataset: Dataset): Promise<{ manifest: CatalogManifest; files: Map<string, string> }> {
+export async function splitDataset(dataset: Dataset): Promise<{ manifest: CatalogManifest & { categories: Record<Category, AssetDescriptor> }; files: Map<string, string> }> {
   const files = new Map<string, string>();
   const metadata = dataset.lines.map(({ coordinates: _coordinates, viaAt: _viaAt, ...rest }) => rest);
   const descriptor = async (prefix: string, value: Catalog | CategoryPayload): Promise<AssetDescriptor> => {
@@ -46,9 +46,10 @@ export async function parseManifest(value: unknown): Promise<CatalogManifest> {
   const descriptor = (v: unknown, prefix: string): v is AssetDescriptor => object(v) && hash(v.hash) &&
     v.file === `${prefix}.${v.hash}.json` && integer(v.count) && integer(v.bytes);
   if (!descriptor(value.catalog, 'catalog')) throw new Error('Invalid asset descriptor');
-  const categories = {} as Record<Category, AssetDescriptor>;
+  const categories = {} as CatalogManifest['categories'];
   for (const c of CATEGORIES) {
     const entry = value.categories[c];
+    if (c === 'ferry' && entry === undefined) continue;
     if (!descriptor(entry, `categories/${c}`)) throw new Error('Invalid asset descriptor');
     categories[c] = entry;
   }
@@ -56,7 +57,7 @@ export async function parseManifest(value: unknown): Promise<CatalogManifest> {
     schemaVersion: 2, release: value.release, feedVersion: value.feedVersion, referenceDate: value.referenceDate,
     generatedAt: value.generatedAt, lineCount: value.lineCount, catalog: value.catalog, categories,
   };
-  if (manifest.catalog.count !== manifest.lineCount || CATEGORIES.reduce((n, c) => n + manifest.categories[c].count, 0) !== manifest.lineCount ||
+  if (manifest.catalog.count !== manifest.lineCount || CATEGORIES.reduce((n, c) => n + (manifest.categories[c]?.count ?? 0), 0) !== manifest.lineCount ||
       await contentHash(JSON.stringify({ feedVersion: manifest.feedVersion, referenceDate: manifest.referenceDate, catalog: manifest.catalog, categories: manifest.categories })) !== manifest.release) {
     throw new Error('Invalid release hash or counts');
   }
@@ -82,7 +83,7 @@ export function parseCatalog(value: unknown, manifest: CatalogManifest): Catalog
     keys.add(l.key);
   }
   const catalog: Catalog = { schemaVersion: 2, lines: value.lines };
-  if (!CATEGORIES.every((c) => catalog.lines.filter((l) => l.category === c).length === manifest.categories[c].count)) throw new Error('Invalid category membership');
+  if (!CATEGORIES.every((c) => catalog.lines.filter((l) => l.category === c).length === (manifest.categories[c]?.count ?? 0))) throw new Error('Invalid category membership');
   return catalog;
 }
 

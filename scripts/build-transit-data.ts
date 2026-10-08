@@ -80,7 +80,7 @@ async function main(): Promise<void> {
     const active = days.get(r.service_id);
     if (info && active?.size) {
       trips.set(r.trip_id, { route: r.route_id, direction: r.direction_id, shape: r.shape_id, service: r.service_id });
-      if (info.category !== 'other-bus' && active.has(referenceDate)) referenceGroups.add(info.key);
+      if (info.category !== 'other-bus' && info.category !== 'ferry' && active.has(referenceDate)) referenceGroups.add(info.key);
     }
   }
   for (const [id, trip] of trips) {

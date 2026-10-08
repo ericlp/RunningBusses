@@ -11,6 +11,7 @@ export async function validateSplitAssets(dataset: Dataset, directory: string): 
   const lines = new Map<string, Line>();
   for (const category of CATEGORIES) {
     const descriptor = manifest.categories[category];
+    if (!descriptor) continue;
     const payload = parseCategory(await parseAsset(readFileSync(`${directory}/${descriptor.file}`, 'utf8'), descriptor), category, catalog);
     const byKey = new Map(payload.lines.map((l) => [l.key, l]));
     for (const metadata of catalog.lines.filter((l) => l.category === category)) lines.set(metadata.key, assembleLine(metadata, byKey.get(metadata.key)!));

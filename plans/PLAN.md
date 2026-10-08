@@ -175,6 +175,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [057 - All public timetabled Västtrafik buses](057-all-vasttrafik-buses.md): regional coverage, collision-safe keys and the additional bus category.
 - [059 - Tile cache reliability](059-tile-cache-reliability.md): local expiry metadata, stale HTTP/network fallback and storage-safe tile display.
 - [058 - On-demand category data](058-on-demand-category-data.md): catalogue/category split, lazy geometry loading and explicit offline installation.
+- [060 - Västtrafik ferries](060-vasttrafik-ferries.md): public static-feed ferries, on-demand geometry and optional progress, preserving older offline releases.
 
 ## Future todos
 

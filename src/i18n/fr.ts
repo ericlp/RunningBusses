@@ -42,7 +42,7 @@ export const fr: Dict = {
   'load.retry': 'Réessayer',
   'load.loading': 'Chargement des lignes…',
 
-  'notice.text': 'Les tracés montrent le trajet du bus et ne sont qu’une référence. Toutes les routes, tunnels et voies de bus ne sont pas praticables à pied.',
+  'notice.text': 'Les tracés montrent les trajets des transports publics et ne sont qu’une référence. Toutes les routes, tunnels et voies de bus ne sont pas praticables à pied. Les trajets des ferries traversent l’eau et ne peuvent pas être parcourus en courant.',
   'notice.offline': ' Vous êtes hors ligne – données enregistrées affichées.',
 
   'chooser.aria': 'Choisir une ligne',
@@ -66,6 +66,7 @@ export const fr: Dict = {
   'category.industri': 'Bus industriels',
   'category.tram': 'Tramway',
   'category.other-bus': 'Autres bus Västtrafik',
+  'category.ferry': 'Ferry',
   'tag.call-ordered': 'Sur réservation',
   'tag.loop': 'Boucle',
   'tag.one-way': 'Sens unique',

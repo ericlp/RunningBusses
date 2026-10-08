@@ -29,9 +29,9 @@ describe('persisted filters and sort', () => {
     expect(loadFilters()).toEqual(f);
     expect(loadSort()).toBe('longest');
   });
-  it('persists the additional bus category without changing defaults', () => {
-    saveFilters({ ...defaultFilters, categories: ['other-bus'] });
-    expect(loadFilters().categories).toEqual(['other-bus']);
+  it.each(['other-bus', 'ferry'] as const)('persists %s without changing defaults', (category) => {
+    saveFilters({ ...defaultFilters, categories: [category] });
+    expect(loadFilters().categories).toEqual([category]);
     expect(defaultFilters.categories).toEqual(['stadsbuss']);
   });
 

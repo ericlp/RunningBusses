@@ -43,6 +43,55 @@ beforeEach(async () => {
 });
 
 describe('category release loader', () => {
+  it('loads ferries on demand and includes their payload in durable offline installation', async () => {
+    const ferry = line('vt.9011014528600000', 'ferry');
+    assets = await splitDataset({ ...dataset, lines: [...dataset.lines, ferry] });
+    const loader = await CategoryData.open();
+    await loader.ensure(['stadsbuss']);
+    expect(fetchMock.mock.calls.some(([url]) => url.includes('ferry.'))).toBe(false);
+    expect(loader.categoriesForKeys([ferry.key])).toEqual(['ferry']);
+    await loader.ensureKeys([ferry.key]);
+    expect(loader.getSnapshot().dataset.lines).toEqual([dataset.lines[0], ferry]);
+    await loader.installAll();
+    expect(loader.getSnapshot().cached).toContain('ferry');
+    blocked.add('*');
+    const offline = await CategoryData.open();
+    await offline.ensure(['ferry']);
+    expect(offline.getSnapshot().dataset.lines).toEqual([ferry]);
+    expect(offline.getSnapshot().offline).toBe(true);
+  });
+
+  it('retains pre-ferry offline installations and protects their payloads during upgrade', async () => {
+    const { ferry: _ferry, ...categories } = assets.manifest.categories;
+    const { feedVersion, referenceDate, catalog } = assets.manifest;
+    const release = await contentHash(JSON.stringify({ feedVersion, referenceDate, catalog, categories }));
+    const manifest = { ...assets.manifest, release, categories };
+    const originalFetch = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url) => url.endsWith('catalog-manifest.json') ? Response.json(manifest) : originalFetch(url));
+    const old = await CategoryData.open();
+    await old.installAll();
+    expect(old.getSnapshot().installed?.release).toBe(release);
+    expect(old.getSnapshot().installProgress).toBe(6);
+    expect(fetchMock.mock.calls.some(([url]) => url.includes('ferry.'))).toBe(false);
+    blocked.add('*');
+    fetchMock.mockImplementation(originalFetch);
+    const offline = await CategoryData.open();
+    await offline.ensure(['stadsbuss', 'other-bus']);
+    expect(offline.getSnapshot().dataset.lines).toEqual(dataset.lines);
+    await expect(offline.ensure(['ferry'])).rejects.toThrow('unavailable');
+    expect(offline.getSnapshot().installed?.release).toBe(release);
+    blocked.clear();
+    assets = await splitDataset({ ...dataset, feedVersion: 'two', lines: dataset.lines.map((l) => ({ ...l, coordinates: [[13, 58], [14, 59]] })) });
+    const upgraded = await CategoryData.open();
+    expect(upgraded.getSnapshot().installed?.release).toBe(release);
+    expect(upgraded.getSnapshot().storageError).toBe(false);
+    expect(storage.has(`transit.payload.${manifest.categories.stadsbuss.hash}`)).toBe(true);
+    blocked.add('*');
+    const fallback = await CategoryData.open();
+    await fallback.ensure(['stadsbuss']);
+    expect(fallback.getSnapshot().dataset.lines).toEqual([dataset.lines[0]]);
+  });
+
   it('fetches only requested geometry, deduplicates requests and reads no unrelated cached values', async () => {
     const loader = await CategoryData.open();
     await Promise.all([loader.ensure(['stadsbuss']), loader.ensure(['stadsbuss'])]);

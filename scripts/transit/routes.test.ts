@@ -36,6 +36,20 @@ describe('regional route identity and eligibility', () => {
     expect(tram).toMatchObject({ key: '1', category: 'tram' });
     expect(select(row('9011014601400000', '14', '900'))).toBeUndefined();
   });
+  it.each(['1000', '4', '1200'])('classifies ferry type %s independently of bus number rules', (type) => {
+    expect(select(row('9011014528600000', '286', type))).toMatchObject({
+      key: 'vt.9011014528600000', category: 'ferry', callOrdered: false, tram: false,
+    });
+    expect(select(row('9011014505900000', '59', type))).toMatchObject({ key: 'vt.9011014505900000', category: 'ferry' });
+    expect(select(row('9011014484700000', '847', type))).toMatchObject({ key: 'vt.9011014484700000', category: 'ferry' });
+  });
+  it('requires public registry classification for ferries and excludes other agencies', () => {
+    const r = row('9011014528600000', '286', '1000');
+    expect(() => select(r, [])).toThrow(/Unclassified ferry route/);
+    expect(() => select({ ...r, route_desc: 'Ersätter färja' }, [])).toThrow(/Unclassified ferry route/);
+    expect(select(r, [line(r.route_id, '286', 'A - B', false)])).toBeUndefined();
+    expect(select({ ...r, agency_id: 'other' })).toBeUndefined();
+  });
 
   it('uses fixed, verified normal/call-ordered aliases even without the ordinary route in the feed', () => {
     const ordinary = line('9011014230200000', '302');

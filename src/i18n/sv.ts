@@ -41,7 +41,7 @@ export const sv = {
   'load.retry': 'Försök igen',
   'load.loading': 'Laddar linjer…',
 
-  'notice.text': 'Linjerna visar bussens väg och är bara en referens. Alla vägar, tunnlar och bussleder går inte att springa på.',
+  'notice.text': 'Linjerna visar kollektivtrafikens väg och är bara en referens. Alla vägar, tunnlar och bussleder går inte att springa på. Färjelinjer går över vatten och kan inte springas.',
   'notice.offline': ' Du är offline – visar sparad data.',
 
   'chooser.aria': 'Välj linje',
@@ -65,6 +65,7 @@ export const sv = {
   'category.industri': 'Industribuss',
   'category.tram': 'Spårvagn',
   'category.other-bus': 'Övriga Västtrafikbussar',
+  'category.ferry': 'Färja',
   'tag.call-ordered': 'Anropsstyrd',
   'tag.loop': 'Slinga',
   'tag.one-way': 'Enkelriktad',

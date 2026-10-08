@@ -1,5 +1,5 @@
-export type Category = 'stadsbuss' | 'stombuss' | 'express' | 'industri' | 'other-bus' | 'tram';
-export const CATEGORIES: readonly Category[] = ['stadsbuss', 'stombuss', 'express', 'industri', 'other-bus', 'tram'];
+export type Category = 'stadsbuss' | 'stombuss' | 'express' | 'industri' | 'other-bus' | 'tram' | 'ferry';
+export const CATEGORIES: readonly Category[] = ['stadsbuss', 'stombuss', 'express', 'industri', 'other-bus', 'tram', 'ferry'];
 
 /** Orders line numbers the way people read them: 9 before 17 before 114 before X1. */
 export const compareLineNumbers = (a: string, b: string): number => a.localeCompare(b, 'en', { numeric: true });
@@ -71,7 +71,8 @@ export interface CatalogManifest {
   generatedAt: string;
   lineCount: number;
   catalog: AssetDescriptor;
-  categories: Record<Category, AssetDescriptor>;
+  /** Releases published before ferries retain their original hashes and offline installation. */
+  categories: Record<Exclude<Category, 'ferry'>, AssetDescriptor> & Partial<Record<'ferry', AssetDescriptor>>;
 }
 export interface Catalog {
   schemaVersion: 2;

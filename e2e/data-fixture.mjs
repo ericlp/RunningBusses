@@ -13,7 +13,7 @@ export function splitFixture(dataset) {
   };
   const catalog = descriptor('catalog', { schemaVersion: 2, lines: dataset.lines.map(({ coordinates, viaAt, ...metadata }) => metadata) });
   const categories = {};
-  for (const category of ['stadsbuss', 'stombuss', 'express', 'industri', 'other-bus', 'tram']) {
+  for (const category of ['stadsbuss', 'stombuss', 'express', 'industri', 'other-bus', 'tram', 'ferry']) {
     categories[category] = descriptor(`categories/${category}`, {
       schemaVersion: 2, category, lines: dataset.lines.filter((l) => l.category === category).map((l) => ({
         key: l.key, coordinates: l.coordinates, ...(l.viaAt !== undefined ? { viaAt: l.viaAt } : {}),
