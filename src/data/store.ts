@@ -1,6 +1,6 @@
 import type { Course, Leg } from '../domain/course';
 import { isLogEntry, type LogEntry } from '../domain/log';
-import { idbGet, idbSet } from './idb';
+import { idbBatch, idbGet, idbSet } from './idb';
 
 export interface Draft {
   name: string;
@@ -67,4 +67,8 @@ export async function loadRecovery(): Promise<Recovery | null> {
 
 export function saveRecovery(r: Recovery): Promise<void> {
   return idbSet('recovery', r);
+}
+
+export function saveImport(recovery: Recovery, courses: Course[], people: string[], log: LogEntry[]): Promise<void> {
+  return idbBatch([['recovery', recovery], ['courses', courses], ['people', people], ['log', log]]);
 }

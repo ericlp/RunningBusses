@@ -1,5 +1,5 @@
 import { courseStats, type Course, type Leg } from './course';
-import type { Line } from './types';
+import type { Line, LineMetadata } from './types';
 
 export interface CourseChange {
   courseId: string;
@@ -26,7 +26,7 @@ export function refreshLegs(legs: Leg[], lines: Line[]): Leg[] {
 }
 
 /** Line keys in a course that the dataset no longer contains. */
-export function missingLineKeys(course: Course, lines: Line[]): string[] {
+export function missingLineKeys(course: Course, lines: LineMetadata[]): string[] {
   const keys = new Set(lines.map((l) => l.key));
   return course.legs.flatMap((l) => (l.kind === 'line' && !keys.has(l.line.key) ? [l.line.key] : []));
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { deflateRawSync } from 'node:zlib';
 import type { Course } from './course';
-import { decodeShare, encodeShare, payloadFromHash, shareUrl } from './share';
+import { decodeShare, encodeShare, payloadFromHash, prepareShare, rebuildShare, shareUrl } from './share';
 import type { Line } from './types';
 
 const line = (key: string): Line => ({
@@ -29,6 +30,26 @@ const course = (id: string, keys: string[], extra: Partial<Course> = {}): Course
 });
 
 describe('share links', () => {
+  it('discovers validated keys without geometry, then reconstructs only after resolution', async () => {
+    const parsed = await prepareShare(await encodeShare([course('1', ['59', '69'])], 'f', true));
+    expect(parsed.ok && parsed.prepared.keys).toEqual(['59', '69']);
+    if (!parsed.ok) throw new Error('Preparation failed');
+    const result = rebuildShare(parsed.prepared, lines);
+    expect(result.ok && result.shared.backup.courses[0].legs).toEqual(course('1', ['59', '69']).legs);
+  });
+
+  it('validates malformed legs even after an unknown key before requesting geometry', async () => {
+    const payload = 'p' + Buffer.from(JSON.stringify({ v: 1, f: 'f', c: [['c', 'Bad', 0, 'a', 'b', null, [['l', 'unknown', 0], ['m', 'm', 'Manual', -1]]]] })).toString('base64url');
+    expect(await prepareShare(payload)).toEqual({ ok: false, error: 'invalid' });
+  });
+
+  it('preserves payload and decompression limits during key discovery', async () => {
+    expect(await prepareShare('p' + 'x'.repeat(500_000))).toEqual({ ok: false, error: 'badLink' });
+    const oversized = JSON.stringify({ v: 1, f: 'f', c: [], padding: 'x'.repeat(2 * 1024 * 1024) });
+    const compressed = 'z' + deflateRawSync(oversized).toString('base64url');
+    expect(compressed.length).toBeLessThan(500_000);
+    expect(await prepareShare(compressed)).toEqual({ ok: false, error: 'badLink' });
+  });
   it('round-trips courses, directions and manual legs', async () => {
     const c1 = course('1', ['59', '69']);
     c1.legs.push({ kind: 'manual', id: 'm1', label: 'Walk', lengthM: null });

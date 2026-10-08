@@ -37,6 +37,14 @@ Publication includes a schema-2 `data/catalog-manifest.json`, a content-addresse
 
 Courses live in the browser (IndexedDB); filters and sort order are remembered in localStorage. Use ⚙ → Säkerhetskopia to share a link (courses only) or export a file, and open the link or import the file with merge or replace on another device. A copy from before the last import can be downloaded.
 
+The app loads the complete lightweight catalogue and only the geometry needed by your filters, route link or shared courses. New visits load city buses only. Search, route counts and progress cover the full catalogue even before geometry is downloaded. Planning waits for all selected categories rather than suggesting from an incomplete pool. Open, unpinned courses fetch their current categories after the initial view; saved historical snapshots remain usable without those downloads.
+
+Used categories are automatically saved in IndexedDB. Settings lists availability and offers **Download all categories** to install one complete offline release. Downloads can be retried; a failed or interrupted refresh preserves the previous installation. New online on-demand data does not automatically refresh a complete offline installation. Offline fallback uses one coherent saved release and identifies older data. Browser storage can be evicted, and downloading route data does not prefetch map tiles. Storage failures are reported even if fetched routes remain usable in memory.
+
+The loader, not the service worker, caches split route data. Legacy cached aggregates are read only for an offline migration/fallback; courses and drafts are not migrated. Backups and share links retain their schema-1 formats.
+
+For reproducible loading measurements, build and start `npx vite preview --port 4173 --strictPort`, then run `node e2e/category-performance.mjs`. It records request sets, gzip/transferred bytes, JSON parsing, IndexedDB reads and retained JS heap under controlled Chromium network/CPU throttling. The monolith comparison measures the old loader's data-ready path, not equivalent UI rendering; this is emulation, not physical-phone evidence. Results and limitations are recorded in plan 058.
+
 ## Links
 
 The address shows the current view: `#line=<key>` selects a line and zooms to it, `#mode=plan` opens the course list. Copy the address to share or bookmark it.

@@ -202,4 +202,28 @@ describe('shipped service worker tile caching', () => {
     expect(h.caches.delete).toHaveBeenCalledExactlyOnceWith('obsolete');
     expect(h.claim).toHaveBeenCalledOnce();
   });
+
+  it.each(['catalog-manifest.json', 'catalog.ab12.json', 'categories/other-bus.ab12.json'])('leaves split asset %s to the IndexedDB loader', (file) => {
+    const h = harness();
+    const dispatched = h.dispatch(new Request(`https://example.test/RunningBusses/data/${file}`));
+    expect(dispatched.response).toBeUndefined();
+    expect(h.fetch).not.toHaveBeenCalled();
+    expect(h.caches.open).not.toHaveBeenCalled();
+  });
+
+  it('cleans accidental split-data entries during upgrade without deleting legacy data or tiles', async () => {
+    const h = harness();
+    const split = 'https://example.test/RunningBusses/data/categories/stadsbuss.ab12.json';
+    const legacy = 'https://example.test/RunningBusses/data/lines.json';
+    h.entries.set(split, new Response('obsolete duplicate'));
+    h.entries.set(legacy, new Response('legacy dataset'));
+    h.entries.set(url, new Response('tile'));
+    let wait: Promise<unknown> | undefined;
+    h.handlers.get('activate')!({ waitUntil: (value: Promise<unknown>) => { wait = value; } });
+    await wait;
+    expect(h.entries.has(split)).toBe(false);
+    expect(h.entries.has(legacy)).toBe(true);
+    expect(h.entries.has(url)).toBe(true);
+    expect(h.claim).toHaveBeenCalledOnce();
+  });
 });

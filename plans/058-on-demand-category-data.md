@@ -1,6 +1,6 @@
 # 058 - On-demand category data
 
-**Status:** In progress. Split publication, lossless reconstruction and validation are implemented; loader, UI and offline installation are being delivered separately.
+**Status:** Implemented. Split publication and client loading/offline installation were delivered as separate commits. All six implementation groups below are complete.
 
 ## Problem
 
@@ -129,3 +129,40 @@ Before each implementation commit, run typecheck, unit tests, build, all browser
 ## Remaining trade-offs
 
 The regional category is still large when requested. Splitting does not remove the cost of rendering every category, so the existing viewport optimization remains necessary. Legacy compatibility temporarily duplicates published geometry assets, without requiring the new client to download both formats.
+
+## Implementation results
+
+The existing aggregate was used to generate the new assets without changing the feed, route selection or geometry. All 805 routes reassemble byte-for-byte at the JSON line-record level, including optional fields and property ordering. Both refresh and deployment workflows validate the generated assets before publication.
+
+The client uses the catalogue for lists, searches, filters, availability, progress and removal detection. Geometry resolution deduplicates requests and retries a deployment race once. Pending links retain their selection; prepared shares retain their intent until all known referenced geometry resolves. Planning waits for its complete selected pool while snapshot editing controls remain usable. Automatic reconciliation waits for complete per-course geometry, skips completed/pinned courses and older offline fallback, and explicit asynchronous refreshes reject stale course state.
+
+Owned IndexedDB release metadata and category payloads are persisted atomically. Offline installation stages one pinned release, reuses durable work on retry and promotes its pointer only when all categories are saved. The previous installation remains through failed refreshes. On-demand browsing can use a newer release independently; warm startup reads only requested category payloads. Missing/corrupt/evicted chunks are validated and reported rather than treated as removed routes. Garbage collection protects active, installed and staged releases and never touches user records. Split assets bypass service-worker fallback caching; activation also removes accidental duplicate split entries left by an older worker. Course imports now atomically persist recovery, courses, participants and history.
+
+### Actual generated payload sizes
+
+| Payload | JSON bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Manifest | 2,011 | 683 |
+| Complete catalogue | 416,755 | 84,434 |
+| City-bus geometry | 437,420 | 99,630 |
+| Default total | 856,186 | 184,747 |
+| Legacy aggregate baseline | 13,855,413 | 3,324,481 |
+
+Default route data is **5.56%** of the monolithic gzip baseline, below the 10% acceptance threshold. A cold default visit makes exactly three transit requests: manifest, catalogue and city geometry. Warm city startup after download-all requests only the manifest and does not read/hydrate other category payloads.
+
+### Controlled browser measurements
+
+Run on 2026-10-08 with `e2e/category-performance.mjs`: headless Chromium, 360 x 740 viewport, CDP 4x CPU slowdown, 50 ms latency and 10 Mbit/s download. Vite preview served gzip; tile requests were blocked to isolate route loading. The following is one controlled sample, not a promised load-speed improvement.
+
+| Loader / state | Transit requests | Transferred route bytes, including resource overhead | JSON parse time | Readiness | Retained JS heap (decimal MB) |
+| --- | ---: | ---: | ---: | --- | ---: |
+| Split / cold | 3 | 185,647 | 14.2 ms | Visible city route canvas: 1,436 ms | 14.4 |
+| Split / warm after download-all | 1 | 983 | 9.9 ms | Visible city route canvas: 981 ms | 15.0 |
+| Previous monolith loader / cold | 2 | 3,325,283 | 198.6 ms | Data-ready only: 3,231 ms | 31.1 |
+| Previous monolith loader / warm | 1 | 502 | No JSON parse; full IndexedDB object hydration | Data-ready only: 524 ms | 42.1 |
+
+The warm split geometry IndexedDB read took 5.7 ms; the warm baseline read/materialisation of the full cached dataset took 22.9 ms. These asynchronous request timings include scheduling, not isolated storage microbenchmarks. Split readiness includes application loading/rendering, whereas the baseline emulates the previous loader without UI rendering; the readiness columns are therefore **not an equivalent end-to-end speed comparison**. Heap was sampled after forced garbage collection and is not peak or total device memory. This is emulation, not physical-phone evidence.
+
+### Verification
+
+Typechecking, all 187 unit tests, the production build, all 16 registered browser journeys and dataset validation passed before delivery. The category journey covers default/warm request sets, saved non-city filters, deep links, mixed shares, incomplete planning pools, late selections, deferred mixed-course updates, pinned/completed snapshots, true removals, stale explicit-refresh writes, service-worker offline startup, installation refresh/retry and storage failures. Unit tests additionally cover lossless publication, owned-file cleanup, cache corruption, eviction, deployment races, deduplication, interrupted installations, legacy offline migration and bounded share preparation.

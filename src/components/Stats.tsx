@@ -4,7 +4,7 @@ import { formatDistance } from '../domain/course';
 import { categoryLabel } from '../domain/filter';
 import { cleanName, computeProgress, MAX_PERSON_NAME, unusedPeople, type CategoryProgress } from '../domain/stats';
 import type { LogEntry } from '../domain/log';
-import type { Category, Line } from '../domain/types';
+import type { Category, LineMetadata } from '../domain/types';
 import { t, tn } from '../i18n';
 
 const pct = (done: number, total: number) => (total > 0 ? Math.round((done / total) * 100) : 0);
@@ -33,7 +33,7 @@ function Row({ p, title }: { p: CategoryProgress; title: string }) {
 
 interface Props {
   courses: Course[];
-  lines: Line[];
+  lines: LineMetadata[];
   people: string[];
   log: LogEntry[];
   categories: Category[];

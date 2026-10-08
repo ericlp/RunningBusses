@@ -17,7 +17,7 @@ Node 24 via mise (`mise install`, `mise exec -- npm ci`).
   - Reuses `.cache/vt/` when present; `npm run data -- --download` fetches a fresh feed. `--date=YYYYMMDD` selects the reference service day.
 - `npm run data:validate -- --previous=old-lines.json` – validate a rebuilt dataset
 
-There is no linter. CI (`deploy.yml`) runs typecheck, test, build, e2e, then deploys.
+There is no linter. CI (`deploy.yml`) runs typecheck, test, dataset validation, build, e2e, then deploys.
 
 Playwright MCP is configured for this repository in `.github/mcp.json`. Its launcher uses the project's installed Chromium, so run `npm ci` and `npx playwright install chromium` before using it. Browsers are headless and isolated; MCP output goes to `.cache/playwright-mcp/`.
 
@@ -25,10 +25,10 @@ Playwright MCP is configured for this repository in `.github/mcp.json`. Its laun
 
 - `scripts/` (build-time, run with tsx): downloads the Västtrafik GTFS Regional feed and the official public-line registry. Includes public timetabled buses across the feed period, excluding pupil-restricted school transport; public school-day lines remain eligible. `config/lines.json` scopes the original Gothenburg categories; additional buses use `other-bus`. `config/route-aliases.json` holds verified normal/call-ordered pairings. Publishes schema-2 `catalog-manifest.json`, a content-addressed catalogue and category geometry payloads, plus legacy `lines.json` + `manifest.json`. Monthly refresh validates split hashes/counts/membership and exact aggregate reconstruction against published data; deployment compares the stable release hash.
 - `src/domain/`: pure logic (geo/distance, course building, overlap detection, filters, reconcile of courses against new data, backup, share links, GPX). **No React or Leaflet imports here**; this is where unit tests live (`*.test.ts` next to the source).
-- `src/data/`: loading the published dataset, IndexedDB (`idb.ts`) and the store.
+- `src/data/`: `dataset.ts` loads the complete lightweight catalogue and requested category geometry only. Owned `transit.*` IndexedDB entries keep release metadata/availability separate from payloads; writes and complete offline installation promotion are atomic. Keep active/installed/staged releases coherent and never hydrate every cached category on startup. `idb.ts` and the store also persist user records.
 - `src/components/` + `src/App.tsx`: UI (map, course list/editor, backup, tour). `MapView.tsx` is the only place that touches Leaflet; geometry is lon/lat in data and converted for Leaflet there.
 - `src/i18n/`: `sv.ts` is the source of truth (defines `Key`/`Dict`); `en.ts` and `fr.ts` must provide the same keys. Language follows the browser, Swedish fallback. `i18n.test.ts` checks the dictionaries.
-- `public/sw.js`: service worker, network-first for same-origin assets/data, so monthly data changes need no cache bump. OSM tiles are cached only after being viewed (no prefetch), with local expiry metadata honouring accessible server freshness headers (7-day fallback) and an 800-tile limit. Stale viewed tiles survive HTTP/network failures; storage failures cannot discard successful downloads.
+- `public/sw.js`: service worker, network-first for app-shell/legacy data. Split manifest/catalogue/category requests bypass it; the IndexedDB loader owns their fallback and upgrade activation removes accidental duplicate split entries. OSM tiles are cached only after being viewed (no prefetch), with local expiry metadata honouring accessible server freshness headers (7-day fallback) and an 800-tile limit. Stale viewed tiles survive HTTP/network failures; storage failures cannot discard successful downloads.
 
 ## Conventions
 
@@ -36,6 +36,7 @@ Playwright MCP is configured for this repository in `.github/mcp.json`. Its laun
 - A line is identified by its stable `key`, never by line number alone. Preserve legacy keys (`59`, `62r`); additional buses use `vt.<route_id>` with an optional `r`. Lines carry a `category` (`stadsbuss | stombuss | express | industri | other-bus | tram`) and `tags` (`call-ordered | loop | one-way | retur`). Trams have fixed colours.
 - Route geometries are immutable. Cached extents support map hit testing and buffered-viewport rendering; offscreen routes remain in the dataset and list and must render when panned or selected.
 - Catalogue `LineMetadata` is separate from `LineGeometry`; never invent a full `Line` with empty coordinates. Preserve optional fields and property ordering on reassembly so historical snapshot comparisons stay exact.
+- Use catalogue keys for removals, lists, search, filtering and progress. Planning waits for every selected category. Resolve validated share keys before rebuilding; unavailable known geometry is retryable, not missing. Automatic reconciliation waits for all current route categories per course and never downgrades snapshots on an older offline fallback.
 - Each line belongs to at most one course. Route status (`NotPlanned`/`NotCompleted`/`Completed`) is derived from courses, never stored. Courses store a snapshot of each leg's route; totals are always recomputed, never trusted from imported files.
 - Completed courses are locked; an unlocked course is pinned to its historical data until explicitly updated. Lines missing from new data stay in existing courses with a warning.
 - Backups retain route snapshots; share links encode route keys and rebuild legs from the recipient's dataset. Courses with unknown keys are skipped and reported; partial-course links must merge, not replace.

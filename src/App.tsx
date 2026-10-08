@@ -3,8 +3,8 @@ import { MapView, type Fit, type MapLayer, type MapMarker, type Tone } from './c
 import { BuilderPanel, BuilderStrip, CourseList, LineCard, SplitDialog } from './components/Courses';
 import { StatsPanel } from './components/Stats';
 import { sendShareLink } from './components/shareLink';
-import { loadDataset } from './data/dataset';
-import { DEFAULT_RADIUS_M, loadCourses, loadDraft, loadLog, loadPeople, loadRadius, loadRecovery, saveCourses, saveLog, savePeople, saveRecovery, saveDraft, saveRadius, type Draft } from './data/store';
+import { loadDataset, type CategoryData, type DataState } from './data/dataset';
+import { DEFAULT_RADIUS_M, loadCourses, loadDraft, loadLog, loadPeople, loadRadius, loadRecovery, saveCourses, saveLog, savePeople, saveImport, saveDraft, saveRadius, type Draft } from './data/store';
 import {
   courseStats,
   legEnd,
@@ -34,11 +34,11 @@ import { addPerson, knownPeople, loadProgressCategories, saveProgressCategories,
 import { courseToGpx, gpxFileName } from './domain/gpx';
 import { REPO_URL, Tour, type TourStep } from './components/Tour';
 import { BackupSection } from './components/Backup';
-import { decodeShare, payloadFromHash, type ShareError, type Shared } from './domain/share';
+import { prepareShare, rebuildShare, payloadFromHash, type ShareError, type Shared } from './domain/share';
 import type { Key } from './i18n/sv';
 import { BORDERS, LINE_COLORS, OVERLAPS, setOverlap, MAP_STYLES, PAN_SPEEDS, THEMES, setBorder, setPanSpeed, setShowLocation, setLineColors, setMapStyle, setTheme, useAppearance, type Border, type Overlap, type LineColors, type MapStyle, type PanSpeed, type ThemePref } from './appearance';
 import { LANG_NAMES, LANGS, lineLabel, setLangPref, t, tn, useLang, type LangPref } from './i18n';
-import { CATEGORIES, type Category, type Dataset, type Line, type Tag } from './domain/types';
+import { CATEGORIES, type Category, type Line, type LineMetadata, type Tag } from './domain/types';
 
 const STALE_DAYS = 45;
 
@@ -94,7 +94,6 @@ export function App() {
   const { theme, mapStyle, border, lineColors, panSpeed, overlap, showLocation } = useAppearance();
   const [showSettings, setShowSettings] = useState(false);
   const syncPayload = useRef<string | null>(initialSyncPayload);
-  const deepLinked = useRef(initialView.line !== null);
   const modeRef = useRef<Mode>(initialView.mode);
   const viewSynced = useRef(false);
   const [syncTick, setSyncTick] = useState(0);
@@ -106,7 +105,6 @@ export function App() {
         // a view link pasted into an open tab; never interrupt a draft
         const v = viewFromHash(location.hash);
         if (modeRef.current === 'build') return;
-        deepLinked.current = v.line !== null;
         setMode(v.mode);
         setSelectedKey(v.line);
         setChooser(null);
@@ -142,10 +140,19 @@ export function App() {
       if (history.state?.rbSettings) history.back();
     };
   }, [showSettings]);
-  const [dataset, setDataset] = useState<Dataset | null>(null);
-  const [offline, setOffline] = useState(false);
+  const [loader, setLoader] = useState<CategoryData | null>(null);
+  const [dataState, setDataState] = useState<DataState | null>(null);
+  const dataset = dataState?.dataset ?? null;
+  const catalogue = dataState?.catalog.lines ?? [];
+  const offline = dataState?.offline ?? false;
+  const [initialResolved, setInitialResolved] = useState(false);
+  const [dataRetry, setDataRetry] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
+  const coursesRef = useRef(courses);
+  coursesRef.current = courses;
+  const courseWriteVersion = useRef(0);
+  const [courseWrites, setCourseWrites] = useState(0);
   const [storedPeople, setStoredPeople] = useState<string[]>([]);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [progressCategories, setProgressCategories] = useState<Category[]>(loadProgressCategories);
@@ -156,6 +163,7 @@ export function App() {
   const [mode, setMode] = useState<Mode>(initialView.mode);
   modeRef.current = mode;
   const [filters, setFilters] = useState<Filters>(loadFilters);
+  const initialFilters = useRef(filters);
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortKey>(loadSort);
   useEffect(() => saveFilters(filters), [filters]);
@@ -182,10 +190,26 @@ export function App() {
   const [split, setSplit] = useState<{ at: number; name1: string; name2: string } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
     loadDataset()
-      .then((r) => {
-        setDataset(r.dataset);
-        setOffline(r.offline);
+      .then(async (r) => {
+        if (cancelled) return;
+        setLoader(r);
+        setDataState(r.getSnapshot());
+        unsubscribe = r.subscribe(() => setDataState(r.getSnapshot()));
+        let categories = initialFilters.current.categories;
+        if (initialView.line) {
+          const linked = r.categoriesForKeys([initialView.line]);
+          if (linked.length) categories = linked;
+        }
+        if (initialSyncPayload) {
+          const prepared = await prepareShare(initialSyncPayload);
+          categories = prepared.ok ? r.categoriesForKeys(prepared.prepared.keys) : [];
+        }
+        try { await r.ensure(categories); }
+        catch (e) { console.warn('Initial category loading failed:', e); }
+        if (!cancelled) setInitialResolved(true);
       })
       .catch((e) => setError(String(e.message ?? e)));
     Promise.all([loadCourses(), loadDraft(), loadPeople().catch(() => [] as string[]), loadLog().catch(() => [] as LogEntry[])])
@@ -199,17 +223,43 @@ export function App() {
         setReady(true);
       })
       .catch(() => setToast(t('toast.loadCourses')));
+    return () => { cancelled = true; unsubscribe?.(); };
   }, []);
 
-  const reconciledFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!ready || !dataset || reconciledFor.current === dataset.generatedAt) return;
-    reconciledFor.current = dataset.generatedAt;
-    const r = reconcileCourses(courses, dataset.lines);
+    if (!loader || !ready || !initialResolved || offline) return;
+    const keys = courses.filter((c) => c.status !== 'Completed' && !c.pinned).flatMap((c) => c.legs.flatMap((l) => l.kind === 'line' ? [l.line.key] : []));
+    void loader.ensureKeys(keys).catch((e) => console.warn('Course category loading failed:', e));
+  }, [loader, ready, initialResolved, offline, courses, dataRetry, dataState?.manifest.release]);
+
+  const reconcileAttempt = useRef<{ courses: Course[]; dataset: typeof dataset; retry: number } | null>(null);
+  useEffect(() => {
+    if (!ready || !dataset || !loader || !initialResolved || offline || courseWrites) return;
+    const last = reconcileAttempt.current;
+    if (last?.courses === courses && last.dataset === dataset && last.retry === dataRetry) return;
+    const eligible = courses.filter((c) => c.status !== 'Completed' && !c.pinned &&
+      loader.hasCategories(loader.categoriesForKeys(c.legs.flatMap((l) => l.kind === 'line' ? [l.line.key] : []))));
+    const r = reconcileCourses(eligible, dataset.lines);
     if (!r.changes.length) return;
-    commit(r.courses).then((ok) => ok && setToast(tn('toast.updated', r.changes.length)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, dataset]);
+    reconcileAttempt.current = { courses, dataset, retry: dataRetry };
+    const updated = new Map(r.courses.map((c) => [c.id, c]));
+    void commit(courses.map((c) => updated.get(c.id) ?? c)).then((ok) => ok && setToast(tn('toast.updated', r.changes.length)));
+  }, [ready, dataset, loader, initialResolved, offline, courses, courseWrites, dataRetry]);
+
+  useEffect(() => {
+    if (!loader) return;
+    if (mode !== 'build' && (initialView.line || initialSyncPayload) && filters === initialFilters.current) return;
+    void loader.ensure(filters.categories).catch((e) => console.warn('Filter category loading failed:', e));
+  }, [loader, filters, mode, dataRetry, dataState?.manifest.release]);
+
+  useEffect(() => {
+    if (!loader || !selectedKey) return;
+    if (!loader.getSnapshot().catalog.lines.some((l) => l.key === selectedKey)) {
+      setSelectedKey(null);
+      return;
+    }
+    void loader.ensureKeys([selectedKey]).catch((e) => console.warn('Selected category loading failed:', e));
+  }, [loader, selectedKey, dataRetry, dataState?.manifest.release]);
 
   useEffect(() => {
     if (!ready) return;
@@ -256,13 +306,13 @@ export function App() {
   const statuses = useMemo(() => routeStatuses(courses), [courses]);
   const statusOf = (key: string): RouteStatus => statuses.get(key)?.status ?? 'NotPlanned';
   const visible = useMemo(() => (dataset ? applyFilters(dataset.lines, filters, statusOf) : []), [dataset, filters, statuses]);
-  const listed = useMemo(() => sortLines(searchLines(visible, query), sortBy, statusOf), [visible, query, sortBy, statuses]);
+  const listed = useMemo(() => sortLines(searchLines(applyFilters(catalogue, filters, statusOf), query), sortBy, statusOf), [catalogue, filters, query, sortBy, statuses]);
   const selected = useMemo(() => dataset?.lines.find((l) => l.key === selectedKey) ?? null, [dataset, selectedKey]);
   useEffect(() => {
     if (mode === 'build' || !ready) return;
     const q = new URLSearchParams();
     if (mode === 'plan') q.set('mode', 'plan');
-    if (selected) q.set('line', selected.key);
+    if (selectedKey) q.set('line', selectedKey);
     const h = q.toString();
     // keep a pending #sync= link intact until it is consumed
     if (payloadFromHash(location.hash) !== null) return;
@@ -272,10 +322,9 @@ export function App() {
     if (viewSynced.current) history.pushState(null, '', url);
     else history.replaceState(null, '', url);
     viewSynced.current = true;
-  }, [mode, selected, ready]);
+  }, [mode, selectedKey, ready]);
   useEffect(() => {
-    if (!selected || !deepLinked.current) return;
-    deepLinked.current = false;
+    if (!selected) return;
     fitTo(selected.coordinates);
   }, [selected]);
   const selectedCourse = useMemo(() => courses.find((c) => c.id === selectedCourseId) ?? null, [courses, selectedCourseId]);
@@ -284,22 +333,25 @@ export function App() {
   // the course being edited releases its own lines for the draft
   const others = useMemo(() => courses.filter((c) => c.id !== draft?.editingId), [courses, draft?.editingId]);
   const options = useMemo(() => {
-    if (mode !== 'build' || !dataset) return [];
+    if (mode !== 'build' || !dataset || !loader?.hasCategories(filters.categories)) return [];
     const pool = applyFilters(dataset.lines, { ...filters, status: 'all' });
     return nextOptions(pool, usedLineKeys(others, legs), legs, radiusM);
-  }, [mode, dataset, filters, others, legs, radiusM]);
+  }, [mode, dataset, loader, filters, others, legs, radiusM]);
 
   const fitTo = (coords: [number, number][], topInset = 70) => setFit({ coords, seq: (fit?.seq ?? 0) + 1, topInset });
 
   const commit = async (next: Course[]): Promise<boolean> => {
+    courseWriteVersion.current++;
+    setCourseWrites((n) => n + 1);
     try {
       await saveCourses(next);
+      coursesRef.current = next;
       setCourses(next);
       return true;
     } catch {
       setToast(t('toast.save'));
       return false;
-    }
+    } finally { setCourseWrites((n) => n - 1); }
   };
 
   const setRadius = (m: number) => {
@@ -307,10 +359,11 @@ export function App() {
     if (m >= 50 && m <= 5000) saveRadius(m);
   };
 
-  const pickLine = (l: Line) => {
+  const pickLine = (l: LineMetadata) => {
     setSelectedKey(l.key);
     setChooser(null);
-    fitTo(l.coordinates);
+    const loaded = dataset?.lines.find((line) => line.key === l.key);
+    if (l.key === selectedKey && loaded) fitTo(loaded.coordinates);
   };
 
   const addOption = (o: Option) => {
@@ -373,13 +426,27 @@ export function App() {
   useEffect(() => {
     // a shared link is only read; nothing is saved until the user confirms the import
     const payload = syncPayload.current;
-    if (!dataset || !ready || !payload) return;
-    syncPayload.current = null;
-    void decodeShare(payload, dataset.lines).then((r) => {
-      if (r.ok) setIncoming({ shared: r.shared, error: null });
-      else setIncoming({ shared: null, error: r.error });
-    });
-  }, [dataset, ready, syncTick]);
+    if (!loader || !ready || !payload) return;
+    let cancelled = false;
+    void (async () => {
+      const parsed = await prepareShare(payload);
+      if (cancelled) return;
+      if (!parsed.ok) {
+        syncPayload.current = null;
+        setIncoming({ shared: null, error: parsed.error });
+        return;
+      }
+      try {
+        const resolved = await loader.ensureKeys(parsed.prepared.keys);
+        if (cancelled || syncPayload.current !== payload) return;
+        const r = rebuildShare(parsed.prepared, resolved.dataset.lines);
+        syncPayload.current = null;
+        if (r.ok) setIncoming({ shared: r.shared, error: null });
+        else setIncoming({ shared: null, error: r.error });
+      } catch (e) { console.warn('Shared category loading failed:', e); }
+    })();
+    return () => { cancelled = true; };
+  }, [loader, ready, syncTick, dataRetry]);
 
   // a shared course opens straight on the map once it is saved
   const openImported = (imported: Course[]) => {
@@ -500,15 +567,18 @@ export function App() {
   };
 
   const applyImport = async (next: Course[], radius: number | null, nextPeople: string[], nextLog: LogEntry[]): Promise<boolean> => {
+    courseWriteVersion.current++;
+    setCourseWrites((n) => n + 1);
     try {
-      await saveRecovery({ savedAt: new Date().toISOString(), courses });
+      await saveImport({ savedAt: new Date().toISOString(), courses }, next, nextPeople, nextLog);
     } catch {
+      setToast(t('toast.save'));
       return false;
-    }
-    if (!(await commit(next))) return false;
-    // the people list is rebuilt from the courses anyway, so a failure here loses nothing
-    savePeople(nextPeople).then(() => setStoredPeople(nextPeople)).catch(() => undefined);
-    saveLog(nextLog).then(() => setLog(nextLog)).catch(() => undefined);
+    } finally { setCourseWrites((n) => n - 1); }
+    coursesRef.current = next;
+    setCourses(next);
+    setStoredPeople(nextPeople);
+    setLog(nextLog);
     if (radius !== null) setRadius(radius);
     // a draft that edits a course which no longer exists or is now completed would be stale
     if (draft?.editingId && !next.some((x) => x.id === draft.editingId && x.status !== 'Completed')) setDraft(null);
@@ -517,11 +587,19 @@ export function App() {
   };
 
   const refreshCourse = async (c: Course) => {
-    if (!dataset) return;
-    const change = previewRefresh(c, dataset.lines);
+    if (!loader || offline) { setToast(t('data.offlineRefresh')); return; }
+    const before = courses;
+    const version = courseWriteVersion.current;
+    let lines: Line[];
+    try {
+      const resolved = await loader.ensureKeys(c.legs.flatMap((l) => l.kind === 'line' ? [l.line.key] : []));
+      lines = resolved.dataset.lines;
+    } catch (e) { console.warn('Course refresh failed:', e); setToast(t('data.unavailable')); return; }
+    if (coursesRef.current !== before || version !== courseWriteVersion.current || courseWrites) { setToast(t('data.courseChanged')); return; }
+    const change = previewRefresh(c, lines);
     if (change && !confirm(t('confirm.update', { name: c.name, old: formatDistance(change.oldTotalM), new: formatDistance(change.newTotalM) }))) return;
     const now = new Date().toISOString();
-    if (await commit(courses.map((x) => (x.id === c.id ? { ...x, legs: refreshLegs(x.legs, dataset.lines), pinned: undefined, updatedAt: now } : x)))) {
+    if (await commit(before.map((x) => (x.id === c.id ? { ...x, legs: refreshLegs(x.legs, lines), pinned: undefined, updatedAt: now } : x)))) {
       if (!change) setToast(t('toast.updateNone'));
     }
   };
@@ -674,7 +752,12 @@ export function App() {
   }, [selectedKey]);
 
   const stats = courseStats(legs);
-  const avail = useMemo(() => (dataset ? facetAvailability(dataset.lines, filters, statusOf) : null), [dataset, filters, statuses]);
+  const avail = useMemo(() => (dataset ? facetAvailability(catalogue, filters, statusOf) : null), [dataset, catalogue, filters, statuses]);
+  const pendingCategories = loader ? filters.categories.filter((c) => !loader.hasCategories([c])) : [];
+  const retryData = () => {
+    setDataRetry((n) => n + 1);
+    setSyncTick((n) => n + 1);
+  };
   const activeFilters = Number(!sameCategories(filters.categories, defaultFilters.categories)) + Number(filters.status !== defaultFilters.status) + filters.tags.length + Number(filters.minKm !== null || filters.maxKm !== null);
 
   return (
@@ -753,6 +836,7 @@ export function App() {
           <div className="notice" role="note">
             <span>
               {offline && t('notice.offline')}
+              {dataState?.stale && t('data.staleOffline')}
               {dataset && Date.now() - Date.parse(dataset.generatedAt) > STALE_DAYS * 864e5 && t('notice.stale', { date: dataset.generatedAt.slice(0, 10) })}
             </span>
             <button className="chip" aria-label={t('common.close')} onClick={() => setNoticeOpen(false)}>
@@ -1008,9 +1092,18 @@ export function App() {
               }}
             />
             <div className="sheet-body">
+              {dataState && ((mode === 'build' && pendingCategories.length > 0) || pendingCategories.some((c) => dataState.loading.includes(c)) || dataState.failed.length > 0 || (selectedKey && !selected) || syncPayload.current) && (
+                <div role="status" className="data-status">
+                  <p>{t(dataState.loading.length ? 'data.loading' : 'data.unavailable')} {CATEGORIES.filter((c) => dataState.loading.includes(c) || dataState.failed.includes(c) || (mode === 'build' && pendingCategories.includes(c))).map(categoryLabel).join(', ')}</p>
+                  {mode === 'build' && <p>{t('data.planning')}</p>}
+                  <button className="chip" onClick={retryData}>{t('load.retry')}</button>
+                </div>
+              )}
+              {dataState?.storageError && <p role="status">{t('data.storageError')}</p>}
               {mode === 'build' && (
                 <BuilderPanel
                   options={options}
+                  routesReady={pendingCategories.length === 0}
                   hasLegs={legs.length > 0}
                   radiusM={radiusM || DEFAULT_RADIUS_M}
                   onRadius={setRadius}
@@ -1028,7 +1121,7 @@ export function App() {
 
               {mode === 'plan' && (
                 <>
-                <StatsPanel courses={courses} lines={dataset?.lines ?? []} people={people} log={log} categories={progressCategories} onAddPerson={(n) => void addPersonName(n)} onRemovePerson={(n) => void removePersonName(n)} />
+                <StatsPanel courses={courses} lines={catalogue} people={people} log={log} categories={progressCategories} onAddPerson={(n) => void addPersonName(n)} onRemovePerson={(n) => void removePersonName(n)} />
                 <CourseList
                   courses={courses}
                   selectedId={selectedCourseId}
@@ -1043,7 +1136,7 @@ export function App() {
                   onExportGpx={exportGpx}
                   onShare={shareCourse}
                   onEditRun={editRun}
-                  lines={dataset?.lines ?? []}
+                  lines={catalogue}
                 />
                 </>
               )}
@@ -1077,7 +1170,7 @@ export function App() {
                     {t('list.hideCompleted')}
                   </button>
                   <p className="muted">
-                    {t('list.count', { shown: listed.length, total: dataset.lines.length, version: dataset.feedVersion })}
+                    {t('list.count', { shown: listed.length, total: catalogue.length, version: dataset.feedVersion })}
                   </p>
                   <ul className="list">
                     {listed.map((l) => {
@@ -1089,6 +1182,7 @@ export function App() {
                             <span>
                               {l.from} → {l.to}
                               <br />
+                              {!loader?.hasCategories([l.category]) && <span className="sub">{t(dataState?.loading.includes(l.category) ? 'data.loading' : dataState?.failed.includes(l.category) ? 'data.unavailable' : 'data.notLoaded')} · </span>}
                               <span className="sub"><span className={`dot dot-${st}`} aria-hidden />{[st === 'Completed' ? t('list.completed') : st === 'NotCompleted' ? t('list.planned') : '', ...l.tags.map((tag) => tagLabel(tag))].filter(Boolean).join(' · ')}</span>
                             </span>
                             <span className="km">{formatKm(l.lengthM)}</span>
@@ -1225,6 +1319,20 @@ export function App() {
                 {t('tour.start')}
               </button>
               <BackupSection courses={courses} people={people} log={log} radiusM={radiusM} feedVersion={dataset.feedVersion} incoming={incoming} onConsumed={() => setIncoming(null)} onImported={openImported} onApply={applyImport} loadRecoveryCourses={async () => (await loadRecovery())?.courses ?? null} />
+              {loader && dataState && (
+                <section aria-label={t('data.offlineTitle')}>
+                  <h3>{t('data.offlineTitle')}</h3>
+                  <p className="muted">{t('data.offlineHelp')}</p>
+                  <p>{dataState.installed ? t(dataState.installed.release === dataState.manifest.release ? 'data.installed' : 'data.olderInstalled', { version: dataState.installed.feedVersion }) : t('data.notInstalled')}</p>
+                  <ul>{CATEGORIES.map((c) => <li key={c}>{categoryLabel(c)}: {t(dataState.cached.includes(c) ? 'data.cached' : 'data.notCached')}</li>)}</ul>
+                  <button className="chip" disabled={dataState.installing || offline} onClick={() => void loader.installAll()}>
+                    {t(dataState.installError ? 'load.retry' : dataState.installed && dataState.installed.release !== dataState.manifest.release ? 'data.refresh' : 'data.downloadAll')}
+                  </button>
+                  {dataState.installing && <p role="status">{t('data.progress', { done: dataState.installProgress, total: CATEGORIES.length })}</p>}
+                  {dataState.installError && <p role="alert">{t('data.installError')} {dataState.installError}</p>}
+                  {dataState.storageError && <p role="alert">{t('data.storageError')}</p>}
+                </section>
+              )}
               <p className="muted">{t('settings.tiles')}</p>
               <p>
                 <a href={REPO_URL} target="_blank" rel="noreferrer">

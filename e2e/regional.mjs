@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
+import { serveFixture } from './data-fixture.mjs';
 
 const dataset = JSON.parse(readFileSync('public/data/lines.json', 'utf8'));
 const city = dataset.lines.find((l) => l.key === '59');
@@ -16,7 +17,7 @@ try {
     const context = await browser.newContext({ locale: 'sv-SE', viewport: { width, height: 740 }, serviceWorkers: 'block' });
     const page = await context.newPage();
     page.on('pageerror', (error) => { console.log('FAIL', error.message); failures++; });
-    await page.route('**/data/lines.json*', (route) => route.fulfill({ json: fixture }));
+    await serveFixture(context, fixture);
     await page.addInitScript(() => localStorage.setItem('rb.panSpeed', 'off'));
     await page.goto('http://localhost:4173/');
     await page.waitForSelector('.list button');
@@ -26,6 +27,7 @@ try {
     ok(await categories.locator('button:text-is("Alla")').count() === 0, `${width}px: no all-buses shortcut`);
     await categories.locator('button:text-is("Övriga Västtrafikbussar")').click();
     await categories.locator('button:text-is("Stadsbuss")').click();
+    await page.waitForFunction(() => document.querySelectorAll('.sheet .list button').length === 2);
     ok(await page.locator('.list button').count() === 2, `${width}px: regional category excludes city buses and trams`);
     await page.click('button.tool:has-text("Filter")');
     for (let i = 0; i < regional.length; i++) {
@@ -46,6 +48,7 @@ try {
     for (let i = 0; i < regional.length; i++) {
       await page.click('text=Skapa bana');
       await page.waitForSelector('.strip');
+      await page.waitForSelector('.sheet .list button');
       await page.locator('.list button').first().click();
       await page.click('.strip >> text=Spara');
       await page.fill('.modal input', `Regional ${i + 1}`);

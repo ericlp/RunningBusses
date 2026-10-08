@@ -1,6 +1,7 @@
 import { BACKUP_FORMAT, BACKUP_VERSION, parseBackup, type Backup } from './backup';
 import type { Course, Leg } from './course';
 import type { Line } from './types';
+import { cleanName, MAX_PERSON_NAME } from './stats';
 
 export const SHARE_VERSION = 1;
 export const SHARE_PARAM = 'sync';
@@ -32,6 +33,12 @@ interface Compact {
   /** 1 when the link carries a selection of courses rather than everything, so it must not replace local data. */
   p?: 1;
 }
+
+export interface PreparedShare {
+  compact: Compact;
+  keys: string[];
+}
+export type PreparedResult = { ok: true; prepared: PreparedShare } | { ok: false; error: ShareError };
 
 const hasCompression = () => typeof CompressionStream !== 'undefined' && typeof DecompressionStream !== 'undefined';
 
@@ -106,7 +113,7 @@ function rebuildLegs(legs: unknown, byKey: Map<string, Line>): Leg[] | 'missing'
 }
 
 /** Turns a link payload back into courses using this device's route data. Courses with unknown routes are skipped. */
-export async function decodeShare(payload: string, lines: Line[], now = new Date()): Promise<ShareResult> {
+export async function prepareShare(payload: string): Promise<PreparedResult> {
   if (!payload || payload.length > MAX_PAYLOAD_CHARS || !/^[pz][A-Za-z0-9_-]+$/.test(payload)) return { ok: false, error: 'badLink' };
   let data: unknown;
   try {
@@ -125,6 +132,29 @@ export async function decodeShare(payload: string, lines: Line[], now = new Date
   if (typeof d.v !== 'number' || d.v < 1 || !Array.isArray(d.c) || !isStr(d.f)) return { ok: false, error: 'badLink' };
   if (d.v > SHARE_VERSION) return { ok: false, error: 'newerVersion' };
 
+  const keys = new Set<string>();
+  const ids = new Set<string>();
+  for (const c of d.c) {
+    if (!Array.isArray(c) || !isStr(c[0]) || !c[0] || ids.has(c[0]) || !isStr(c[1]) ||
+        (c[2] !== 0 && c[2] !== 1) || !isStr(c[3]) || !isStr(c[4]) || !(c[5] === null || isStr(c[5])) ||
+        !Array.isArray(c[6]) || !c[6].length ||
+        (c[7] !== undefined && (!Array.isArray(c[7]) || c[7].length > 100 || !c[7].every((p: unknown) => isStr(p) && p !== '' && p === cleanName(p) && p.length <= MAX_PERSON_NAME)))) return { ok: false, error: 'invalid' };
+    ids.add(c[0]);
+    for (const leg of c[6]) {
+      if (!Array.isArray(leg)) return { ok: false, error: 'invalid' };
+      if (leg[0] === 'l') {
+        if (!isStr(leg[1]) || (leg[2] !== 0 && leg[2] !== 1) || keys.has(leg[1])) return { ok: false, error: 'invalid' };
+        keys.add(leg[1]);
+      } else if (leg[0] !== 'm' || !isStr(leg[1]) || !isStr(leg[2]) ||
+          !(leg[3] === null || (typeof leg[3] === 'number' && Number.isFinite(leg[3]) && leg[3] >= 0))) return { ok: false, error: 'invalid' };
+    }
+  }
+  if (!d.c.length) return { ok: false, error: 'empty' };
+  return { ok: true, prepared: { compact: d as Compact, keys: [...keys] } };
+}
+
+export function rebuildShare(prepared: PreparedShare, lines: Line[], now = new Date()): ShareResult {
+  const d = prepared.compact;
   const byKey = new Map(lines.map((l) => [l.key, l]));
   const courses: Course[] = [];
   const skipped: string[] = [];
@@ -143,6 +173,11 @@ export async function decodeShare(payload: string, lines: Line[], now = new Date
   const checked = parseBackup(JSON.stringify({ format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: now.toISOString(), radiusM: 500, courses }));
   if (!checked.ok) return { ok: false, error: 'invalid' };
   return { ok: true, shared: { backup: checked.backup, skipped, feedVersion: d.f, partial: d.p === 1 } };
+}
+
+export async function decodeShare(payload: string, lines: Line[], now = new Date()): Promise<ShareResult> {
+  const result = await prepareShare(payload);
+  return result.ok ? rebuildShare(result.prepared, lines, now) : result;
 }
 
 export function shareUrl(payload: string, loc: Pick<Location, 'origin' | 'pathname'> = location): string {

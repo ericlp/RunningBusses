@@ -1,6 +1,6 @@
 import { lineLabel, localeTag, t } from '../i18n';
 import type { RouteStatus } from './course';
-import { CATEGORIES, compareLineNumbers, type Category, type Line, type Tag } from './types';
+import { CATEGORIES, compareLineNumbers, type Category, type LineMetadata, type Tag } from './types';
 
 /** `incomplete` means not completed, which includes lines that are not planned. */
 export type StatusFilter = 'all' | 'unplanned' | 'incomplete' | 'completed';
@@ -65,7 +65,7 @@ export function saveSort(s: SortKey): void {
   }
 }
 
-export function applyFilters(lines: Line[], f: Filters, statusOf: (key: string) => RouteStatus = () => 'NotPlanned'): Line[] {
+export function applyFilters<T extends LineMetadata>(lines: T[], f: Filters, statusOf: (key: string) => RouteStatus = () => 'NotPlanned'): T[] {
   return lines.filter((l) => {
     if (f.status !== 'all') {
       const st = statusOf(l.key);
@@ -82,7 +82,7 @@ export function applyFilters(lines: Line[], f: Filters, statusOf: (key: string) 
 }
 
 /** Which chips would still show something, given the other active filters. A chip that is already on stays usable. */
-export function facetAvailability(lines: Line[], f: Filters, statusOf: (key: string) => RouteStatus) {
+export function facetAvailability(lines: LineMetadata[], f: Filters, statusOf: (key: string) => RouteStatus) {
   const any = (g: Filters) => applyFilters(lines, g, statusOf).length > 0;
   return {
     category: (c: Category) => f.categories.includes(c) || any({ ...f, categories: [c] }),
@@ -91,7 +91,7 @@ export function facetAvailability(lines: Line[], f: Filters, statusOf: (key: str
   };
 }
 
-export function searchLines(lines: Line[], query: string): Line[] {
+export function searchLines<T extends LineMetadata>(lines: T[], query: string): T[] {
   const q = query.trim().toLowerCase();
   if (!q) return lines;
   return lines.filter(
@@ -109,9 +109,9 @@ export const SORT_KEYS: readonly SortKey[] = ['number', 'shortest', 'longest', '
 
 const STATUS_RANK: Record<RouteStatus, number> = { NotCompleted: 0, NotPlanned: 1, Completed: 2 };
 
-export function sortLines(lines: Line[], by: SortKey = 'number', statusOf: (key: string) => RouteStatus = () => 'NotPlanned'): Line[] {
-  const byNumber = (a: Line, b: Line) => compareLineNumbers(a.number, b.number) || a.key.localeCompare(b.key);
-  const primary: Record<SortKey, (a: Line, b: Line) => number> = {
+export function sortLines<T extends LineMetadata>(lines: T[], by: SortKey = 'number', statusOf: (key: string) => RouteStatus = () => 'NotPlanned'): T[] {
+  const byNumber = (a: LineMetadata, b: LineMetadata) => compareLineNumbers(a.number, b.number) || a.key.localeCompare(b.key);
+  const primary: Record<SortKey, (a: LineMetadata, b: LineMetadata) => number> = {
     number: () => 0,
     shortest: (a, b) => a.lengthM - b.lengthM,
     longest: (a, b) => b.lengthM - a.lengthM,

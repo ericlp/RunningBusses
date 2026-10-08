@@ -20,7 +20,7 @@ import { missingLineKeys } from '../domain/reconcile';
 import { categoryLabel, formatKm, tagLabel } from '../domain/filter';
 import { lineLabel, t, tn } from '../i18n';
 import { badgeStyle } from '../domain/color';
-import type { Line } from '../domain/types';
+import type { Line, LineMetadata } from '../domain/types';
 import { useState } from 'react';
 
 export function LineCard({ line, info, onClose, onShareCourse }: { line: Line; info: RouteInfo; onClose: () => void; onShareCourse?: () => void }) {
@@ -90,7 +90,7 @@ interface CourseListProps {
   onShare: (c: Course) => void;
   onEditRun: (c: Course) => void;
   /** Line keys currently in the dataset, to warn about lines that have disappeared. */
-  lines: Line[];
+  lines: LineMetadata[];
 }
 
 export function CourseList({ courses, lines, onRefresh, onExportGpx, onShare, onEditRun, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
@@ -259,6 +259,7 @@ export function BuilderStrip({ legs, onSave, onCancel, saving, canSave, editing,
 
 interface PanelProps {
   options: Option[];
+  routesReady: boolean;
   hasLegs: boolean;
   radiusM: number;
   onRadius: (m: number) => void;
@@ -271,7 +272,7 @@ interface PanelProps {
   editing: boolean;
 }
 
-export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUndo, onAddManual, onDiscard, canReverse, onReverse, editing }: PanelProps) {
+export function BuilderPanel({ options, routesReady, hasLegs, radiusM, onRadius, onPick, onUndo, onAddManual, onDiscard, canReverse, onReverse, editing }: PanelProps) {
   const [manualOpen, setManualOpen] = useState(false);
   const [label, setLabel] = useState('');
   const [km, setKm] = useState('');
@@ -317,6 +318,7 @@ export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUn
           </button>
         </div>
       )}
+      {routesReady && <>
       <p className="muted">{hasLegs ? t('panel.next', { n: options.filter((o) => !o.outside).length, radius: radiusM }) : t('panel.first')}</p>
       {hasLegs && options.length > 0 && options[0].outside && <p>{t('panel.none', { radius: radiusM })}</p>}
       {canReverse && hasLegs && !options.some((o) => !o.outside) && (
@@ -343,6 +345,7 @@ export function BuilderPanel({ options, hasLegs, radiusM, onRadius, onPick, onUn
           </li>
         ))}
       </ul>
+      </>}
     </div>
   );
 }

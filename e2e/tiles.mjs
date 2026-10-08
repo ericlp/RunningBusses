@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
+import { serveFixture } from './data-fixture.mjs';
 
 const dataset = JSON.parse(readFileSync('public/data/lines.json', 'utf8'));
 const fixture = { ...dataset, lines: dataset.lines.filter((line) => line.key === '59') };
@@ -32,7 +33,7 @@ try {
       });
     }
   });
-  await context.route('**/data/lines.json*', (route) => route.fulfill({ json: fixture }));
+  await serveFixture(context, fixture);
   const page = await context.newPage();
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.goto('http://localhost:4173/');

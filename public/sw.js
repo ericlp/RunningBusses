@@ -12,11 +12,23 @@ let tileWrites = Promise.resolve();
 
 self.addEventListener('install', () => self.skipWaiting());
 
+const splitData = (url) => url.origin === self.location.origin &&
+  /\/data\/(?:catalog-manifest\.json|catalog\.[a-f0-9]+\.json|categories\/(?:stadsbuss|stombuss|express|industri|other-bus|tram)\.[a-f0-9]+\.json)$/.test(url.pathname);
+
+async function clearSplitData() {
+  try {
+    const cache = await caches.open(CACHE);
+    const keys = await cache.keys();
+    await Promise.all(keys.filter((key) => splitData(new URL(key.url))).map((key) => cache.delete(key)));
+  } catch (error) { console.warn('Legacy split-data cache cleanup failed:', error); }
+}
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== TILE_CACHE).map((k) => caches.delete(k))))
+      .then(clearSplitData)
       .then(() => self.clients.claim()),
   );
 });
@@ -84,6 +96,7 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   if (request.method !== 'GET') return;
+  if (splitData(url)) return;
   if (url.hostname === TILE_HOST) {
     const maintenance = [];
     const response = tile(request, maintenance);

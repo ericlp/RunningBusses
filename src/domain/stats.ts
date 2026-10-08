@@ -1,5 +1,5 @@
 import { courseStats, routeStatuses, type Course } from './course';
-import { CATEGORIES, type Category, type Line } from './types';
+import { CATEGORIES, type Category, type LineMetadata } from './types';
 
 export const MAX_PERSON_NAME = 40;
 
@@ -90,7 +90,7 @@ export interface Progress {
 const empty = (category: Category): CategoryProgress => ({ category, lines: 0, doneLines: 0, plannedLines: 0, lengthM: 0, doneM: 0 });
 
 /** Everything on the dashboard, derived from the courses and the current line data. */
-export function computeProgress(courses: readonly Course[], lines: readonly Line[], people: readonly string[] = [], recentCount = 5, categories: readonly Category[] = DEFAULT_PROGRESS_CATEGORIES): Progress {
+export function computeProgress(courses: readonly Course[], lines: readonly LineMetadata[], people: readonly string[] = [], recentCount = 5, categories: readonly Category[] = DEFAULT_PROGRESS_CATEGORIES): Progress {
   const status = routeStatuses([...courses]);
   const rows = new Map<Category, CategoryProgress>();
   const total = empty('stadsbuss');
