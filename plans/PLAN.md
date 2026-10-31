@@ -186,5 +186,9 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 ## Future todos
 
 - [061 – Shareable course card](061-course-card.md): todo; image of a course to share or download.
+- [062 – Elevation profile](062-elevation-profile.md): todo; build-time altitude profiles from Lantmäteriet's ground model, chart for lines and courses.
+- [063 – Send GPX to a watch app](063-gpx-to-watch.md): todo; share sheet hand-off to Garmin Connect, needs real-device testing.
+- [064 – Runnable GPX](064-runnable-gpx.md): todo; bus route snapped to the walking network with Valhalla for export.
+- [065 – Lunch after the run](065-lunch-after-run.md): todo; casual places to eat near the course end from OpenStreetMap.
 - [052 – Start run mode](052-start-run.md): todo, design agreed; needs Västtrafik API credentials to test.
 - [048 – Västtrafik navigation to start](048-vasttrafik-navigation.md): shelved until a prefill link or the Planera Resa API (052) is available.
