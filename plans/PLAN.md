@@ -189,7 +189,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 ## Future todos
 
 - [062 – Elevation profile](062-elevation-profile.md): investigated, implementation pending; build-time 1 m CC BY terrain profiles for lines and courses; authorised access/sampling deferred.
-- [064 – Runnable GPX](064-runnable-gpx.md): investigated, implementation pending; local build-time Valhalla, independently prepared directions and explicit unavailable legs; full-region validation still required.
+- [064 – Runnable GPX](064-runnable-gpx.md): investigated, implementation pending; local build-time Valhalla, independently prepared directions and explicit unavailable legs; includes a pedestrian-connector subtask for continuous Garmin-compatible export; full-region validation still required.
 - [052 – Start run mode](052-start-run.md): todo, design agreed; needs Västtrafik API credentials to test.
 - [048 – Västtrafik navigation to start](048-vasttrafik-navigation.md): shelved until a prefill link or the Planera Resa API (052) is available.
 

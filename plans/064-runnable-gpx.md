@@ -4,7 +4,7 @@ Status: investigated; local build-time architecture confirmed. Implementation pe
 
 Goal: a GPX that follows the bus route as closely as a runner legally and pleasantly can, on pavements, cycle/foot paths and crossings, avoiding motorways, bus-only tunnels and other places pedestrians may not go. The bus route itself stays the reference for courses, distances and completion.
 
-PLAN.md listed pedestrian routing as out of scope. This plan brings in only this narrow case: snapping an existing route to the walking network for export. It does not add free routing.
+PLAN.md listed pedestrian routing as out of scope. This plan brings in only this narrow case: snapping an existing route to the walking network for export and preparing pedestrian connections between its course legs. It does not add free routing.
 
 ## Decisions
 
@@ -16,7 +16,7 @@ PLAN.md listed pedestrian routing as out of scope. This plan brings in only this
 - **Publication/client:** use [062's optional route-extras sidecar](062-elevation-profile.md), with `extras/runnable/<category>.<hash>.json` assets and per-route/direction `available` or reasoned `unavailable` records. Load only when requested and promote manifest/payload availability atomically. Bind to exact snapshot geometry; do not use current generated geometry for historical legs with a different hash.
 - **Review before export:** the map shows the runnable line next to the bus route, with stretches that differ by more than 50 m highlighted, and the runnable distance next to the bus distance. If a leg cannot be routed for pedestrians, block runnable export and identify the failed leg; the original bus-reference GPX remains available as a separate action. Never label bus-geometry fallback as runnable. Mapped pedestrian access is not a safety guarantee; review remains necessary. Manual legs and ferry crossings must be reported explicitly rather than silently omitted from a supposedly complete runnable course.
 - **Course distance and completion are unchanged.** Runnable geometry is never stored in course snapshots, backups or share links.
-- **Inter-leg gaps:** per-line assets do not supply a verified pedestrian connection between course legs. Preserve those as track breaks and label them in the review, never draw/export invented straight-line connectors as runnable paths. Do not promise a continuous watch course until Garmin's multi-segment handling is established. Manual legs and ferry legs block a complete runnable-course export unless separately resolved.
+- **Inter-leg gaps:** per-line assets do not supply a verified pedestrian connection between course legs. Add the connector subtask below to investigate continuous runnable-course export. Until validated connectors exist, preserve gaps as track breaks and label them in the review; never draw/export invented straight-line connectors as runnable paths or promise complete Garmin import. Manual legs and ferry legs block a complete runnable-course export unless separately resolved.
 - **Attribution:** "© OpenStreetMap contributors, ODbL; routing by Valhalla" in GPX metadata, review and About. Include source/provenance and the ODbL obligations for published derived route data. Do not credit FOSSGIS for a locally generated result.
 
 ## Design sketch
@@ -26,6 +26,15 @@ PLAN.md listed pedestrian routing as out of scope. This plan brings in only this
 - `src/data/routeExtras.ts`: the shared optional loader from 062; no production browser Valhalla client.
 - `MapView.tsx`: draws the runnable overlay and the deviation highlights.
 - i18n: button, progress, deviation note, failure and attribution text in sv/en/fr.
+
+## Subtask: pedestrian connections between legs
+
+- Motivation: the real-device check in [063](063-gpx-to-watch.md) found that Garmin's imported map showed only the first route of a two-segment GPX, although the downloaded file contained both segments. Investigate a single continuous runnable track, not a change to the existing bus-reference export.
+- Route from the actual end of one direction-specific runnable leg to the actual start of the next, using the same pedestrian access checks as the legs. Validate endpoint continuity and every connector edge; merely joining endpoint coordinates is not sufficient.
+- Resolve how to prepare and publish connectors for user-chosen leg pairs within the local build-time, static-site architecture before implementation. Include independently oriented pairs, historical geometry identities and courses with gaps beyond the current suggestion radius. Do not assume that per-line assets cover these connections or introduce a runtime routing service without a separate decision.
+- Show connector geometry and distance in the export review and include that distance in the runnable total. Keep stored course totals, completion, snapshots, backups and share links unchanged.
+- Enable a continuous export only when every leg and connector is validated. An unavailable connector blocks that action with an explicit reason; retain the separate bus-reference export without silently bridging gaps.
+- Acceptance: a single-track-segment GPX containing all legs and validated connectors, in running order, imports completely into Garmin Connect and reaches the watch. Real-device testing must verify the whole shape, direction and distance; a syntactically valid GPX alone is insufficient.
 
 ## Confirmed choices and technical checks
 
@@ -47,5 +56,6 @@ PLAN.md listed pedestrian routing as out of scope. This plan brings in only this
 
 ## Tests
 
-- Unit/build: independent directions, matched/interpolated/unmatched inputs, alternate/disconnected output, access restrictions at endpoints, parallel sidewalks, long motorway/tunnel detours, stale cache identity, historical snapshots and explicit unavailable records. Include manual/ferry legs and gap-preserving GPX.
-- e2e `e2e/runnable.mjs` with static extra-asset fixtures: overlay, distances, exact exported points, offline cached results, a failed leg blocking runnable export while original GPX remains available, and no runtime routing requests. Fixture tests must not call public routing servers.
+- Unit/build: independent directions, matched/interpolated/unmatched inputs, alternate/disconnected output, access restrictions at endpoints, parallel sidewalks, long motorway/tunnel detours, stale cache identity, historical snapshots and explicit unavailable records. Include manual/ferry legs, gap-preserving reference GPX, connector endpoint/access validation, unavailable connectors and continuous runnable assembly without omitted legs or invented connections.
+- e2e `e2e/runnable.mjs` with static extra-asset fixtures: overlay, leg/connector distances, exact exported points, offline cached results, a failed leg or connector blocking continuous runnable export while original GPX remains available, and no runtime routing requests. Fixture tests must not call public routing servers.
+- Manual: import a connected two-leg runnable GPX through the Files-to-Garmin path from 063, inspect both legs and the connector, and verify the saved course on a watch.

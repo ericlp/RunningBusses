@@ -1,6 +1,6 @@
 # 063 – Send GPX to a watch app
 
-Status: sharing UI implemented and automatically validated. End-to-end Garmin import still requires the deferred real-device checks.
+Status: sharing UI implemented and automatically validated. Real-device checks have started; the tested two-segment course did not import completely into Garmin. Full acceptance remains pending.
 
 Goal: offer GPX sharing alongside download, allowing the user to choose Garmin Connect when the operating system offers it.
 
@@ -35,6 +35,13 @@ Goal: offer GPX sharing alongside download, allowing the user to choose Garmin C
 For Android Samsung Internet, iPhone Chrome and iPhone Safari record browser/OS/Connect versions, whether `canShare` accepts the actual file, whether Connect appears, import success, displayed distance, both leg shapes/direction and gap handling. Check download/open-with even when Share is unavailable. Send-to-watch is a separate user-controlled Garmin step.
 
 The fixture files live in the investigation session's `files/` directory as `garmin-single-segment.gpx` and `garmin-two-segments.gpx`; recreate them using the exporter if the session is unavailable. A supported browser API alone is not a passed Garmin test.
+
+### Partial results (2026-10-31)
+
+- iPhone Chrome with Garmin Connect installed: direct Share GPX did not offer Connect; sharing the downloaded file from Files did offer it.
+- After importing a course with a gap through that path, the user reported that Garmin's map showed only the first route. Inspection of the supplied `course-1.gpx` confirmed one track with two segments containing 555 and 313 points. The export retained both routes; complete multi-segment import failed in this check.
+- OS/browser/Connect versions, Garmin distance, single-segment acceptance and watch delivery have not been recorded. Do not generalise this result to every Garmin version or import path.
+- [064](064-runnable-gpx.md#subtask-pedestrian-connections-between-legs) now includes investigating validated pedestrian connectors for a continuous runnable GPX. The existing reference export keeps its segment breaks; no straight-line workaround is approved.
 
 ## Sources (checked 2026-10-31)
 
