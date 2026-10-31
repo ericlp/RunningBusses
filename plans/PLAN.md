@@ -182,6 +182,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [058 - On-demand category data](058-on-demand-category-data.md): catalogue/category split, lazy geometry loading and explicit offline installation.
 - [059 - Tile cache reliability](059-tile-cache-reliability.md): local expiry metadata, stale HTTP/network fallback and storage-safe tile display.
 - [060 - Västtrafik ferries](060-vasttrafik-ferries.md): public static-feed ferries, on-demand geometry and optional progress, preserving older offline releases.
+- [066 - Deterministic category retry journey](066-category-retry-journey.md): wait for failed loading before restoring the network and assert an explicit retry request.
 
 ## Future todos
 

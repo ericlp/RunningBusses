@@ -21,6 +21,7 @@ const waitGeometry = (page) => page.waitForFunction(() => [...document.querySele
   return false;
 }));
 const note = (message) => console.log('ok  ', message);
+const waitFailed = (page) => page.getByText('Route data are not available yet.', { exact: false }).waitFor();
 
 async function setup(options = {}) {
   const context = await browser.newContext({ locale: 'en-GB', viewport: { width: 360, height: 740 }, serviceWorkers: 'block', ...options });
@@ -88,6 +89,7 @@ try {
     assert.equal(new URL(page.url()).hash, `#line=${encodeURIComponent(regional.key)}`);
     assert(!requests.includes(split.manifest.categories.stadsbuss.file));
     assert.equal(await page.locator('.line-card').count(), 0);
+    await waitFailed(page);
     fail = false;
     await page.locator('.data-status button').click();
     await page.waitForSelector('.line-card');
@@ -106,6 +108,7 @@ try {
     await page.waitForSelector('.data-status');
     assert.equal(await page.locator('.modal').count(), 0);
     assert(!requests.includes(split.manifest.categories.stadsbuss.file));
+    await waitFailed(page);
     fail = false;
     await page.locator('.data-status button').click();
     await page.waitForSelector('.modal');
@@ -128,11 +131,17 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('.sheet .list button').length === 3);
     assert.equal(await page.locator('.sheet .list button').count(), fixture.lines.length);
     await page.getByRole('button', { name: 'Plan', exact: true }).click();
+    await waitFailed(page);
+    const buildRequest = page.waitForRequest(`**/data/${split.manifest.categories['other-bus'].file}`);
     await page.getByRole('button', { name: 'Create course', exact: true }).click();
+    await buildRequest;
     await page.getByText('All selected categories must load before suggesting nearest routes.', { exact: false }).waitFor();
     assert.equal(await page.locator('.sheet .list button').count(), 0);
+    await waitFailed(page);
     fail = false;
+    const retryRequest = page.waitForRequest(`**/data/${split.manifest.categories['other-bus'].file}`);
     await page.locator('.data-status button').click();
+    await retryRequest;
     await page.waitForFunction(() => document.querySelectorAll('.sheet .list button').length === 6);
     note('complete catalogue lists every category before geometry; planning waits for the entire selected pool and retries');
     await context.close();
