@@ -90,7 +90,8 @@ try {
     if (scenario.mode === 'missing') await context.setOffline(true);
     stallPreview = scenario.mode === 'stalled';
     if (stallPreview) {
-      await page.clock.install();
+      await page.clock.install({ time: '2030-01-01T00:00:00Z' });
+      await page.clock.pauseAt('2030-01-02T00:00:00Z');
       await page.evaluate(() => {
         const schedule = window.setTimeout;
         window.setTimeout = function(callback, delay, ...args) {
@@ -102,14 +103,11 @@ try {
     await page.getByRole('button', { name: 'Share image', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Course image', exact: true });
     await dialog.waitFor();
-    const previewA11y = await new AxeBuilder({ page }).include('dialog').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
-    assert.deepEqual(previewA11y.violations.map((violation) => violation.id), []);
     if (stallPreview) {
-      await page.clock.pauseAt(new Date());
       const prepare = dialog.getByRole('button', { name: 'Prepare image', exact: true });
       assert.equal(await prepare.isDisabled(), true);
       const remaining = await page.evaluate(() => window.cardDeadline - Date.now());
-      assert(remaining > 0 && remaining <= 15000, 'a bounded 15-second tile deadline is armed');
+      assert.equal(remaining, 15000, 'a bounded 15-second tile deadline is armed on the paused browser clock');
       await page.clock.fastForward(remaining - 1);
       assert.equal(await prepare.isDisabled(), true, 'the 15-second deadline must not fire early');
       await page.clock.fastForward(1);
@@ -118,6 +116,8 @@ try {
       await Promise.all(heldRoutes.map((route) => route.abort()));
       await page.clock.resume();
     }
+    const previewA11y = await new AxeBuilder({ page }).include('dialog').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+    assert.deepEqual(previewA11y.violations.map((violation) => violation.id), []);
     await page.waitForFunction(() => [...document.querySelectorAll('dialog button')].some((button) => button.textContent === 'Prepare image' && !button.disabled));
     await page.waitForLoadState('networkidle');
     assert(tiles.length - previousTiles <= 12, 'only the bounded visible preview tiles are requested');

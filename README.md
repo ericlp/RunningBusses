@@ -7,10 +7,16 @@ The lines show public transport routes. They are a reference only: roads, tunnel
 ## Develop
 
 Node is managed with [mise](https://mise.jdx.dev): `mise install`, then `mise exec -- npm ci`.
+Local development and both CI workflows read the same exact Node version from `mise.toml`.
+Install the lockfile's Chromium with `mise exec -- npx playwright install --with-deps chromium`,
+then run `mise exec -- npm run check` for the same validation pipeline as deployment.
+Linux browser system dependencies may require administrator access. OS and hardware
+still differ between machines; test deadlines must not depend on their speed or clock alignment.
 
 | Command | What |
 | --- | --- |
 | `npm run dev` | dev server |
+| `npm run check` | deployment checks: typecheck, unit tests, dataset validation, build and all browser journeys with exactly two workers |
 | `npm test` | unit tests, including browser-runner scheduling and published payload budgets |
 | `npm run build` | typecheck and production build |
 | `npm run e2e` | browser journeys at phone and desktop widths (needs `npm run build` and `npx playwright install chromium`) |

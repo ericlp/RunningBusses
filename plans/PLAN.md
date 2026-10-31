@@ -191,6 +191,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [070 - Backup byte limit](070-backup-byte-limit.md): enforce the existing file-size limit using UTF-8 bytes and protect backup history round trips.
 - [071 - Domain test contracts](071-domain-test-contracts.md): isolate validation guards and assert exact snapshots, geometry, status, history and share behavior.
 - [072 - Data test integrity](072-data-test-integrity.md): real storage transactions, coherent release races, named tile caches and isolated GTFS publication fixtures.
+- [073 - Local and CI test parity](073-local-ci-test-parity.md): shared validation command and exact Node version, with deterministic course-card timeout testing.
 
 ## Future todos
 

@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "e2e": "node e2e/run.mjs",
+    "check": "npm run typecheck && npm test && npm run data:validate && npm run build && npm run e2e -- --workers=2",
     "test": "vitest run",
     "data": "tsx scripts/build-transit-data.ts",
     "data:validate": "tsx scripts/validate-transit-data.ts"
