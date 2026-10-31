@@ -1,6 +1,6 @@
 # 063 – Send GPX to a watch app
 
-Status: sharing UI implemented and automatically validated. Real-device checks have started; the tested two-segment course did not import completely into Garmin. Full acceptance remains pending.
+Status: done with a documented Garmin import limitation. Sharing UI implemented and automatically validated; complete multi-segment Garmin import and watch delivery are not claimed. Closed by the user on 2026-11-01; continuous runnable export remains in 064.
 
 Goal: offer GPX sharing alongside download, allowing the user to choose Garmin Connect when the operating system offers it.
 
@@ -28,7 +28,7 @@ Goal: offer GPX sharing alongside download, allowing the user to choose Garmin C
 - Verify handoff, MIME acceptance, multi-segment handling and import results on each browser; browser automation cannot establish successful Garmin import.
 - No Garmin login/API secret is needed for file handoff. Do not request the user's Garmin password.
 - Investigation generated single- and two-segment reference files with the repository's actual `courseToGpx` exporter, not a substitute serializer. They are diagnostic bus-reference files, not safe-navigation advice.
-- The user chose to defer real-phone/import verification until the sharing UI exists. Keep that acceptance gate open; prepared files are not evidence of successful Garmin import.
+- Real-phone/import verification was initially deferred until the sharing UI existed. The partial check below established a limitation; the user subsequently closed this plan with that limitation documented, not with successful Garmin acceptance.
 
 ## Real-device acceptance matrix
 
@@ -43,17 +43,27 @@ The fixture files live in the investigation session's `files/` directory as `gar
 - OS/browser/Connect versions, Garmin distance, single-segment acceptance and watch delivery have not been recorded. Do not generalise this result to every Garmin version or import path.
 - [064](064-runnable-gpx.md#subtask-pedestrian-connections-between-legs) now includes investigating validated pedestrian connectors for a continuous runnable GPX. The existing reference export keeps its segment breaks; no straight-line workaround is approved.
 
-## Sources (checked 2026-10-31)
+## Closure and workaround assessment (2026-11-01)
+
+- Inspection of `courseToGpx` confirms one track segment per line, with every line's snapshot coordinates retained in running order and direction. The observed first-leg-only result is consistent with Garmin community reports, not missing geometry in our export. Garmin's published import guidance does not establish a universal multi-segment support contract.
+- Community reports describe merging all points into one segment as a workaround, with mixed import results. For our disconnected legs this would turn gaps into implied, unverified connections. Do not flatten the reference export or convert to TCX merely to hide those breaks; changing format does not supply pedestrian connector geometry.
+- Importing each segment as a separate Garmin course is a reported gap-preserving workaround, but not one complete course. Users can split a copy of the GPX into one file per line using a GPX editor without changing stored app courses. This has not been verified on the user's phone/watch, and no separate-file export UI is added in this plan.
+- There is no verified gap-preserving fix for importing the whole disconnected course as one Garmin course. Preserve the current exporter and its translated warning (067), document the limitation in README, and close 063. Browser/OS compatibility and watch delivery remain unverified, not passed acceptance checks; no further implementation or device acceptance work is scheduled here.
+- A continuous, validated pedestrian track is a distinct feature in 064, including real-device acceptance of every leg and connector. It must not silently replace the bus-reference GPX.
+
+## Sources (import guidance checked 2026-10-31; segment reports checked 2026-11-01)
 
 - [Garmin third-party course import support](https://support.garmin.com/en-GB/?faq=wKuZXCaZRP4mWPX5aRz5h5). Article identified via indexed support results; direct browser retrieval was blocked, so details still need device confirmation.
 - [Web Share specification](https://www.w3.org/TR/web-share/).
 - [Chromium's documented file-type allowlist](https://chromium.googlesource.com/chromium/src/+/main/third_party/blink/renderer/modules/webshare/FILE_TYPES.md).
+- [Garmin community: only part of track showing](https://forums.garmin.com/apps-software/mobile-apps-web/f/garmin-connect-web/235024/only-part-of-track-showing-on-map): a user reports success after removing segment boundaries; not an official support guarantee.
+- [Garmin community: GPX import shows only the first part](https://forums.garmin.com/apps-software/mobile-apps-web/f/garmin-connect-web/339417/importing-a-gpx-only-shows-the-first-part-of-the-route): reports separate-file import working and mixed results from removing segmentation.
 
 ## Tests
 
 - Unit: file construction preserves geometry, segment breaks and waypoints.
 - e2e: stub `navigator.canShare`/`navigator.share` and check that the file is shared with the right name and type; without them, check the download and hint.
-- Manual: Android Samsung Internet, iPhone Chrome and iPhone Safari with Garmin Connect, recorded in this plan when done.
+- Manual: partial iPhone Chrome result recorded above. The broader device matrix was not completed and is no longer a closure gate for this plan; continuous runnable GPX acceptance belongs to 064.
 
 ## Implementation
 

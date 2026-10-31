@@ -80,6 +80,8 @@ The address shows the current view: `#line=<key>` selects a line and zooms to it
 
 Course details keep **Export GPX** available and show **Share GPX** beside it when the browser accepts the actual file. Choose Garmin Connect if offered, or open the downloaded file with Connect; course type, import and watch sync are user-controlled Garmin steps. Browser sharing does not confirm Garmin import. Exports retain snapshot directions and segment breaks, not verified pedestrian routes.
 
+**Garmin limitation:** Connect may import only the first line of a multi-line course; this occurred in our iPhone Chrome / Files-to-Connect check. Inspect the whole imported route before using it. Importing each line as a separate GPX/course is a community-reported workaround, not verified on our test device; a GPX editor can split a copy of the export without changing your saved course. We do not merge segments, because that would imply unverified connections across gaps. There is no verified whole-course fix that preserves those breaks. [Plan 063](plans/063-gpx-to-watch.md) is closed with this limitation; [064](plans/064-runnable-gpx.md) separately plans continuous export with validated pedestrian connectors.
+
 **Share image**, in course details or a line's course actions, prepares a 1080 × 1350 PNG in the app theme, including completed runners' names. Adjust the visible map preview first; capture uses only its loaded, visible tiles and embeds OSM attribution. Missing/unreadable tiles produce a labelled route-only image, including offline. Share or download the prepared PNG; changing the preview invalidates the old file.
 
 ## Plans
