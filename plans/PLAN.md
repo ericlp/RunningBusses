@@ -186,6 +186,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [063 – Send GPX to a watch app](063-gpx-to-watch.md): prepared capability-based file sharing beside download, with Garmin guidance; real-phone import acceptance remains pending.
 - [066 - Deterministic category retry journey](066-category-retry-journey.md): wait for failed loading before restoring the network and assert an explicit retry request.
 - [067 - Course action groups and GPX guidance](067-course-action-groups.md): grouped sharing/editing actions, informational handoff notices and Garmin import limitations.
+- [068 - Category retry loading transition](068-category-retry-loading-transition.md): hold mode-triggered failures until loading is rendered, preventing stale unavailable text from satisfying the retry test.
 
 ## Future todos
 

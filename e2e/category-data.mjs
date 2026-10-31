@@ -21,7 +21,7 @@ const waitGeometry = (page) => page.waitForFunction(() => [...document.querySele
   return false;
 }));
 const note = (message) => console.log('ok  ', message);
-const waitFailed = (page) => page.getByText('Route data are not available yet.', { exact: false }).waitFor();
+const waitFailed = (page) => page.locator('.data-status').getByText('Route data are not available yet.', { exact: false }).waitFor();
 
 async function setup(options = {}) {
   const context = await browser.newContext({ locale: 'en-GB', viewport: { width: 360, height: 740 }, serviceWorkers: 'block', ...options });
@@ -126,20 +126,40 @@ try {
     const { context, page, split } = await setup();
     await context.addInitScript((categories) => localStorage.setItem('rb.filters', JSON.stringify({ categories, status: 'all', tags: [], minKm: null, maxKm: null })), categories);
     let fail = true;
-    await context.route(`**/data/${split.manifest.categories['other-bus'].file}`, (route) => fail ? route.abort() : route.fulfill({ contentType: 'application/json', body: split.files.get(split.manifest.categories['other-bus'].file) }));
+    const categoryUrl = `**/data/${split.manifest.categories['other-bus'].file}`;
+    let failureGate = Promise.resolve();
+    await context.route(categoryUrl, async (route) => {
+      if (fail) {
+        await failureGate;
+        await route.abort();
+      } else {
+        await route.fulfill({ contentType: 'application/json', body: split.files.get(split.manifest.categories['other-bus'].file) });
+      }
+    });
+    const failModeTransition = async (name) => {
+      let release;
+      failureGate = new Promise((resolve) => { release = resolve; });
+      const request = page.waitForRequest(categoryUrl);
+      try {
+        await page.getByRole('button', { name, exact: true }).click();
+        await request;
+        await page.locator('.data-status').getByText('Loading route data', { exact: false }).waitFor();
+      } finally {
+        release();
+      }
+      await waitFailed(page);
+    };
     await page.goto(url);
     await page.waitForFunction(() => document.querySelectorAll('.sheet .list button').length === 3);
     assert.equal(await page.locator('.sheet .list button').count(), fixture.lines.length);
-    await page.getByRole('button', { name: 'Plan', exact: true }).click();
     await waitFailed(page);
-    const buildRequest = page.waitForRequest(`**/data/${split.manifest.categories['other-bus'].file}`);
-    await page.getByRole('button', { name: 'Create course', exact: true }).click();
-    await buildRequest;
+    await failModeTransition('Plan');
+    await failModeTransition('Create course');
     await page.getByText('All selected categories must load before suggesting nearest routes.', { exact: false }).waitFor();
     assert.equal(await page.locator('.sheet .list button').count(), 0);
     await waitFailed(page);
     fail = false;
-    const retryRequest = page.waitForRequest(`**/data/${split.manifest.categories['other-bus'].file}`);
+    const retryRequest = page.waitForRequest(categoryUrl);
     await page.locator('.data-status button').click();
     await retryRequest;
     await page.waitForFunction(() => document.querySelectorAll('.sheet .list button').length === 6);
