@@ -11,6 +11,8 @@ packages.
 - Use the official Ubuntu 24.04 development-container base and a pinned mise
   binary. Install the project's exact Node version from `mise.toml`; do not
   maintain a second Node version in the container configuration.
+- Retain the CLI-generated `devcontainer-lock.json` to pin feature versions
+  and their registry integrity digests.
 - Run as the base image's non-root `vscode` user. Setup trusts this repository's
   mise configuration, installs locked npm dependencies and the project's
   Chromium plus Linux browser dependencies, and fails explicitly on errors.
