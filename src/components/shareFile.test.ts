@@ -45,7 +45,7 @@ describe('prepared file sharing', () => {
     const result = sendShareFile(file, course.name);
     expect(share).toHaveBeenCalledWith({ files: [file], title: course.name });
     finish();
-    expect(await result).toMatch(/Import|Importation|import/i);
+    expect(await result).toEqual({ text: expect.stringMatching(/Import|Importation|import/i), tone: 'info' });
   });
 
   it('treats cancellation as silence, but logs and reports other failures', async () => {
@@ -54,7 +54,7 @@ describe('prepared file sharing', () => {
     expect(await sendShareFile(makeGpxFile(course), course.name)).toBeNull();
     expect(warn).not.toHaveBeenCalled();
     vi.stubGlobal('navigator', { share: () => Promise.reject(new Error('No target')) });
-    expect(await sendShareFile(makeGpxFile(course), course.name)).toBeTruthy();
+    expect(await sendShareFile(makeGpxFile(course), course.name)).toEqual({ text: expect.any(String), tone: 'error' });
     expect(warn).toHaveBeenCalled();
   });
 });

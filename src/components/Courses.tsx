@@ -16,6 +16,7 @@ import {
 } from '../domain/course';
 import { Icon } from './Icon';
 import { GpxActions } from './GpxActions';
+import type { FileMessage } from './shareFile';
 import { courseStart, directionsUrl } from '../domain/navigate';
 import { missingLineKeys } from '../domain/reconcile';
 import { categoryLabel, formatKm, tagLabel } from '../domain/filter';
@@ -88,7 +89,7 @@ interface CourseListProps {
   onToggleComplete: (c: Course) => void;
   onDelete: (c: Course) => void;
   onRefresh: (c: Course) => void;
-  onMessage: (message: string) => void;
+  onMessage: (message: string, tone: FileMessage['tone']) => void;
   onCourseCard: (course: Course) => void;
   onShare: (c: Course) => void;
   onEditRun: (c: Course) => void;
@@ -140,7 +141,24 @@ export function CourseList({ courses, lines, onRefresh, onMessage, onCourseCard,
                     ))}
                   </ol>
                   {missingLineKeys(c, lines).length > 0 && c.status !== 'Completed' && <p className="gap">{t('courses.missing', { keys: missingLineKeys(c, lines).join(', ') })}</p>}
-                  <div className="actions">
+                  {courseStart(c.legs) && (
+                    <div className="actions">
+                      <a className="chip" href={directionsUrl(courseStart(c.legs)!)} target="_blank" rel="noreferrer">
+                        <Icon name="navigate" />
+                        {t('courses.navigate')}
+                      </a>
+                    </div>
+                  )}
+                  <div role="group" aria-label={t('courses.sharingActions')}>
+                    <GpxActions course={c} onMessage={onMessage}>
+                      <button className="chip" onClick={() => onShare(c)}>
+                        <Icon name="share" />
+                        {t('courses.share')}
+                      </button>
+                      <button className="chip" onClick={() => onCourseCard(c)}>{t('courseCard.button')}</button>
+                    </GpxActions>
+                  </div>
+                  <div className="actions course-edit-actions" role="group" aria-label={t('courses.editActions')}>
                     {c.pinned && (
                       <button className="chip" onClick={() => onRefresh(c)}>
                         <Icon name="refresh" />
@@ -153,24 +171,12 @@ export function CourseList({ courses, lines, onRefresh, onMessage, onCourseCard,
                         {t('courses.edit')}
                       </button>
                     )}
-                    {courseStart(c.legs) && (
-                      <a className="chip" href={directionsUrl(courseStart(c.legs)!)} target="_blank" rel="noreferrer">
-                        <Icon name="navigate" />
-                        {t('courses.navigate')}
-                      </a>
-                    )}
                     {c.status === 'Completed' && (
                       <button className="chip" onClick={() => onEditRun(c)}>
                         <Icon name="calendar" />
                         {t('courses.editRun')}
                       </button>
                     )}
-                    <button className="chip" onClick={() => onShare(c)}>
-                      <Icon name="share" />
-                      {t('courses.share')}
-                    </button>
-                    <GpxActions course={c} onMessage={onMessage} />
-                    <button className="chip" onClick={() => onCourseCard(c)}>{t('courseCard.button')}</button>
                     <button className={`chip${c.status === 'Completed' ? '' : ' success'}`} onClick={() => onToggleComplete(c)}>
                       <Icon name={c.status === 'Completed' ? 'undo' : 'check'} />
                       {c.status === 'Completed' ? t('courses.markUndone') : t('courses.markDone')}

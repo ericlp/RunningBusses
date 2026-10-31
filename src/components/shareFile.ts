@@ -2,6 +2,11 @@ import type { Course } from '../domain/course';
 import { courseToGpx, gpxFileName } from '../domain/gpx';
 import { t } from '../i18n';
 
+export interface FileMessage {
+  text: string;
+  tone: 'info' | 'error';
+}
+
 export const makeGpxFile = (course: Course): File =>
   new File([courseToGpx(course)], gpxFileName(course), { type: 'application/gpx+xml' });
 
@@ -15,14 +20,14 @@ export function canShareFile(file: File): boolean {
   }
 }
 
-export async function sendShareFile(file: File, title: string): Promise<string | null> {
+export async function sendShareFile(file: File, title: string): Promise<FileMessage | null> {
   try {
     await navigator.share({ files: [file], title });
-    return t('fileShare.handoff');
+    return { text: t('fileShare.handoff'), tone: 'info' };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') return null;
     console.warn('File sharing failed:', error);
-    return t('fileShare.failed');
+    return { text: t('fileShare.failed'), tone: 'error' };
   }
 }
 

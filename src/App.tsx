@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapView, type Fit, type MapLayer, type MapMarker, type Tone } from './components/MapView';
 import { BuilderPanel, BuilderStrip, CourseList, LineCard, SplitDialog } from './components/Courses';
 import { StatsPanel } from './components/Stats';
 import { sendShareLink } from './components/shareLink';
 import { CourseCard } from './components/CourseCard';
+import type { FileMessage } from './components/shareFile';
 import { loadDataset, type CategoryData, type DataState } from './data/dataset';
 import { DEFAULT_RADIUS_M, loadCourses, loadDraft, loadLog, loadPeople, loadRadius, loadRecovery, saveCourses, saveLog, savePeople, saveImport, saveDraft, saveRadius, type Draft } from './data/store';
 import {
@@ -183,7 +184,10 @@ export function App() {
   }, [showFilters]);
   const [tour, setTour] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(true);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToastState] = useState<FileMessage | null>(null);
+  const setToast = useCallback((text: string | null, tone: FileMessage['tone'] = 'error') => {
+    setToastState(text ? { text, tone } : null);
+  }, []);
   const [saving, setSaving] = useState(false);
   const [fit, setFit] = useState<Fit | null>(null);
   const [completing, setCompleting] = useState<{ course: Course; date: string; participants: string[]; newName: string; editOnly: boolean } | null>(null);
@@ -839,8 +843,8 @@ export function App() {
         )}
 
         {toast && (
-          <div className="toast" role="alert">
-            {toast}
+          <div className={`toast${toast.tone === 'info' ? ' info' : ''}`} role={toast.tone === 'info' ? 'status' : 'alert'}>
+            {toast.text}
           </div>
         )}
         {undo && !toast && (

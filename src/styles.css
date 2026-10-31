@@ -56,12 +56,16 @@ button {
 }
 
 .gpx-actions {
-  flex-basis: 100%;
   min-width: 0;
 }
 
 .gpx-actions p {
   margin: 8px 0;
+}
+
+.course-edit-actions {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
 }
 
 .course-card-dialog {

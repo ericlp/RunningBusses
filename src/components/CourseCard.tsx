@@ -93,7 +93,7 @@ export function CourseCard({ course, onClose }: { course: Course; onClose: () =>
             {supported && (
               <button className="chip" disabled={sharing} onClick={() => {
                 setSharing(true);
-                void sendShareFile(prepared.file, course.name).then(setMessage).finally(() => setSharing(false));
+                void sendShareFile(prepared.file, course.name).then((result) => setMessage(result?.text ?? null)).finally(() => setSharing(false));
               }}>{t('courseCard.share')}</button>
             )}
             <button className="chip" onClick={() => {

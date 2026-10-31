@@ -185,6 +185,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [061 – Shareable course card](061-course-card.md): snapshot-based portrait PNG, viewed-map capture with explicit route-only fallback, prepared sharing/download, names and app theme.
 - [063 – Send GPX to a watch app](063-gpx-to-watch.md): prepared capability-based file sharing beside download, with Garmin guidance; real-phone import acceptance remains pending.
 - [066 - Deterministic category retry journey](066-category-retry-journey.md): wait for failed loading before restoring the network and assert an explicit retry request.
+- [067 - Course action groups and GPX guidance](067-course-action-groups.md): grouped sharing/editing actions, informational handoff notices and Garmin import limitations.
 
 ## Future todos
 

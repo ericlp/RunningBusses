@@ -13,8 +13,14 @@ const course = {
 };
 const browser = await chromium.launch();
 try {
-  for (const supported of [true, false]) {
-    const context = await browser.newContext({ locale: 'en-GB', viewport: { width: 360, height: 740 }, serviceWorkers: 'block' });
+  for (const { supported, status, width } of [
+    { supported: true, status: 'Completed', width: 360 },
+    { supported: false, status: 'Completed', width: 360 },
+    { supported: true, status: 'NotCompleted', width: 360 },
+    { supported: true, status: 'Completed', width: 1100 },
+    { supported: false, status: 'NotCompleted', width: 1100 },
+  ]) {
+    const context = await browser.newContext({ locale: 'en-GB', viewport: { width, height: 740 }, serviceWorkers: 'block' });
     await serveFixture(context, { ...original, lines: [line] });
     await context.route('**/tile.openstreetmap.org/**', (route) => route.abort());
     await context.addInitScript((supported) => {
@@ -33,17 +39,33 @@ try {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto('http://localhost:4173/');
     await page.waitForSelector('.list button');
-    await writeStored(page, [['courses', [course]]]);
+    await writeStored(page, [['courses', [{ ...course, status, pinned: status !== 'Completed', completedAt: status === 'Completed' ? course.completedAt : null }]]]);
     await page.reload();
     await page.getByRole('button', { name: 'Plan', exact: true }).click();
     await page.locator('.course-main').click();
-    await page.getByText('Choose Garmin Connect', { exact: false }).waitFor();
+    await page.getByText('For Garmin: export GPX', { exact: false }).waitFor();
+    await page.getByText('Garmin may import only the first line', { exact: false }).waitFor();
+    const sharing = page.getByRole('group', { name: 'Share and export course', exact: true });
+    const editing = page.getByRole('group', { name: 'Edit course', exact: true });
+    assert.deepEqual(await sharing.locator('button').allTextContents(),
+      ['Share course', 'Share image', ...(supported ? ['Share GPX'] : []), 'Export GPX']);
+    assert.deepEqual(await editing.locator('button').allTextContents(), status === 'Completed'
+      ? ['Edit date and runners', 'Mark as not completed', 'Delete']
+      : ['Update to current data', 'Edit', 'Mark as completed', 'Delete']);
+    const groups = await page.evaluate(() => {
+      const sharing = document.querySelector('.gpx-actions').getBoundingClientRect();
+      const editing = document.querySelector('.course-edit-actions').getBoundingClientRect();
+      return { sharingBottom: sharing.bottom, editingTop: editing.top };
+    });
+    assert(groups.editingTop >= groups.sharingBottom, 'edit actions start after all sharing actions and guidance');
     const share = page.getByRole('button', { name: 'Share GPX', exact: true });
     const download = page.getByRole('button', { name: 'Export GPX', exact: true });
     assert.equal(await share.count(), supported ? 1 : 0);
     if (supported) {
       await share.click();
       await page.getByText('The file was handed to the share sheet.', { exact: false }).waitFor();
+      assert.equal(await page.locator('.toast.info[role="status"]').count(), 1);
+      assert.equal(await page.locator('.toast').evaluate((toast) => getComputedStyle(toast).backgroundColor), 'rgb(27, 42, 58)');
       const [sent] = await page.evaluate(() => window.testShared);
       assert(sent.active, 'native sharing starts with transient user activation');
       assert.equal(sent.name, 'gpx-snapshot.gpx');
@@ -58,10 +80,21 @@ try {
       await page.evaluate(() => { window.testShareMode = 'fail'; });
       await share.click();
       await page.getByText('Could not share the file.', { exact: false }).waitFor();
+      assert.equal(await page.locator('.toast[role="alert"]:not(.info)').count(), 1);
     }
+    await page.evaluate(() => {
+      window.originalGpxClick = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () { throw new Error('Mock download failure'); };
+    });
+    await download.click();
+    await page.getByText('Could not start the download.', { exact: true }).waitFor();
+    assert.equal(await page.locator('.toast[role="alert"]:not(.info)').count(), 1);
+    await page.evaluate(() => { HTMLAnchorElement.prototype.click = window.originalGpxClick; });
     const downloading = page.waitForEvent('download');
     await download.click();
     const saved = await downloading;
+    await page.getByText('Download started.', { exact: true }).waitFor();
+    assert.equal(await page.locator('.toast.info[role="status"]').count(), 1);
     assert.equal(saved.suggestedFilename(), 'gpx-snapshot.gpx');
     const xml = readFileSync(await saved.path(), 'utf8');
     assert.equal((xml.match(/<trkseg>/g) ?? []).length, 2);
@@ -70,7 +103,7 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     assert.deepEqual(errors, []);
     await context.close();
-    console.log(`ok  GPX ${supported ? 'prepared sharing, cancellation/error and' : 'unsupported sharing with'} unchanged snapshot download`);
+    console.log(`ok  ${width}px ${status}: grouped actions, guidance, ${supported ? 'informational sharing, cancellation/errors and' : 'unsupported sharing with'} unchanged snapshot download`);
   }
 } finally {
   await browser.close();
