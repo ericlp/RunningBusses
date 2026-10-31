@@ -190,6 +190,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [069 - Browser test reliability and runtime](069-browser-test-reliability.md): fail closed on assertions, deterministic fixtures, workflow coverage and bounded timed browser runs.
 - [070 - Backup byte limit](070-backup-byte-limit.md): enforce the existing file-size limit using UTF-8 bytes and protect backup history round trips.
 - [071 - Domain test contracts](071-domain-test-contracts.md): isolate validation guards and assert exact snapshots, geometry, status, history and share behavior.
+- [072 - Data test integrity](072-data-test-integrity.md): real storage transactions, coherent release races, named tile caches and isolated GTFS publication fixtures.
 
 ## Future todos
 

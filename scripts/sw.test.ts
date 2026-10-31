@@ -11,17 +11,43 @@ const week = 7 * 24 * 60 * 60 * 1000;
 function harness() {
   let now = 1_800_000_000_000;
   const entries = new Map<string, Response>();
-  const cache = {
-    match: vi.fn(async (request: Request) => entries.get(request.url)?.clone()),
-    put: vi.fn(async (request: Request, response: Response) => { entries.set(request.url, response.clone()); }),
-    keys: vi.fn(async () => [...entries.keys()].map((key) => new Request(key))),
-    delete: vi.fn(async (request: Request) => entries.delete(request.url)),
-  };
+  const legacyEntries = new Map<string, Response>();
+  const requestUrl = (request: Request | string) =>
+    typeof request === 'string' ? new URL(request, 'https://example.test/RunningBusses/').href : request.url;
+  const makeCache = (values: Map<string, Response>) => ({
+    match: vi.fn(async (request: Request | string, options?: CacheQueryOptions) => {
+      const target = new URL(requestUrl(request));
+      if (options?.ignoreSearch) target.search = '';
+      const key = [...values.keys()].find((key) => {
+        const candidate = new URL(key);
+        if (options?.ignoreSearch) candidate.search = '';
+        return candidate.href === target.href;
+      });
+      return key === undefined ? undefined : values.get(key)?.clone();
+    }),
+    put: vi.fn(async (request: Request, response: Response) => { values.set(request.url, response.clone()); }),
+    keys: vi.fn(async () => [...values.keys()].map((key) => new Request(key))),
+    delete: vi.fn(async (request: Request) => values.delete(request.url)),
+  });
+  const cache = makeCache(entries);
+  const legacyCache = makeCache(legacyEntries);
+  const stores = new Map([
+    ['runningbusses-v1', legacyCache], [tileCache, cache], ['obsolete', makeCache(new Map())],
+  ]);
   const caches = {
-    open: vi.fn(async () => cache),
-    keys: vi.fn(async () => ['runningbusses-v1', tileCache, 'obsolete']),
-    delete: vi.fn(async () => true),
-    match: vi.fn(async () => new Response('offline shell')),
+    open: vi.fn(async (name: string) => {
+      if (!stores.has(name)) stores.set(name, makeCache(new Map()));
+      return stores.get(name)!;
+    }),
+    keys: vi.fn(async () => [...stores.keys()]),
+    delete: vi.fn(async (name: string) => stores.delete(name)),
+    match: vi.fn(async (request: Request | string, options?: CacheQueryOptions) => {
+      for (const store of stores.values()) {
+        const hit = await store.match(request, options);
+        if (hit) return hit;
+      }
+      return undefined;
+    }),
   };
   const fetch = vi.fn(async (_request: Request) => new Response('new tile', { headers: { 'content-type': 'image/png' } }));
   const warn = vi.fn();
@@ -57,7 +83,7 @@ function harness() {
     };
   }
   return {
-    entries, cache, caches, fetch, warn, claim, handlers, dispatch,
+    entries, legacyEntries, cache, legacyCache, stores, caches, fetch, warn, claim, handlers, dispatch,
     now: () => now,
     advance: (ms: number) => { now += ms; },
   };
@@ -177,10 +203,40 @@ describe('shipped service worker tile caching', () => {
   it('serializes concurrent saves and trims the oldest entries to 800', async () => {
     const h = harness();
     for (let i = 0; i < 800; i++) h.entries.set(`${url}?old=${i}`, new Response('old'));
-    await Promise.all(Array.from({ length: 12 }, (_, i) => h.dispatch(new Request(`${url}?new=${i}`)).done()));
+    let release!: () => void;
+    const put = h.cache.put.getMockImplementation()!;
+    h.cache.put.mockImplementationOnce(async (request, response) => {
+      await new Promise<void>((resolve) => { release = resolve; });
+      await put(request, response);
+    });
+    const requests = Array.from({ length: 12 }, (_, i) => h.dispatch(new Request(`${url}?new=${i}`)));
+    await Promise.all(requests.map((request) => request.response));
+    await vi.waitFor(() => expect(release).toBeDefined());
+    expect(h.cache.put).toHaveBeenCalledTimes(1);
+    expect(h.cache.keys).not.toHaveBeenCalled();
+    release();
+    await Promise.all(requests.map((request) => request.done()));
     expect(h.entries.size).toBe(800);
     expect(h.entries.has(`${url}?old=0`)).toBe(false);
     for (let i = 0; i < 12; i++) expect(h.entries.has(`${url}?new=${i}`)).toBe(true);
+  });
+
+  it('continues queued saves after a deferred predecessor rejects', async () => {
+    const h = harness();
+    let reject!: (error: Error) => void;
+    h.cache.put.mockImplementationOnce(() => new Promise<void>((_resolve, fail) => { reject = fail; }));
+    const first = h.dispatch(new Request(`${url}?first`));
+    const second = h.dispatch(new Request(`${url}?second`));
+    expect(await (await first.response!).text()).toBe('new tile');
+    expect(await (await second.response!).text()).toBe('new tile');
+    await vi.waitFor(() => expect(reject).toBeDefined());
+    expect(h.cache.put).toHaveBeenCalledTimes(1);
+    reject(new Error('quota'));
+    await Promise.all([first.done(), second.done()]);
+    expect(h.warn).toHaveBeenCalled();
+    expect(h.entries.has(`${url}?first`)).toBe(false);
+    expect(await h.entries.get(`${url}?second`)!.clone().text()).toBe('new tile');
+    expect(h.cache.put).toHaveBeenCalledTimes(2);
   });
 
   it('preserves same-origin network-first and offline fallback behaviour', async () => {
@@ -188,8 +244,15 @@ describe('shipped service worker tile caching', () => {
     const request = new Request('https://example.test/data/lines.json');
     expect(await (await h.dispatch(request).done()).text()).toBe('new tile');
     expect(h.caches.open).toHaveBeenCalledWith('runningbusses-v1');
+    await vi.waitFor(() => expect(h.legacyEntries.has(request.url)).toBe(true));
+    expect(h.entries.size).toBe(0);
+    h.legacyEntries.set('https://example.test/RunningBusses/', new Response('offline shell'));
     h.fetch.mockRejectedValue(new Error('offline'));
-    expect(await (await h.dispatch(request).done()).text()).toBe('offline shell');
+    expect(await (await h.dispatch(request).done()).text()).toBe('new tile');
+    expect(await (await h.dispatch(new Request(`${request.url}?uncached`)).done()).text()).toBe('offline shell');
+    expect(h.caches.match).toHaveBeenCalledWith('./', { ignoreSearch: true });
+    h.legacyEntries.clear();
+    expect((await h.dispatch(request).done()).type).toBe('error');
     expect(h.dispatch(new Request('https://other.test/image.png')).response).toBeUndefined();
     expect(h.dispatch(new Request(url, { method: 'POST' })).response).toBeUndefined();
   });
@@ -200,6 +263,7 @@ describe('shipped service worker tile caching', () => {
     h.handlers.get('activate')!({ waitUntil: (value: Promise<unknown>) => { wait = value; } });
     await wait;
     expect(h.caches.delete).toHaveBeenCalledExactlyOnceWith('obsolete');
+    expect([...h.stores.keys()]).toEqual(['runningbusses-v1', tileCache]);
     expect(h.claim).toHaveBeenCalledOnce();
   });
 
@@ -216,17 +280,19 @@ describe('shipped service worker tile caching', () => {
     const split = 'https://example.test/RunningBusses/data/categories/stadsbuss.ab12.json';
     const ferry = 'https://example.test/RunningBusses/data/categories/ferry.ab12.json';
     const legacy = 'https://example.test/RunningBusses/data/lines.json';
-    h.entries.set(split, new Response('obsolete duplicate'));
-    h.entries.set(ferry, new Response('obsolete ferry duplicate'));
-    h.entries.set(legacy, new Response('legacy dataset'));
+    h.legacyEntries.set(split, new Response('obsolete duplicate'));
+    h.legacyEntries.set(ferry, new Response('obsolete ferry duplicate'));
+    h.legacyEntries.set(legacy, new Response('legacy dataset'));
     h.entries.set(url, new Response('tile'));
     let wait: Promise<unknown> | undefined;
     h.handlers.get('activate')!({ waitUntil: (value: Promise<unknown>) => { wait = value; } });
     await wait;
-    expect(h.entries.has(split)).toBe(false);
-    expect(h.entries.has(ferry)).toBe(false);
-    expect(h.entries.has(legacy)).toBe(true);
+    expect(h.legacyEntries.has(split)).toBe(false);
+    expect(h.legacyEntries.has(ferry)).toBe(false);
+    expect(h.legacyEntries.has(legacy)).toBe(true);
     expect(h.entries.has(url)).toBe(true);
+    expect(h.legacyCache.delete.mock.calls.map(([request]) => request.url).sort()).toEqual([split, ferry].sort());
+    expect(h.cache.delete).not.toHaveBeenCalled();
     expect(h.claim).toHaveBeenCalledOnce();
   });
 });

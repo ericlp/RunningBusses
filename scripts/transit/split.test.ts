@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { writeSplitAssets } from './split';
 import { validateSplitAssets } from './validate-split';
@@ -19,6 +20,13 @@ const dataset: Dataset = {
 };
 
 describe('split publication', () => {
+  it('keeps published default route downloads within 10% of the monolithic gzip size', () => {
+    const manifest: CatalogManifest = JSON.parse(readFileSync('public/data/catalog-manifest.json', 'utf8'));
+    const gzipBytes = (file: string) => gzipSync(readFileSync(`public/data/${file}`)).length;
+    const defaultBytes = ['catalog-manifest.json', manifest.catalog.file, manifest.categories.stadsbuss.file]
+      .reduce((sum, file) => sum + gzipBytes(file), 0);
+    expect(defaultBytes).toBeLessThanOrEqual(gzipBytes('lines.json') * 0.1);
+  });
   it('validates generated assets and cleans only obsolete owned content-addressed files', async () => {
     mkdirSync('.cache', { recursive: true });
     const directory = mkdtempSync('.cache/split-test-');

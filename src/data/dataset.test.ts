@@ -144,7 +144,10 @@ describe('category release loader', () => {
     const old = await CategoryData.open();
     await old.installAll();
     const oldManifest = assets.manifest;
-    assets = await splitDataset({ ...dataset, feedVersion: 'two', generatedAt: '2026-10-09T00:00:00Z' });
+    assets = await splitDataset({
+      ...dataset, feedVersion: 'two', generatedAt: '2026-10-09T00:00:00Z',
+      lines: dataset.lines.map((l) => ({ ...l, from: 'New A', lengthM: 2000, coordinates: [[13, 58], [14, 59]] })),
+    });
     const online = await CategoryData.open();
     await online.ensure(['stadsbuss']);
     blocked.add('*');
@@ -154,6 +157,54 @@ describe('category release loader', () => {
     expect(offline.getSnapshot().stale).toBe(true);
     expect(offline.getSnapshot().manifest.release).toBe(oldManifest.release);
     expect(offline.getSnapshot().dataset.lines).toEqual(dataset.lines);
+  });
+
+  it('ignores late old geometry while keeping a newer release request loading', async () => {
+    const oldAssets = assets;
+    const loader = await CategoryData.open();
+    let finishOld!: (response: Response) => void;
+    let finishNew!: (response: Response) => void;
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url) => {
+      if (url.endsWith(oldAssets.manifest.categories.stadsbuss.file)) {
+        return new Promise<Response>((resolve) => { finishOld = resolve; });
+      }
+      return original(url);
+    });
+    let oldSettled = false;
+    const oldRequest = loader.ensure(['stadsbuss']).then(() => { oldSettled = true; });
+    await vi.waitFor(() => expect(finishOld).toBeDefined());
+    assets = await splitDataset({
+      ...dataset, feedVersion: 'two',
+      lines: dataset.lines.map((l) => ({ ...l, from: 'New A', coordinates: [[13, 58], [14, 59]] })),
+    });
+    const newAssets = assets;
+    fetchMock.mockImplementation(async (url) => {
+      if (url.endsWith(newAssets.manifest.categories.stadsbuss.file)) {
+        return new Promise<Response>((resolve) => { finishNew = resolve; });
+      }
+      return original(url);
+    });
+    const refresh = loader.ensure(['other-bus']);
+    await refresh;
+    expect(loader.getSnapshot().manifest.release).toBe(newAssets.manifest.release);
+    expect(loader.getSnapshot().dataset.lines.map((l) => l.key)).toEqual(['vt.1']);
+    const published: Line[][] = [];
+    loader.subscribe(() => published.push(loader.getSnapshot().dataset.lines));
+    const newRequest = loader.ensure(['stadsbuss']);
+    await vi.waitFor(() => expect(finishNew).toBeDefined());
+    finishOld(new Response(oldAssets.files.get(oldAssets.manifest.categories.stadsbuss.file)));
+    await vi.waitFor(() => expect(storage.has(`transit.payload.${oldAssets.manifest.categories.stadsbuss.hash}`)).toBe(true));
+    expect(oldSettled).toBe(false);
+    expect(loader.getSnapshot().loading).toContain('stadsbuss');
+    expect(loader.getSnapshot().dataset.lines.map((l) => l.key)).toEqual(['vt.1']);
+    finishNew(new Response(newAssets.files.get(newAssets.manifest.categories.stadsbuss.file)));
+    await Promise.all([oldRequest, newRequest]);
+    expect(loader.getSnapshot().dataset.lines).toEqual(
+      dataset.lines.map((l) => ({ ...l, from: 'New A', coordinates: [[13, 58], [14, 59]] })),
+    );
+    expect(published.every((lines) => lines.every((l) => l.from === 'New A'))).toBe(true);
+    expect(loader.getSnapshot().loading).toEqual([]);
   });
 
   it('does not turn a missing known chunk into a removed route, and supports retry', async () => {

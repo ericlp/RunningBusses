@@ -11,7 +11,7 @@ Node is managed with [mise](https://mise.jdx.dev): `mise install`, then `mise ex
 | Command | What |
 | --- | --- |
 | `npm run dev` | dev server |
-| `npm test` | unit tests, including browser-runner scheduling |
+| `npm test` | unit tests, including browser-runner scheduling and published payload budgets |
 | `npm run build` | typecheck and production build |
 | `npm run e2e` | browser journeys at phone and desktop widths (needs `npm run build` and `npx playwright install chromium`) |
 | `npm run data` | rebuild `public/data` from the Trafiklab feed |

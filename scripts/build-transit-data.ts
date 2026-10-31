@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
 import { pathLengthM } from '../src/domain/geo';
 import type { Dataset, Line, Manifest } from '../src/domain/types';
 import { readCsv, readCsvRows } from './transit/csv';
@@ -18,29 +19,27 @@ interface Config {
   splitDirections: { lengthDifference: number };
 }
 
-const root = new URL('..', import.meta.url).pathname;
-const cacheDir = `${root}.cache`;
-const feedDir = `${cacheDir}/vt`;
-const outDir = `${root}public/data`;
-const config: Config = JSON.parse(readFileSync(`${root}config/lines.json`, 'utf8'));
-const aliases: Record<string, string> = JSON.parse(readFileSync(`${root}config/route-aliases.json`, 'utf8'));
-const args = process.argv.slice(2);
-const argValue = (name: string) => args.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
+export async function buildTransitData(root = new URL('..', import.meta.url).pathname, args = process.argv.slice(2)): Promise<void> {
+  const cacheDir = `${root}.cache`;
+  const feedDir = `${cacheDir}/vt`;
+  const outDir = `${root}public/data`;
+  const config: Config = JSON.parse(readFileSync(`${root}config/lines.json`, 'utf8'));
+  const aliases: Record<string, string> = JSON.parse(readFileSync(`${root}config/route-aliases.json`, 'utf8'));
+  const argValue = (name: string) => args.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
 
-async function download(): Promise<void> {
-  if (existsSync('.env')) process.loadEnvFile('.env');
-  const key = process.env.TRAFIKLAB_API_KEY;
-  if (!key) throw new Error('TRAFIKLAB_API_KEY is not set (see .env.example)');
-  mkdirSync(feedDir, { recursive: true });
-  const res = await fetch(`https://opendata.samtrafiken.se/gtfs/vt/vt.zip?key=${key}`, {
-    headers: { 'Accept-Encoding': 'gzip' },
-  });
-  if (!res.ok) throw new Error(`Feed download failed: HTTP ${res.status}`);
-  await writeFile(`${cacheDir}/vt.zip`, Buffer.from(await res.arrayBuffer()));
-  execFileSync('unzip', ['-oq', `${cacheDir}/vt.zip`, '-d', feedDir]);
-}
+  async function download(): Promise<void> {
+    if (existsSync('.env')) process.loadEnvFile('.env');
+    const key = process.env.TRAFIKLAB_API_KEY;
+    if (!key) throw new Error('TRAFIKLAB_API_KEY is not set (see .env.example)');
+    mkdirSync(feedDir, { recursive: true });
+    const res = await fetch(`https://opendata.samtrafiken.se/gtfs/vt/vt.zip?key=${key}`, {
+      headers: { 'Accept-Encoding': 'gzip' },
+    });
+    if (!res.ok) throw new Error(`Feed download failed: HTTP ${res.status}`);
+    await writeFile(`${cacheDir}/vt.zip`, Buffer.from(await res.arrayBuffer()));
+    execFileSync('unzip', ['-oq', `${cacheDir}/vt.zip`, '-d', feedDir]);
+  }
 
-async function main(): Promise<void> {
   const downloadFeed = args.includes('--download') || !existsSync(`${feedDir}/routes.txt`);
   if (downloadFeed) {
     console.log('Downloading feed…');
@@ -231,7 +230,9 @@ async function main(): Promise<void> {
   for (const l of lines.filter((l) => l.tags.length)) console.log(`  ${l.label.padEnd(8)} ${(l.lengthM / 1000).toFixed(1).padStart(5)} km  [${l.tags.join(', ')}]  ${l.from} → ${l.to}`);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  buildTransitData().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

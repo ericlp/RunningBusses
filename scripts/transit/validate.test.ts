@@ -27,6 +27,18 @@ describe('validateDataset', () => {
     const moved = line('1', { coordinates: [[11.91, 57.7], [11.91, 57.71]] });
     expect(validateDataset(ds([moved]), ds([line('1')]), opts).warnings[0]).toMatch(/moved/);
   });
+  it('accepts optional stop positions only when they match names and valid coordinates', () => {
+    const stops = line('59', { via: ['A', 'B'], viaAt: [[11.9, 57.7], [11.9, 57.71]] });
+    expect(validateDataset(ds([stops]), null, opts).errors).toEqual([]);
+    expect(validateDataset(ds([line('59', { via: ['A', 'B'] })]), null, opts).errors).toEqual([]);
+    for (const viaAt of [
+      [], [[11.9, 57.7]], [[11.9, 57.7], [NaN, 57.71]], [[11.9, 57.7], [11.9, Infinity]],
+      [[181, 57.7], [11.9, 57.71]], [[11.9, -91], [11.9, 57.71]],
+    ] as [number, number][][]) {
+      expect(validateDataset(ds([{ ...stops, viaAt }]), null, opts).errors)
+        .toContainEqual(expect.stringMatching(/stop positions do not match/));
+    }
+  });
   it('accepts long regional routes but still rejects implausible lengths and wrong geometry', () => {
     const coordinates: [number, number][] = [[11.9, 57.7], [11.9, 58.7]];
     const regional = line('vt.9011014360000000', { category: 'other-bus', coordinates, lengthM: Math.round(pathLengthM(coordinates)) });

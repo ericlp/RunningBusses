@@ -17,7 +17,7 @@ const pat = (o: Partial<Pattern>): Pattern => ({
 });
 
 describe('planRoutes', () => {
-  it('blocks publication when an eligible line has no timed shape', () => {
+  it('reports missing representative patterns through the explicit publication guard', () => {
     expect(planRoutes([], 0.12)).toEqual([]);
     expect(() => assertRoutableLines(['59 (vt.9011014405900000)'])).toThrow(/59.*Dataset not written/);
     expect(() => assertRoutableLines([])).not.toThrow();
@@ -71,7 +71,7 @@ describe('planRoutes', () => {
     expect(r[0].tags).not.toContain('one-way');
   });
 
-  it('prefers ordinary service over call-ordered for the path', () => {
+  it('prefers ordinary service over call-ordered within a direction', () => {
     const r = planRoutes(
       [pat({ shapeId: 'taxi', callOrdered: true, trips: 50 }), pat({ shapeId: 'bus', trips: 3 })],
       0.12,
