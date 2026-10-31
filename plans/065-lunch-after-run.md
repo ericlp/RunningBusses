@@ -1,10 +1,15 @@
-# 065 – Lunch after the run
+# 065 – Lunch after the run (cancelled)
 
-Status: investigated; Private.coffee selected for live queries. Implementation pending; successful API delivery and CORS remain unverified.
+Status: cancelled on 2026-10-31 at the user's request.
 
-Goal: from a course, show a few casual places to eat near where it ends, suited to a group that is sweaty and maybe wet: quick, informal and not posh.
+The group expects to use Google Maps directly instead. Do not implement lunch
+recommendations, an Overpass client or a Google Places integration in this app.
+No lunch functionality was implemented, so there is no application code to remove.
+The research below is retained as history, not active requirements or pending work.
 
-## Decisions
+Former goal: from a course, show a few casual places to eat near where it ends, suited to a group that is sweaty and maybe wet: quick, informal and not posh.
+
+## Archived decisions
 
 - **Source:** live OSM queries via `https://overpass.private.coffee/api/interpreter`, only when Lunch is opened. Its own terms explicitly permit any project, including commercial apps, without registration. No key, billing account or backend. Do not silently fall back to FOSSGIS's main public Overpass instance: its operator warns against general app-backend dependency. Private.coffee is best-effort and can terminate service.
 - **Request policy:** make one bounded POST form query for food POIs within 1 km, then filter/rank the 500 m area locally and widen to 1 km only if sparse. Include nodes, ways and relations (`nwr`, `out center tags`), deduplicate by element type/id, retain the source timestamp and bound response size/query timeout. One request at a time, no refresh on every map pan, no background polling and no immediate retry loops. Browser identity uses its normal User-Agent and the site's origin-only Referer; non-browser research/build clients must identify the project.
@@ -21,14 +26,14 @@ Goal: from a course, show a few casual places to eat near where it ends, suited 
 - **First version:** no saved favourites and no backup/share schema changes.
 - Out of scope: booking, menus, verified prices, ratings, weather integration, favourites and Google/Yelp data. Results are likely casual options, not guarantees of low prices or acceptance of wet running clothes.
 
-## Design sketch
+## Archived design sketch
 
 - `src/domain/lunch.ts` (pure): Overpass query builder, tag classification, ranking, opening-hours evaluation for a time.
 - `src/data/overpass.ts`: thin client with mockable `fetch`, timeouts and cache.
 - UI: a "Lunch nära målet" chip on the course row and line card that opens a sheet with the list; selecting a place shows it on the map (`MapView`).
 - i18n: all labels, the "casual places" explanation, attribution and errors in sv/en/fr.
 
-## Confirmed choices and technical checks
+## Archived choices and technical checks
 
 - Include cafes, bakeries, fast food and casual restaurants; avoid pricey/fancy places, with no firm dietary filter.
 - Expected finish date/time selectable, default now; 500 m radius expanding to 1 km.
@@ -38,20 +43,20 @@ Goal: from a course, show a few casual places to eat near where it ends, suited 
 - OSM coverage research at central Gothenburg (one 500 m query) returned 130 food venues: all named, 66 with cuisine, 66 with opening hours, 26 with outdoor seating, 15 with takeaway and 7 with reservation. None had `stars` or `lunch`. This small central sample is not representative of every route finish, but demonstrates that unknown-hours/atmosphere states are essential.
 - Private.coffee's landing-page terms/privacy were retrieved. Its actual API status and bounded query requests timed out from this environment, including an alternate client. A final cross-origin Chromium POST for a 100 m food-venue query also reached its 20-second abort limit. This does not distinguish provider unavailability from network restrictions; CORS and successful query delivery are not claimed verified. Verify a live browser request before enabling the feature; if unavailable, show a clear service error and retain cached results. Do not describe a community service as having a reliability guarantee.
 
-## Google comparison and zero-cost decision
+## Archived Google comparison and zero-cost decision
 
 Google does have official Places services with ratings, price levels and hours where supplied. As checked on 2026-10-31, basic Places UI Kit queries have 10,000 free monthly events; advanced Places UI Kit has 5,000. Production still requires billing, overages cost money, and budget alerts do not stop charges. Its documented UI Kit quotas are per minute, so an enforceable project-specific cap would have to be verified before promising zero spend; a no-billing demo key is not for production.
 
 For a new Swedish/EEA billing integration, Google directs place information associated with any map through Places UI Kit, not an arbitrary Places API overlay on Leaflet. API content storage/reuse is restricted; an OSM-style 7-day POI cache cannot simply be assumed permitted. These account/UI/cache changes and residual billing risk do not fit the confirmed no-billing first version. No Google or Geoapify account/key was requested or created.
 
-## Sources (checked 2026-10-31)
+## Archived sources (checked 2026-10-31)
 
 - [Private.coffee: explicit application-use terms and privacy](https://overpass.private.coffee/).
 - [Main Overpass operator's usage cautions, comparison only](https://dev.overpass-api.de/overpass-doc/en/preface/commons.html).
 - [Hours library API and licence](https://github.com/opening-hours/opening_hours.js); [published package metadata](https://registry.npmjs.org/opening_hours/latest).
 - [Google pricing](https://developers.google.com/maps/billing-and-pricing/pricing), [UI Kit billing](https://developers.google.com/maps/documentation/javascript/places-ui-kit/overview), [EEA restrictions](https://developers.google.com/maps/comms/eea/faq), [cost-control guidance](https://developers.google.com/maps/billing-and-pricing/manage-costs).
 
-## Tests
+## Former test plan
 
 - Unit: casual classification, unknown prices, ranking, weekday/overnight/closed intervals, unsupported hours syntax, Swedish civil dates with device timezones abroad and DST boundaries, missing finish and local widening from 500 m to 1 km. Validate malformed data, HTTP-200 Overpass `remark` errors, timeout/429 handling and stale cache.
 - e2e `e2e/lunch.mjs` with mocked provider responses: request only on explicit action, one-query widening, no polling/weather requests, list order, finish-time selection, Swedish timezone, unknown-hours/raw-hours labels, offline/stale-cache provenance and service failure without misleading empty results. No real Overpass calls in CI.

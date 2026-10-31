@@ -190,6 +190,9 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 
 - [062 – Elevation profile](062-elevation-profile.md): investigated, implementation pending; build-time 1 m CC BY terrain profiles for lines and courses; authorised access/sampling deferred.
 - [064 – Runnable GPX](064-runnable-gpx.md): investigated, implementation pending; local build-time Valhalla, independently prepared directions and explicit unavailable legs; full-region validation still required.
-- [065 – Lunch after the run](065-lunch-after-run.md): investigated, implementation pending; live Private.coffee OSM queries with no billing and weekly-hours support; API delivery/CORS remain unverified.
 - [052 – Start run mode](052-start-run.md): todo, design agreed; needs Västtrafik API credentials to test.
 - [048 – Västtrafik navigation to start](048-vasttrafik-navigation.md): shelved until a prefill link or the Planera Resa API (052) is available.
+
+## Cancelled plans
+
+- [065 – Lunch after the run](065-lunch-after-run.md): cancelled; use Google Maps directly instead. Research retained for history, with no implementation work planned.
