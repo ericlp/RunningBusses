@@ -1,4 +1,4 @@
-# 003 – Future feature: preferred language (sv, en, fr)
+# 003 – Preferred language (sv, en, fr)
 
 Status: done. Keys in `src/i18n/sv.ts` (source), `en.ts`, `fr.ts`; tests in `src/i18n/i18n.test.ts`. New UI text must add a key to all three files (a test enforces key and placeholder parity).
 

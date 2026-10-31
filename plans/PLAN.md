@@ -58,6 +58,7 @@ Sources: Scope list <https://sv.wikipedia.org/wiki/Busstrafik_i_G%C3%B6teborg#St
 
 ### Later and out of scope
 - Out of scope: archiving old line sets when Västtrafik renumbers; live bus positions or timetables, pedestrian routing, accounts, per-person completion, live sync between devices, offline map tiles.
+- Correction: later change plans brought per-person completion ([038](038-people.md)), viewed-tile offline caching ([041](041-offline-tiles.md)) and planned live bus positions ([052](052-start-run.md)) into scope.
 
 ## User experience
 
@@ -170,20 +171,19 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [045 – Share from the line card](045-share-from-line-card.md): share the line's course from the map.
 - [046 – Separate import dialog](046-import-dialog.md): import preview opens in its own dialog instead of inside Settings.
 - [047 – A share link opens the course](047-link-opens-course.md): link opens the import dialog directly, then the course on the map.
-
+- [049 – Distinguish NotPlanned and NotCompleted in status colours](049-status-colours.md): distinct colours for planned and unplanned lines in "by status" mode.
+- [050 – Categories counted in progress](050-progress-categories.md): setting for which categories the progress panel counts.
+- [051 – Clearer merge/replace choice when importing](051-import-dialog-choices.md): explicit merge/replace choice with explanations in the import dialog.
+- [053 – Close the filter panel on outside click](053-close-filter-on-outside-click.md): a click outside the filter panel closes it.
+- [054 – Action button icons and tones](054-action-icons.md): icons on course and line-card actions, success/danger tones.
+- [055 – Back and Forward follow the selection](055-history-navigation.md): selection and mode changes add browser history entries.
 - [056 - Repository-owned Playwright MCP](056-repository-playwright-mcp.md): shared configuration with a launcher resolving the project's Chromium.
 - [057 - All public timetabled Västtrafik buses](057-all-vasttrafik-buses.md): regional coverage, collision-safe keys and the additional bus category.
-- [059 - Tile cache reliability](059-tile-cache-reliability.md): local expiry metadata, stale HTTP/network fallback and storage-safe tile display.
 - [058 - On-demand category data](058-on-demand-category-data.md): catalogue/category split, lazy geometry loading and explicit offline installation.
+- [059 - Tile cache reliability](059-tile-cache-reliability.md): local expiry metadata, stale HTTP/network fallback and storage-safe tile display.
 - [060 - Västtrafik ferries](060-vasttrafik-ferries.md): public static-feed ferries, on-demand geometry and optional progress, preserving older offline releases.
 
 ## Future todos
 
-- [048 – Västtrafik navigation to start](048-vasttrafik-navigation.md)
-- [049 – Distinguish NotPlanned and NotCompleted in status colours](049-status-colours.md)
-- [050 – Categories counted in progress](050-progress-categories.md)
-- [051 – Clearer merge/replace choice when importing](051-import-dialog-choices.md)
-- [052 – Start run mode](052-start-run.md)
-- [053 – Close the filter panel on outside click](053-close-filter-on-outside-click.md)
-- [054 – Action button icons and tones](054-action-icons.md)
-- [055 – Back and Forward follow the selection](055-history-navigation.md)
+- [052 – Start run mode](052-start-run.md): todo, design agreed; needs Västtrafik API credentials to test.
+- [048 – Västtrafik navigation to start](048-vasttrafik-navigation.md): shelved until a prefill link or the Planera Resa API (052) is available.
