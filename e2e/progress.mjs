@@ -1,7 +1,9 @@
 import { chromium } from 'playwright';
+import { prepareContext } from './setup.mjs';
 const b = await chromium.launch();
 let fails = 0; const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
-const ctx = await b.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 } });
+const ctx = await b.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 }, serviceWorkers: 'block' });
+await prepareContext(ctx);
 const p = await ctx.newPage();
 const errs = []; p.on('pageerror', (e) => errs.push(e.message));
 await p.goto('http://localhost:4173/'); await p.waitForSelector('.badge');

@@ -89,18 +89,36 @@ try {
     const previousData = data.length;
     if (scenario.mode === 'missing') await context.setOffline(true);
     stallPreview = scenario.mode === 'stalled';
-    const openedAt = Date.now();
+    if (stallPreview) {
+      await page.clock.install();
+      await page.evaluate(() => {
+        const schedule = window.setTimeout;
+        window.setTimeout = function(callback, delay, ...args) {
+          if (delay === 15000) window.cardDeadline = Date.now() + delay;
+          return schedule(callback, delay, ...args);
+        };
+      });
+    }
     await page.getByRole('button', { name: 'Share image', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Course image', exact: true });
     await dialog.waitFor();
     const previewA11y = await new AxeBuilder({ page }).include('dialog').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
     assert.deepEqual(previewA11y.violations.map((violation) => violation.id), []);
-    await page.waitForFunction(() => [...document.querySelectorAll('dialog button')].some((button) => button.textContent === 'Prepare image' && !button.disabled), null, { timeout: 25000 });
     if (stallPreview) {
-      assert(Date.now() - openedAt >= 14000 && Date.now() - openedAt < 25000, 'stalled viewed tiles stop blocking preparation at the bounded 15-second deadline');
+      await page.clock.pauseAt(new Date());
+      const prepare = dialog.getByRole('button', { name: 'Prepare image', exact: true });
+      assert.equal(await prepare.isDisabled(), true);
+      const remaining = await page.evaluate(() => window.cardDeadline - Date.now());
+      assert(remaining > 0 && remaining <= 15000, 'a bounded 15-second tile deadline is armed');
+      await page.clock.fastForward(remaining - 1);
+      assert.equal(await prepare.isDisabled(), true, 'the 15-second deadline must not fire early');
+      await page.clock.fastForward(1);
+      await page.waitForFunction(() => [...document.querySelectorAll('dialog button')].some((button) => button.textContent === 'Prepare image' && !button.disabled));
       stallPreview = false;
       await Promise.all(heldRoutes.map((route) => route.abort()));
+      await page.clock.resume();
     }
+    await page.waitForFunction(() => [...document.querySelectorAll('dialog button')].some((button) => button.textContent === 'Prepare image' && !button.disabled));
     await page.waitForLoadState('networkidle');
     assert(tiles.length - previousTiles <= 12, 'only the bounded visible preview tiles are requested');
     let beforeExport = tiles.length;

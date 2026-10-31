@@ -1,11 +1,14 @@
 import { chromium } from 'playwright';
+import { checkPageErrors, prepareContext, waitLegs } from './setup.mjs';
 const b = await chromium.launch();
 const errs = [];
 let bad = 0;
 const check = (ok, m) => { console.log(ok ? 'ok  ' : 'FAIL', m); if (!ok) bad++; };
 for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { width: 1280, height: 800 }]]) {
-  const ctx = await b.newContext({ viewport: vp, locale: 'sv-SE' });
+  const ctx = await b.newContext({ viewport: vp, locale: 'sv-SE', serviceWorkers: 'block' });
+  await prepareContext(ctx);
   const p = await ctx.newPage();
+  const checkErrors = checkPageErrors(p);
   p.on('pageerror', (e) => errs.push(e.message));
   p.on('dialog', (d) => d.accept());
   await p.goto('http://localhost:4173/');
@@ -13,42 +16,35 @@ for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { 
   await p.click('text=Planera');
   await p.click('text=Skapa bana');
   await p.waitForSelector('.strip');
-  // depth-first: take the first option, undo and try the next one when it dead-ends before 3 legs
-  const dfs = async (depth) => {
-    if (depth === 3) return true;
-    const cnt = await p.locator('.list button').count();
-    for (let k = 0; k < Math.min(cnt, 6); k++) {
-      await p.locator('.list button').nth(k).click();
-      await p.waitForTimeout(150);
-      if (await dfs(depth + 1)) return true;
-      await p.click('text=Ångra senaste');
-      await p.waitForTimeout(150);
-    }
-    return false;
-  };
-  await dfs(0);
+  for (let n = 1; n <= 3; n++) {
+    await p.locator('.list button').first().click();
+    await waitLegs(p, n);
+  }
   const n = await p.locator('.leg-card').count();
   console.log(name, 'legs built', n);
   check(n >= 3, `${name}: built at least 3 legs`);
   await p.click('.strip >> text=Spara');
   await p.fill('.modal input', 'Testbana'); await p.click('.modal .primary');
   await p.waitForSelector('.course');
-  const before = await p.textContent('.course .total');
 
   // edit: remove last, then first
   if ((await p.locator('button:text-is("Redigera")').count()) === 0) await p.click('.course-main');
   await p.click('button:text-is("Redigera")');
   await p.waitForSelector('.strip');
   await p.locator('.leg-card .x[aria-label*="slutet"]').click();
+  await waitLegs(p, n - 1);
   check((await p.locator('.leg-card').count()) === n - 1, `${name}: removed from end`);
   await p.locator('.leg-card .x[aria-label*="början"]').click();
+  await waitLegs(p, n - 2);
   check((await p.locator('.leg-card').count()) === n - 2, `${name}: removed from start`);
   // reverse and back
   const startBefore = await p.textContent('.start b');
   await p.click('text=Vänd riktning');
+  await p.waitForFunction((before) => document.querySelector('.start b')?.textContent !== before, startBefore);
   const startRev = await p.textContent('.start b');
   check(startBefore !== startRev, `${name}: reverse changes start (${startBefore} -> ${startRev})`);
   await p.click('text=Vänd riktning');
+  await p.waitForFunction((before) => document.querySelector('.start b')?.textContent === before, startBefore);
   await p.click('.strip >> text=Spara ändringar');
   await p.click('.modal .primary');
   await p.waitForSelector('.course');
@@ -65,16 +61,15 @@ for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { 
   if ((await p.locator('button:text-is("Redigera")').count()) === 0) await p.click('.course-main');
   await p.click('button:text-is("Redigera")');
   await p.waitForSelector('.strip');
-  if ((await p.locator('.list button').count()) > 0) await p.click('.list button >> nth=0');
+  await p.locator('.list button').first().click();
+  await waitLegs(p, 2);
   const legsNow = await p.locator('.leg-card').count();
   console.log(name, 'legs before split', legsNow);
   check(legsNow >= 2, `${name}: has 2+ legs to split`);
-  await p.screenshot({ path: `.cache/${name}-edit.png` });
   await p.locator('.split').first().click();
   await p.waitForSelector('.modal');
-  await p.screenshot({ path: `.cache/${name}-split.png` });
   await p.click('.modal button:text-is("Dela")');
-  await p.waitForSelector('.course');
+  await p.waitForFunction(() => document.querySelectorAll('.course').length === 2);
   const count = await p.locator('.course').count();
   check(count === 2, `${name}: split gives 2 courses (${count})`);
 
@@ -86,7 +81,9 @@ for (const [name, vp] of [['phone', { width: 360, height: 740 }], ['desktop', { 
   await p.waitForSelector('.status-Completed');
   check((await p.locator('text=Redigera').count()) === 0, `${name}: no edit on completed course`);
   check(!(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)), `${name}: no horizontal overflow`);
+  checkErrors();
   await ctx.close();
 }
 console.log('errors', errs, 'failures', bad);
 await b.close();
+process.exitCode = bad || errs.length ? 1 : 0;

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Course } from '../domain/course';
 import { courseToGpx } from '../domain/gpx';
 import { canShareFile, makeGpxFile, sendShareFile } from './shareFile';
+import { t } from '../i18n';
 
 const course: Course = {
   id: 'c', name: 'Bana 1/2: Ö', status: 'NotCompleted', createdAt: '', updatedAt: '', completedAt: null,
@@ -45,7 +46,7 @@ describe('prepared file sharing', () => {
     const result = sendShareFile(file, course.name);
     expect(share).toHaveBeenCalledWith({ files: [file], title: course.name });
     finish();
-    expect(await result).toEqual({ text: expect.stringMatching(/Import|Importation|import/i), tone: 'info' });
+    expect(await result).toEqual({ text: t('fileShare.handoff'), tone: 'info' });
   });
 
   it('treats cancellation as silence, but logs and reports other failures', async () => {
@@ -54,7 +55,7 @@ describe('prepared file sharing', () => {
     expect(await sendShareFile(makeGpxFile(course), course.name)).toBeNull();
     expect(warn).not.toHaveBeenCalled();
     vi.stubGlobal('navigator', { share: () => Promise.reject(new Error('No target')) });
-    expect(await sendShareFile(makeGpxFile(course), course.name)).toEqual({ text: expect.any(String), tone: 'error' });
+    expect(await sendShareFile(makeGpxFile(course), course.name)).toEqual({ text: t('fileShare.failed'), tone: 'error' });
     expect(warn).toHaveBeenCalled();
   });
 });

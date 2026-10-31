@@ -11,11 +11,21 @@ Node is managed with [mise](https://mise.jdx.dev): `mise install`, then `mise ex
 | Command | What |
 | --- | --- |
 | `npm run dev` | dev server |
-| `npm test` | unit tests |
+| `npm test` | unit tests, including browser-runner scheduling |
 | `npm run build` | typecheck and production build |
 | `npm run e2e` | browser journeys at phone and desktop widths (needs `npm run build` and `npx playwright install chromium`) |
 | `npm run data` | rebuild `public/data` from the Trafiklab feed |
 | `npm run data:validate -- --previous=old-lines.json` | check a rebuilt dataset |
+
+Browser journeys run with **two isolated workers** by default and print
+per-journey durations. Use `npm run e2e -- --workers=1` for a serial run, or
+`npm run e2e -- courses backup` for selected journeys. `--workers=1..4` (or
+`E2E_WORKERS`) bounds concurrency. The runner starts its own preview on port
+4173, waits for readiness, rejects an occupied port and cleans up its processes.
+Build first after changing application code. Ordinary UI journeys use small
+deterministic data and intercepted tiles; publication, offline and tile-cache
+journeys retain their specialized fixtures. Timer-specific journeys advance
+the browser clock rather than waiting in real time.
 
 Copilot CLI loads this repository's Playwright MCP configuration from `.github/mcp.json`. After installing dependencies, run `npx playwright install chromium`. The launcher resolves the browser from the project's Playwright installation, without machine-specific paths. MCP browsers run headless with isolated storage, and output is saved under `.cache/playwright-mcp/`.
 

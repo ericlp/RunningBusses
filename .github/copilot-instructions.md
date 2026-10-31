@@ -8,11 +8,12 @@ Node 24 via mise (`mise install`, `mise exec -- npm ci`).
 
 - `npm run dev` – dev server
 - `npm run typecheck` – `tsc --noEmit`
-- `npm test` – Vitest (`src/**/*.test.ts`, `scripts/**/*.test.ts`)
+- `npm test` – Vitest (`src/**/*.test.ts`, `scripts/**/*.test.ts`, `e2e/runner.test.mjs`)
   - Single file: `npx vitest run src/domain/course.test.ts`; single test: `npx vitest run -t "name"`
 - `npm run build` – typecheck + production build to `dist/`
 - `npm run e2e` – Playwright journeys against `vite preview` on port 4173. Requires `npm run build` first and `npx playwright install chromium`.
-  - Single journey: start `npx vite preview --port 4173 --strictPort`, then `node e2e/courses.mjs`. The journeys listed in `e2e/run.mjs` are plain scripts, not a test framework; add new ones to that list.
+  - Two isolated workers by default, with per-journey timings. `npm run e2e -- --workers=1` runs serially; `npm run e2e -- courses backup` runs selected journeys. The runner starts and cleans up its own preview; port 4173 must be free.
+  - The journeys listed in `e2e/run.mjs` are plain scripts, not a test framework; add new ones to that list. Ordinary UI journeys use `e2e/setup.mjs` for deterministic data/tiles and page-error checks.
 - `npm run data` – rebuild `public/data/` from the Trafiklab GTFS feed (needs `TRAFIKLAB_API_KEY` in `.env`; never commit it)
   - Reuses `.cache/vt/` when present; `npm run data -- --download` fetches a fresh feed. `--date=YYYYMMDD` selects the reference service day.
 - `npm run data:validate -- --previous=old-lines.json` – validate a rebuilt dataset

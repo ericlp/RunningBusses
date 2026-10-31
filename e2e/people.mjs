@@ -1,7 +1,9 @@
 import { chromium } from 'playwright';
+import { prepareContext } from './setup.mjs';
 const b = await chromium.launch();
 let fails = 0; const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
-const ctx = await b.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 }, permissions: ['clipboard-read', 'clipboard-write'] });
+const ctx = await b.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 }, serviceWorkers: 'block', permissions: ['clipboard-read', 'clipboard-write'] });
+await prepareContext(ctx);
 const p = await ctx.newPage();
 const open = async () => { if ((await p.locator('.details').count()) === 0) await p.locator('.course-main').first().click(); };
 const errs = []; p.on('pageerror', (e) => errs.push(e.message));
@@ -27,7 +29,7 @@ ok((await p.locator('.stats-panel').innerText()).includes('Anna'), 'person total
 
 // undo restores the open course
 await p.click('.toast.info button');
-await p.waitForTimeout(300);
+await p.waitForSelector('.status-Completed', { state: 'detached' });
 ok(await p.locator('.status-Completed').count() === 0, 'undo reverts completion');
 
 // the people list survives a reload and is preselectable
@@ -42,8 +44,10 @@ await open(); await p.click('button:text-is("Dela bana")');
 await p.waitForSelector('.toast');
 const link = await p.evaluate(() => navigator.clipboard.readText());
 ok(link.includes('#sync='), 'single course link copied');
-const ctx2 = await b.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 } });
+const ctx2 = await b.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 }, serviceWorkers: 'block' });
+await prepareContext(ctx2);
 const q = await ctx2.newPage();
+q.on('pageerror', (e) => errs.push(e.message));
 await q.goto(link); await q.waitForSelector('.import-preview');
 ok(await q.locator('.import-preview input[type=radio]').count() === 0, 'partial link cannot replace');
 await q.click('.import-preview .primary'); await q.waitForSelector('text=Importen är klar.');

@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { chromium } from 'playwright';
+import { checkPageErrors, prepareContext } from './setup.mjs';
 
 const URL = process.env.E2E_URL ?? 'http://localhost:4173/';
 const b = await chromium.launch();
@@ -7,8 +8,10 @@ let fails = 0;
 const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 
 for (const [w, h, scheme] of [[360, 740, 'light'], [360, 740, 'dark'], [1280, 800, 'light']]) {
-  const ctx = await b.newContext({ locale: 'sv-SE', viewport: { width: w, height: h }, colorScheme: scheme });
+  const ctx = await b.newContext({ locale: 'sv-SE', viewport: { width: w, height: h }, colorScheme: scheme, serviceWorkers: 'block' });
+  await prepareContext(ctx);
   const p = await ctx.newPage();
+  const checkErrors = checkPageErrors(p);
   await p.goto(URL);
   await p.waitForSelector('.badge');
   const tooSmall = () => p.evaluate(() =>
@@ -37,6 +40,7 @@ for (const [w, h, scheme] of [[360, 740, 'light'], [360, 740, 'dark'], [1280, 80
   await p.keyboard.press('Tab');
   const outline = await p.evaluate(() => getComputedStyle(document.activeElement).outlineStyle);
   ok(outline !== 'none', `${w}px ${scheme}: focus outline visible`);
+  checkErrors();
   await ctx.close();
 }
 await b.close();

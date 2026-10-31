@@ -26,6 +26,7 @@ const waitFailed = (page) => page.locator('.data-status').getByText('Route data 
 async function setup(options = {}) {
   const context = await browser.newContext({ locale: 'en-GB', viewport: { width: 360, height: 740 }, serviceWorkers: 'block', ...options });
   const split = await serveFixture(context, fixture);
+  await context.route('https://tile.openstreetmap.org/**', (route) => route.abort());
   await context.addInitScript(() => { localStorage.setItem('rb.panSpeed', 'off'); });
   const page = await context.newPage();
   const requests = [];

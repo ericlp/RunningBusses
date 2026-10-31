@@ -18,6 +18,7 @@ try {
     const page = await context.newPage();
     page.on('pageerror', (error) => { console.log('FAIL', error.message); failures++; });
     await serveFixture(context, fixture);
+    await context.route('https://tile.openstreetmap.org/**', (route) => route.abort());
     await page.addInitScript(() => localStorage.setItem('rb.panSpeed', 'off'));
     await page.goto('http://localhost:4173/');
     await page.waitForSelector('.list button');

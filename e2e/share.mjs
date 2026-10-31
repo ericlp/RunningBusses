@@ -1,15 +1,18 @@
 import { chromium } from 'playwright';
+import { checkPageErrors, prepareContext } from './setup.mjs';
 const b = await chromium.launch();
 let fails = 0; const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 const mk = async (perm) => {
-  const ctx = await b.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 }, permissions: perm ? ['clipboard-read', 'clipboard-write'] : [] });
-  return { ctx, p: await ctx.newPage() };
+  const ctx = await b.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 }, serviceWorkers: 'block', permissions: perm ? ['clipboard-read', 'clipboard-write'] : [] });
+  await prepareContext(ctx);
+  const p = await ctx.newPage();
+  return { ctx, p, checkErrors: checkPageErrors(p) };
 };
 const A = await mk(true);
 await A.p.goto('http://localhost:4173/'); await A.p.waitForSelector('.badge');
 await A.p.click('text=Planera'); await A.p.click('text=Skapa bana');
 await A.p.click('.sheet .list button >> nth=0');
-await A.p.click('.strip >> text=Spara'); await A.p.click('.modal .primary'); await A.p.waitForTimeout(500);
+await A.p.click('.strip >> text=Spara'); await A.p.click('.modal .primary'); await A.p.waitForSelector('.course');
 await A.p.click('[aria-label="Inställningar"]');
 await A.p.click('button:text-is("Kopiera länk")');
 await A.p.waitForSelector('[role=status]');
@@ -40,4 +43,5 @@ await B.p.click('button:text-is("Avbryt")');
 const C = await mk(false);
 await C.p.goto('http://localhost:4173/#sync=zbroken'); await C.p.waitForSelector('[role=status]');
 ok((await C.p.locator('[role=status]').innerText()).includes('trasig'), 'broken link explained');
-await b.close(); process.exit(fails);
+A.checkErrors(); B.checkErrors(); C.checkErrors();
+await b.close(); process.exitCode = fails ? 1 : 0;

@@ -1,47 +1,64 @@
+import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
-const b = await chromium.launch();
-let fails = 0; const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
-const ctx = await b.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 }, permissions: ['clipboard-read', 'clipboard-write'] });
-const p = await ctx.newPage();
-const open = async () => { if ((await p.locator('.details').count()) === 0) await p.locator('.course-main').first().click(); };
-p.on('dialog', (d) => d.accept());
-const errs = []; p.on('pageerror', (e) => errs.push(e.message));
-await p.goto('http://localhost:4173/'); await p.waitForSelector('.badge');
-await p.click('text=Planera'); await p.click('text=Skapa bana');
-await p.click('.sheet .list button >> nth=0');
-await p.click('.strip >> text=Spara'); await p.fill('.modal input', 'Loggbana'); await p.click('.modal .primary');
-await p.waitForSelector('.course');
+import { readStored } from './data-fixture.mjs';
+import { checkPageErrors, createCourse, prepareContext } from './setup.mjs';
 
-// navigate link
-await open();
-const nav = await p.locator('.details a:text-is("Navigera till start")').getAttribute('href');
-ok(/google\.com\/maps\/dir\/.*destination=5\d\.\d+,1\d\.\d+/.test(nav ?? ''), 'navigate link has coordinates');
+const browser = await chromium.launch();
+try {
+  const context = await browser.newContext({ locale: 'sv-SE', viewport: { width: 360, height: 740 }, serviceWorkers: 'block', permissions: ['clipboard-read', 'clipboard-write'] });
+  await prepareContext(context);
+  const page = await context.newPage();
+  const checkErrors = checkPageErrors(page);
+  page.on('dialog', (dialog) => dialog.accept());
+  await page.clock.install();
+  await page.goto('http://localhost:4173/');
+  await createCourse(page, 'Loggbana');
+  const open = async () => {
+    if (await page.locator('.course-main').getAttribute('aria-pressed') !== 'true') await page.locator('.course-main').click();
+  };
+  await open();
+  const nav = await page.locator('.details a:text-is("Navigera till start")').getAttribute('href');
+  assert.match(nav, /google\.com\/maps\/dir\/.*destination=5\d\.\d+,1\d\.\d+/);
+  await page.click('text=Markera som genomförd');
+  await page.click('.modal button.primary');
+  await page.waitForSelector('.status-Completed');
+  await page.locator('.toast.info').waitFor();
+  await page.clock.fastForward(8001);
+  await page.locator('.toast.info').waitFor({ state: 'detached' });
+  await open();
+  await page.click('text=Markera som ej genomförd');
+  await page.waitForSelector('.status-Completed', { state: 'detached' });
+  await page.click('.stats-panel summary');
+  await page.waitForFunction(() => document.querySelector('.history')?.textContent.includes('Inte längre genomförd'));
+  assert.match(await page.locator('.history').innerText(), /Genomförd/);
+  const history = await readStored(page, 'log');
+  assert.deepEqual(history.map((entry) => entry.kind).sort(), ['completed', 'uncompleted']);
 
-// history: complete, then uncomplete (undo toast dismissed by completing flow)
-await p.click('text=Markera som genomförd'); await p.click('.modal button.primary'); await p.waitForSelector('.status-Completed');
-await p.waitForSelector('.toast.info', { state: 'detached', timeout: 15000 });
-await open(); await p.click('text=Markera som ej genomförd');
-await p.waitForTimeout(300);
-await p.click('.stats-panel summary');
-const hist = await p.locator('.history').innerText();
-ok(hist.includes('Genomförd') && hist.includes('Inte längre genomförd'), 'history lists both events');
-
-// history survives deleting the course and a reload
-await p.reload(); await p.click('text=Planera'); await p.waitForSelector('.course');
-await p.click('.stats-panel summary');
-ok((await p.locator('.history').innerText()).includes('Loggbana'), 'history persisted');
-
-// share from the line card: select the course's line on the browse map
-await p.goto('http://localhost:4173/'); await p.waitForSelector('.badge');
-await p.click('.list li:has-text("Planerad") button');
-await p.waitForSelector('.line-card');
-await p.focus('.leaflet-container');
-let labels = 0;
-for (let i = 0; i < 6 && !labels; i++) { await p.keyboard.press('+'); await p.waitForTimeout(500); labels = await p.locator('.leaflet-tooltip.stop-label').count(); }
-ok(labels > 0, 'stop names shown when zoomed in');
-await p.click('.line-card button:text-is("Dela bana")');
-await p.waitForSelector('.toast');
-const link = await p.evaluate(() => navigator.clipboard.readText());
-ok(link.includes('#sync='), 'line card shares the course');
-console.log('errors', errs);
-await b.close(); process.exit(fails || errs.length ? 1 : 0);
+  await page.goto('http://localhost:4173/');
+  await page.waitForSelector('.badge');
+  await page.click('.list li:has-text("Planerad") button');
+  await page.waitForSelector('.line-card');
+  await page.focus('.leaflet-container');
+  for (let n = 0; n < 6; n++) await page.keyboard.press('+');
+  await page.locator('.leaflet-tooltip.stop-label').first().waitFor();
+  await page.click('.line-card button:text-is("Dela bana")');
+  await page.waitForFunction(async () => (await navigator.clipboard.readText()).includes('#sync='));
+  assert.match(await page.evaluate(() => navigator.clipboard.readText()), /#sync=/);
+  await page.clock.fastForward(6001);
+  await page.click('text=Planera');
+  await page.waitForSelector('.course');
+  await open();
+  await page.getByRole('button', { name: 'Ta bort', exact: true }).click();
+  await page.waitForSelector('.course', { state: 'detached' });
+  assert.deepEqual(await readStored(page, 'courses'), []);
+  assert.deepEqual(await readStored(page, 'log'), history);
+  await page.reload();
+  await page.click('text=Planera');
+  await page.click('.stats-panel summary');
+  await page.locator('.history').waitFor();
+  assert.match(await page.locator('.history').innerText(), /Loggbana/);
+  assert.deepEqual(await readStored(page, 'log'), history);
+  checkErrors();
+  console.log('ok  history: both events survive deletion and reload; navigation, stops and line sharing');
+  await context.close();
+} finally { await browser.close(); }

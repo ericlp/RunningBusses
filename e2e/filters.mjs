@@ -1,7 +1,11 @@
 import { chromium } from 'playwright';
+import { checkPageErrors, prepareContext } from './setup.mjs';
 const b = await chromium.launch();
 let fails = 0; const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
-const p = await (await b.newContext({ locale: 'sv-SE', viewport: { width: 1280, height: 800 } })).newPage();
+const context = await b.newContext({ locale: 'sv-SE', viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
+await prepareContext(context);
+const p = await context.newPage();
+const checkErrors = checkPageErrors(p);
 await p.goto('http://localhost:4173/'); await p.waitForSelector('.badge');
 const count = async () => Number(((await p.locator('body').innerText()).match(/(\d+) av \d+ linjer/) ?? [])[1] ?? -1);
 await p.click('button.tool:has-text("Filter")');
@@ -20,6 +24,7 @@ ok((await chip('Industribuss').getAttribute('aria-pressed')) === 'true', 'one ca
 await chip('Industribuss').click();
 ok((await chip('Industribuss').getAttribute('aria-pressed')) === 'true', 'last selected category cannot be removed');
 await p.mouse.click(700, 400);
-await p.waitForTimeout(200);
+await p.waitForSelector('.filter-panel', { state: 'detached' });
 ok((await p.locator('.filter-panel').count()) === 0, 'clicking the map closes the filter panel');
-await b.close(); process.exit(fails);
+checkErrors();
+await b.close(); process.exitCode = fails ? 1 : 0;

@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { en } from './en';
 import { fr } from './fr';
 import { currentLang, detectLang, lineLabel, localeTag, resolveLang, setLangPref, t, tn } from './index';
 import { sv } from './sv';
 import { formatKm } from '../domain/filter';
+
+afterEach(() => setLangPref('auto'));
 
 describe('language detection', () => {
   it('uses the first supported language in preference order', () => {
