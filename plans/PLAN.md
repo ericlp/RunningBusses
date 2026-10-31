@@ -188,6 +188,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [067 - Course action groups and GPX guidance](067-course-action-groups.md): grouped sharing/editing actions, informational handoff notices and Garmin import limitations.
 - [068 - Category retry loading transition](068-category-retry-loading-transition.md): hold mode-triggered failures until loading is rendered, preventing stale unavailable text from satisfying the retry test.
 - [069 - Browser test reliability and runtime](069-browser-test-reliability.md): fail closed on assertions, deterministic fixtures, workflow coverage and bounded timed browser runs.
+- [070 - Backup byte limit](070-backup-byte-limit.md): enforce the existing file-size limit using UTF-8 bytes and protect backup history round trips.
 
 ## Future todos
 

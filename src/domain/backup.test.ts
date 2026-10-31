@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { choiceKey, makeBackup, mergeCourses, parseBackup } from './backup';
+import { choiceKey, makeBackup, MAX_BACKUP_BYTES, mergeCourses, parseBackup } from './backup';
 import type { Course } from './course';
+import { makeEntry } from './log';
 
 const course = (id: string, keys: string[], name = id): Course => ({
   id,
@@ -37,6 +38,25 @@ describe('people in backups', () => {
 });
 
 describe('parseBackup', () => {
+  it('round-trips completion history and accepts old backups without a log', () => {
+    const c = { ...course('1', ['59']), status: 'Completed' as const, completedAt: '2026-01-01', participants: ['Anna'] };
+    const log = [
+      makeEntry('completed', c, new Date('2026-01-01T12:00:00Z'), 'completed'),
+      makeEntry('uncompleted', c, new Date('2026-01-02T12:00:00Z'), 'uncompleted'),
+    ];
+    const backup = makeBackup([c], 500, ['Anna'], log, new Date('2026-01-03T12:00:00Z'));
+    expect(parseBackup(JSON.stringify(backup))).toEqual({ ok: true, backup });
+    const { log: _log, ...old } = backup;
+    expect(parseBackup(JSON.stringify(old))).toEqual({ ok: true, backup: { ...backup, log: [] } });
+  });
+  it.each([null, {}, [{ id: 'incomplete' }]].map((log) => ({ log })))('rejects malformed supplied history: %j', ({ log }) => {
+    expect(parseBackup(JSON.stringify({ ...makeBackup([], 500), log }))).toMatchObject({ ok: false, error: 'invalid' });
+  });
+  it('rejects a malformed field in an otherwise complete history event', () => {
+    const event = makeEntry('completed', course('1', ['59']), new Date('2026-01-01'), 'event');
+    expect(parseBackup(JSON.stringify({ ...makeBackup([], 500), log: [{ ...event, participants: [1] }] }))).toMatchObject({ ok: false, error: 'invalid' });
+    expect(parseBackup(JSON.stringify({ ...makeBackup([], 500), log: [{ ...event, distanceM: null }] }))).toMatchObject({ ok: false, error: 'invalid' });
+  });
   it('round-trips an export', () => {
     const cs = [course('1', ['59']), course('2', ['69', '70'])];
     const r = parseBackup(JSON.stringify(makeBackup(cs, 700)));
@@ -55,6 +75,25 @@ describe('parseBackup', () => {
   it('rejects duplicate ids and a line in two courses', () => {
     expect(parseBackup(JSON.stringify(makeBackup([course('1', ['59']), course('1', ['69'])], 500)))).toMatchObject({ error: 'invalid' });
     expect(parseBackup(JSON.stringify(makeBackup([course('1', ['59']), course('2', ['59'])], 500)))).toMatchObject({ error: 'invalid' });
+    expect(parseBackup(JSON.stringify(makeBackup([course('1', ['59', '59'])], 500)))).toMatchObject({ error: 'invalid' });
+  });
+  it('rejects negative manual distance and line geometry with fewer than two positions', () => {
+    const manual = { ...course('1', ['59']), legs: [{ kind: 'manual' as const, id: 'm', label: 'Walk', lengthM: -1 }] };
+    expect(parseBackup(JSON.stringify(makeBackup([manual], 500)))).toMatchObject({ ok: false, error: 'invalid' });
+    const short = course('1', ['59']);
+    if (short.legs[0].kind !== 'line') throw new Error('Expected line');
+    short.legs[0].line.coordinates = [[11.9, 57.7]];
+    expect(parseBackup(JSON.stringify(makeBackup([short], 500)))).toMatchObject({ ok: false, error: 'invalid' });
+  });
+  it('enforces the UTF-8 byte limit, including its inclusive boundary', () => {
+    const ascii = JSON.stringify(makeBackup([], 500)).padEnd(MAX_BACKUP_BYTES, ' ');
+    expect(parseBackup(ascii)).toMatchObject({ ok: true });
+    expect(parseBackup(ascii + ' ')).toEqual({ ok: false, error: 'tooLarge' });
+    const unicode = JSON.stringify(makeBackup([course('1', ['59'], 'ö'.repeat(MAX_BACKUP_BYTES / 2))], 500));
+    expect(unicode.length).toBeLessThan(MAX_BACKUP_BYTES);
+    const result = parseBackup(unicode);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe('tooLarge');
   });
 });
 

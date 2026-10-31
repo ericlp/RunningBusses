@@ -63,7 +63,7 @@ function validCourse(c: unknown): c is Course {
 
 /** Checks the whole file before anything is written. */
 export function parseBackup(text: string): ParseResult {
-  if (text.length > MAX_BACKUP_BYTES) return { ok: false, error: 'tooLarge' };
+  if (text.length > MAX_BACKUP_BYTES || new TextEncoder().encode(text).byteLength > MAX_BACKUP_BYTES) return { ok: false, error: 'tooLarge' };
   let data: unknown;
   try {
     data = JSON.parse(text);
