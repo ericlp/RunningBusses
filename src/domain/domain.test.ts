@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { applyFilters, defaultFilters, formatKm, searchLines, sortLines } from './filter';
-import { pathLengthM } from './geo';
-import { linesNear } from './hit';
+import { applyFilters, defaultFilters, facetAvailability, formatKm, searchLines, sortLines, type StatusFilter } from './filter';
+import { haversineM, pathLengthM } from './geo';
+import { distanceToLineM, linesNear } from './hit';
+import type { RouteStatus } from './course';
 import type { Line } from './types';
 
 const line = (o: Partial<Line>): Line => ({
@@ -25,6 +26,65 @@ describe('pathLengthM', () => {
   it('measures about 111 km for one degree of latitude', () => {
     expect(pathLengthM([[11, 57], [11, 58]])).toBeGreaterThan(111000);
     expect(pathLengthM([[11, 57], [11, 58]])).toBeLessThan(111400);
+  });
+  it('measures east-west displacement at Gothenburg latitude', () => {
+    const distance = haversineM({ lon: 11, lat: 57.7 }, { lon: 12, lat: 57.7 });
+    expect(distance).toBeGreaterThan(59000);
+    expect(distance).toBeLessThan(60000);
+    expect(pathLengthM([[11, 57.7], [12, 57.7]])).toBeCloseTo(distance, 6);
+  });
+  it('adds every segment of a bent path, rather than measuring the endpoints', () => {
+    const east = haversineM({ lon: 11, lat: 57.7 }, { lon: 12, lat: 57.7 });
+    const north = haversineM({ lon: 12, lat: 57.7 }, { lon: 12, lat: 58.7 });
+    const distance = pathLengthM([[11, 57.7], [12, 57.7], [12, 58.7]]);
+    expect(distance).toBeCloseTo(east + north, 6);
+    expect(distance).toBeGreaterThan(haversineM({ lon: 11, lat: 57.7 }, { lon: 12, lat: 58.7 }) + 10000);
+  });
+});
+
+describe('status filters and available facets', () => {
+  const lines = [
+    line({ key: 'unplanned' }),
+    line({ key: 'planned', tags: ['loop'] }),
+    line({ key: 'done', tags: ['one-way'] }),
+    line({ key: 'tram', category: 'tram', tags: ['retur'] }),
+  ];
+  const statusOf = (key: string): RouteStatus => key === 'planned' ? 'NotCompleted' : key === 'done' ? 'Completed' : 'NotPlanned';
+
+  it.each([
+    ['all', ['unplanned', 'planned', 'done']],
+    ['unplanned', ['unplanned']],
+    ['incomplete', ['unplanned', 'planned']],
+    ['completed', ['done']],
+  ] satisfies [StatusFilter, string[]][])('filters %s by course-derived status', (status, keys) => {
+    expect(applyFilters(lines, { ...defaultFilters, status }, statusOf).map((l) => l.key)).toEqual(keys);
+  });
+  it('matches the union of selected tags without bypassing category or status filters', () => {
+    const filters = { ...defaultFilters, status: 'all' as const, tags: ['loop', 'one-way'] as const };
+    expect(applyFilters(lines, { ...filters, tags: [...filters.tags] }, statusOf).map((l) => l.key)).toEqual(['planned', 'done']);
+    expect(applyFilters(lines, { ...filters, tags: [...filters.tags], status: 'incomplete' }, statusOf).map((l) => l.key)).toEqual(['planned']);
+  });
+
+  it('evaluates each facet against other active filters and retains selected empty facets', () => {
+    const selected = { ...defaultFilters, tags: ['loop' as const] };
+    const available = facetAvailability(lines, selected, statusOf);
+    expect(available.category('tram')).toBe(false);
+    expect(available.status('completed')).toBe(false);
+    expect(available.status('all')).toBe(true);
+    expect(available.tag('one-way')).toBe(false);
+    expect(available.tag('retur')).toBe(false);
+    const unrestricted = facetAvailability(lines, { ...defaultFilters, status: 'all' }, statusOf);
+    expect(unrestricted.category('tram')).toBe(true);
+    expect(unrestricted.tag('one-way')).toBe(true);
+    expect(unrestricted.tag('retur')).toBe(false);
+
+    const empty = facetAvailability(lines, { ...selected, maxKm: 1 }, statusOf);
+    expect(empty.category('stadsbuss')).toBe(true);
+    expect(empty.status('incomplete')).toBe(true);
+    expect(empty.tag('loop')).toBe(true);
+    expect(empty.category('tram')).toBe(false);
+    expect(empty.status('all')).toBe(false);
+    expect(empty.tag('one-way')).toBe(false);
   });
 });
 
@@ -84,6 +144,23 @@ describe('linesNear', () => {
   });
   it('returns nothing when the tap is too far away', () => {
     expect(linesNear([a, b, far], 57.705, 11.975, 60)).toEqual([]);
+  });
+  it('clamps a diagonal segment at both endpoints instead of using its infinite extension', () => {
+    const diagonal = line({ key: 'diagonal', coordinates: [[11.97, 57.7], [11.98, 57.71]] });
+    expect(distanceToLineM(diagonal, 57.705, 11.975)).toBeLessThan(0.001);
+    for (const [lon, lat] of [[11.9696, 57.6996], [11.9804, 57.7104]]) {
+      const distance = distanceToLineM(diagonal, lat, lon);
+      expect(distance).toBeGreaterThan(45);
+      expect(distance).toBeLessThan(55);
+      expect(linesNear([diagonal], lat, lon, 45)).toEqual([]);
+      expect(linesNear([diagonal], lat, lon, 60)).toEqual([diagonal]);
+    }
+  });
+  it('handles duplicate vertices without NaN or losing the following segment', () => {
+    const repeated = line({ key: 'repeated', coordinates: [[11.97, 57.7], [11.97, 57.7], [11.98, 57.71]] });
+    expect(distanceToLineM(repeated, 57.7, 11.97)).toBe(0);
+    expect(distanceToLineM(repeated, 57.705, 11.975)).toBeLessThan(0.001);
+    expect(linesNear([repeated], 57.705, 11.975, 1)).toEqual([repeated]);
   });
 });
 

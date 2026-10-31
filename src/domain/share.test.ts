@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { deflateRawSync } from 'node:zlib';
 import type { Course } from './course';
 import { decodeShare, encodeShare, payloadFromHash, prepareShare, rebuildShare, shareUrl } from './share';
@@ -17,6 +17,7 @@ const line = (key: string): Line => ({
   coordinates: [[11.9, 57.7], [11.91, 57.71]],
 });
 const lines = ['59', '69', '70'].map(line);
+afterEach(() => vi.unstubAllGlobals());
 
 const course = (id: string, keys: string[], extra: Partial<Course> = {}): Course => ({
   id,
@@ -70,7 +71,45 @@ describe('share links', () => {
 
   it('is much smaller than the full backup', async () => {
     const cs = [course('1', ['59', '69', '70'])];
-    expect((await encodeShare(cs, 'f')).length).toBeLessThan(JSON.stringify(cs).length / 4);
+    const encoded = await encodeShare(cs, 'f');
+    expect(encoded.startsWith('z')).toBe(true);
+    expect(encoded.length).toBeLessThan(JSON.stringify(cs).length / 4);
+  });
+  it('encodes a plain payload and round-trips it when compression is unavailable', async () => {
+    vi.stubGlobal('CompressionStream', undefined);
+    vi.stubGlobal('DecompressionStream', undefined);
+    const c = course('1', ['59', '69'], { participants: ['Anna'] });
+    c.legs.push({ kind: 'manual', id: 'm', label: 'Walk', lengthM: 250 });
+    const payload = await encodeShare([c], 'plain-feed', true);
+    expect(payload.startsWith('p')).toBe(true);
+    expect(await decodeShare(payload, lines)).toMatchObject({
+      ok: true, shared: { backup: { courses: [c] }, feedVersion: 'plain-feed', partial: true, skipped: [] },
+    });
+  });
+  it('reports compressed links as unsupported when decompression is unavailable', async () => {
+    const payload = 'z' + deflateRawSync(JSON.stringify({ v: 1, f: 'f', c: [] })).toString('base64url');
+    vi.stubGlobal('DecompressionStream', undefined);
+    expect(await prepareShare(payload)).toEqual({ ok: false, error: 'unsupported' });
+    expect(await decodeShare(payload, lines)).toEqual({ ok: false, error: 'unsupported' });
+  });
+  it('rebuilds directions using recipient snapshots rather than sender geometry and names', async () => {
+    const c = course('1', ['59', '69']);
+    const before = structuredClone(c);
+    const recipient: Line[] = lines.map((l) => ({
+      ...l, from: 'New A', to: 'New B', lengthM: 2000, color: '#123456', via: ['New A', 'New B'],
+      viaAt: [[12, 58], [12.01, 58.01]], coordinates: [[12, 58], [12.01, 58.01]],
+    }));
+    const recipientBefore = structuredClone(recipient);
+    const decoded = await decodeShare(await encodeShare([c], 'sender-feed'), recipient);
+    expect(decoded).toMatchObject({
+      ok: true,
+      shared: { backup: { courses: [{ ...c, legs: [
+        { kind: 'line', line: recipient[0], reversed: false },
+        { kind: 'line', line: recipient[1], reversed: true },
+      ] }] }, feedVersion: 'sender-feed' },
+    });
+    expect(c).toEqual(before);
+    expect(recipient).toEqual(recipientBefore);
   });
 
   it('skips courses with routes this device does not know', async () => {

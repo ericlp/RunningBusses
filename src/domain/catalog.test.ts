@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { assembleLine, contentHash, parseAsset, parseCatalog, parseCategory, parseManifest, splitDataset } from './catalog';
-import { CATEGORIES, type Dataset } from './types';
+import { CATEGORIES, type Catalog, type CatalogManifest, type CategoryPayload, type Dataset } from './types';
 
 const dataset: Dataset = JSON.parse(readFileSync('public/data/lines.json', 'utf8'));
 
@@ -21,6 +21,86 @@ describe('split transit contract', () => {
     }
     expect(JSON.stringify(catalog.lines.map((l) => assembleLine(l, geometries.get(l.key))))).toBe(JSON.stringify(dataset.lines));
     expect(catalog.lines.every((l) => !('coordinates' in l) && !('viaAt' in l))).toBe(true);
+  });
+
+  describe('independent split-data validation guards', () => {
+    let manifest: CatalogManifest;
+    let catalog: Catalog;
+    let payload: CategoryPayload;
+    let text: string;
+    beforeAll(async () => {
+      const tiny: Dataset = {
+        schemaVersion: 1, feedVersion: 'test', referenceDate: '20260101', generatedAt: '2026-01-01T00:00:00Z',
+        lines: ['bus-a', 'bus-b', 'tram'].map((key) => ({
+          key, number: key, label: key, category: key === 'tram' ? 'tram' : 'stadsbuss',
+          tags: [], from: 'A', to: 'B', lengthM: 1000, via: ['A', 'B'],
+          viaAt: [[11.9, 57.7], [11.91, 57.71]], coordinates: [[11.9, 57.7], [11.91, 57.71]],
+        })),
+      };
+      const split = await splitDataset(tiny);
+      manifest = await parseManifest(split.manifest);
+      text = split.files.get(manifest.catalog.file)!;
+      catalog = parseCatalog(JSON.parse(text), manifest);
+      payload = parseCategory(JSON.parse(split.files.get(manifest.categories.stadsbuss.file)!), 'stadsbuss', catalog);
+    });
+
+    it('rejects a different hash even when the asset has exactly the declared byte count', async () => {
+      const corrupt = text.replace('"label":"bus-a"', '"label":"bus-z"');
+      expect(corrupt).not.toBe(text);
+      expect(new TextEncoder().encode(corrupt).length).toBe(manifest.catalog.bytes);
+      await expect(parseAsset(corrupt, manifest.catalog)).rejects.toThrow('hash');
+    });
+
+    it('rejects a wrong byte count even when the asset hash is correct', async () => {
+      expect(await contentHash(text)).toBe(manifest.catalog.hash);
+      await expect(parseAsset(text, { ...manifest.catalog, bytes: manifest.catalog.bytes + 1 })).rejects.toThrow('hash');
+    });
+
+    it('rejects a wrong release hash with otherwise consistent descriptors and counts', async () => {
+      const release = (manifest.release.startsWith('0') ? '1' : '0') + manifest.release.slice(1);
+      await expect(parseManifest({ ...manifest, release })).rejects.toThrow('release hash');
+    });
+
+    it('rejects duplicate catalogue identities without changing category or total counts', () => {
+      const duplicate = structuredClone(catalog);
+      duplicate.lines[1].key = duplicate.lines[0].key;
+      expect(() => parseCatalog(duplicate, manifest)).toThrow('Duplicate catalogue key');
+    });
+
+    it('rejects wrong catalogue membership with the total count unchanged', () => {
+      const wrong = structuredClone(catalog);
+      wrong.lines[1].category = 'tram';
+      expect(wrong.lines).toHaveLength(manifest.lineCount);
+      expect(() => parseCatalog(wrong, manifest)).toThrow('category membership');
+    });
+
+    it('rejects duplicate and foreign-category geometry keys without changing payload counts', () => {
+      const duplicate = { ...payload, lines: [payload.lines[0], payload.lines[0]] };
+      expect(() => parseCategory(duplicate, 'stadsbuss', catalog)).toThrow('Duplicate geometry key');
+      const foreign = { ...payload, lines: [payload.lines[0], { ...payload.lines[1], key: 'tram' }] };
+      expect(() => parseCategory(foreign, 'stadsbuss', catalog)).toThrow('category payload');
+    });
+
+    it.each([
+      [], [[11.9, 57.7]], [[181, 57.7], [11.9, 57.7]], [[11.9, 91], [11.9, 57.7]],
+      [[NaN, 57.7], [11.9, 57.7]], [[11.9, 57.7, 1], [11.9, 57.7]],
+    ].map((coordinates) => ({ coordinates })))('rejects invalid route positions: %j', ({ coordinates }) => {
+      const bad = { ...payload, lines: [{ ...payload.lines[0], coordinates }, payload.lines[1]] };
+      expect(() => parseCategory(bad, 'stadsbuss', catalog)).toThrow('category payload');
+    });
+
+    it.each([
+      [], [[11.9, 57.7]], [[181, 57.7], [11.9, 57.7]], [[11.9, 91], [11.9, 57.7]],
+      [[11.9, Infinity], [11.9, 57.7]],
+    ].map((viaAt) => ({ viaAt })))('rejects mismatched or invalid stop positions: %j', ({ viaAt }) => {
+      const bad = { ...payload, lines: [{ ...payload.lines[0], viaAt }, payload.lines[1]] };
+      expect(() => parseCategory(bad, 'stadsbuss', catalog)).toThrow('category payload');
+    });
+
+    it('still accepts old geometry without optional stop positions', () => {
+      const old = { ...payload, lines: payload.lines.map(({ viaAt: _viaAt, ...line }) => line) };
+      expect(parseCategory(old, 'stadsbuss', catalog)).toEqual(old);
+    });
   });
 
   it('excludes volatile timestamps and reuses unchanged geometry across releases', async () => {

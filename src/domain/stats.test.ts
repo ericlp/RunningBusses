@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Course } from './course';
+import { courseStats, type Course } from './course';
 import { addPerson, cleanName, computeProgress, DEFAULT_PROGRESS_CATEGORIES, knownPeople, loadProgressCategories, saveProgressCategories, toggleProgressCategory, unusedPeople } from './stats';
 import { CATEGORIES, type Line } from './types';
 
@@ -82,6 +82,34 @@ describe('computeProgress', () => {
     expect(computeProgress([mixed], lines, [], 5, ['stadsbuss']).runM).toBe(5000);
     expect(computeProgress([mixed], lines, [], 5, ['tram']).runM).toBe(4000);
     expect(computeProgress([mixed], lines, [], 5, CATEGORIES).runM).toBe(9000);
+  });
+  it('excludes gaps and manual distances from progress but retains them in recent run totals', () => {
+    const c = course('4', ['59', '69'], { status: 'Completed', completedAt: '2026-04-01', participants: ['Cy'] });
+    c.legs = [
+      { kind: 'line', reversed: false, line: { ...lines[0], coordinates: [[11.9, 57.7], [11.9, 57.71]] } },
+      { kind: 'line', reversed: false, line: { ...lines[1], coordinates: [[11.9, 57.72], [11.9, 57.73]] } },
+      { kind: 'manual', id: 'm', label: 'Walk', lengthM: 250 },
+    ];
+    const p = computeProgress([c], lines);
+    expect(p.runM).toBe(8000);
+    expect(p.people).toEqual([{ name: 'Cy', courses: 1, distanceM: 8000 }]);
+    expect(p.recent[0].distanceM).toBeCloseTo(courseStats(c.legs).totalM, 6);
+    expect(p.recent[0].distanceM).toBeGreaterThan(9250);
+  });
+
+  it('uses historical lengths and categories for run distance even when a route has disappeared', () => {
+    const old = { ...lines[0], lengthM: 4500 };
+    const gone = line('gone', 6000);
+    const c = course('4', [], { status: 'Completed', completedAt: '2026-04-01', participants: ['Cy'] });
+    c.legs = [
+      { kind: 'line', reversed: false, line: old },
+      { kind: 'line', reversed: false, line: gone },
+    ];
+    const p = computeProgress([c], lines);
+    expect(p.total).toMatchObject({ lines: 3, doneLines: 1, doneM: 5000 });
+    expect(p.runM).toBe(10500);
+    expect(p.people).toEqual([{ name: 'Cy', courses: 1, distanceM: 10500 }]);
+    expect(computeProgress([c], lines, [], 5, ['tram']).runM).toBe(0);
   });
 
   it('lists recent completions newest first and ignores open courses', () => {

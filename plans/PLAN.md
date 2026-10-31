@@ -189,6 +189,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [068 - Category retry loading transition](068-category-retry-loading-transition.md): hold mode-triggered failures until loading is rendered, preventing stale unavailable text from satisfying the retry test.
 - [069 - Browser test reliability and runtime](069-browser-test-reliability.md): fail closed on assertions, deterministic fixtures, workflow coverage and bounded timed browser runs.
 - [070 - Backup byte limit](070-backup-byte-limit.md): enforce the existing file-size limit using UTF-8 bytes and protect backup history round trips.
+- [071 - Domain test contracts](071-domain-test-contracts.md): isolate validation guards and assert exact snapshots, geometry, status, history and share behavior.
 
 ## Future todos
 

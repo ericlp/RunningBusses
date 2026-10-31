@@ -56,6 +56,14 @@ describe('courseStats', () => {
     const withLen = courseStats([lineLeg(a), { kind: 'manual', id: 'm', label: 'Fotled', lengthM: 1500 }]);
     expect(formatTotal(withLen)).toBe('3,5 km');
   });
+  it('does not infer a connector across a manual leg between separated lines', () => {
+    const a = mk('1', 1000, O, [11.97, 57.71]);
+    const b = mk('2', 2000, [12, 57.8], [12, 57.82]);
+    const s = courseStats([lineLeg(a), { kind: 'manual', id: 'm', label: 'Walk', lengthM: 300 }, lineLeg(b)]);
+    expect(s).toEqual({ totalM: 3300, gaps: [], gapM: 0, incomplete: false, startName: '1-från', endName: '2-till' });
+    const unknown = courseStats([lineLeg(a), { kind: 'manual', id: 'm', label: 'Walk', lengthM: null }, lineLeg(b)]);
+    expect(unknown).toMatchObject({ totalM: 3000, gaps: [], gapM: 0, incomplete: true });
+  });
 });
 
 describe('nextOptions', () => {
@@ -110,6 +118,12 @@ describe('nextOptions', () => {
     const far = mk('far', 1000, [12.5, 58], [12.6, 58]);
     expect(nextOptions([far], new Set(), [lineLeg(cur), manual], 500)).toHaveLength(2);
   });
+  it('sorts candidates by gap, then by natural line number rather than input order', () => {
+    const options = nextOptions([candidate('17', 200), candidate('9', 200), candidate('30', 50)], new Set(), legs, 500);
+    expect(options.map((o) => [o.line.key, o.reversed])).toEqual([['30', false], ['9', false], ['17', false]]);
+    expect(options.map((o) => o.gapM)).toEqual([...options.map((o) => o.gapM)].sort((a, b) => a! - b!));
+    expect(nextOptions([candidate('17', 200), candidate('9', 200)], new Set(), [], 500).map((o) => o.line.key)).toEqual(['9', '9', '17', '17']);
+  });
 });
 
 describe('route status', () => {
@@ -159,15 +173,27 @@ describe('editing operations', () => {
     expect(canSplitAt([lineLeg(a), man, lineLeg(b)], 1)).toBe(false);
     expect(canSplitAt([lineLeg(a), man, lineLeg(b)], 2)).toBe(true);
   });
+  it('drops only the gap across a split from the two recomputed totals', () => {
+    const separated = mk('4', 2000, [11.97, 57.701 + dLat(300)], [11.97, 57.703]);
+    const legs = [lineLeg(a), lineLeg(separated), lineLeg(c)];
+    const original = courseStats(legs);
+    const [left, right] = splitAt(legs, 1);
+    expect(original.gaps[0].m).toBeGreaterThan(299);
+    expect(original.gaps[0].m).toBeLessThan(301);
+    expect(courseStats(left).totalM + courseStats(right).totalM).toBeCloseTo(original.totalM - original.gaps[0].m, 5);
+    expect(courseStats(right).gaps).toEqual([{ afterIndex: 0, m: 0 }]);
+  });
 
   it('reverses order and direction, and reversing twice gives the original', () => {
     const legs = [lineLeg(a), lineLeg(b)];
+    const original = structuredClone(legs);
     const r = reverseLegs(legs);
+    expect(legs).toEqual(original);
     expect(keys(r)).toEqual(['2', '1']);
     expect(courseStats(r).startName).toBe('2-till');
     expect(courseStats(r).endName).toBe('1-från');
     expect(Math.round(courseStats(r).totalM)).toBe(Math.round(courseStats(legs).totalM));
-    expect(reverseLegs(r)).toEqual(legs);
+    expect(reverseLegs(r)).toEqual(original);
     expect(canReverse([lineLeg(a), man])).toBe(false);
   });
 });

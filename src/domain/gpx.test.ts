@@ -15,12 +15,20 @@ describe('gpx', () => {
 
   it('writes one segment per line, in running direction (lon/lat order fixed)', () => {
     expect(gpx.match(/<trkseg>/g)).toHaveLength(2);
-    const second = gpx.split('<trkseg>')[2];
-    expect(second.indexOf('lat="57.730000" lon="12.000000"')).toBeLessThan(second.indexOf('lat="57.720000" lon="11.990000"'));
+    const segments = [...gpx.matchAll(/<trkseg>([\s\S]*?)<\/trkseg>/g)].map((match) =>
+      [...match[1].matchAll(/<trkpt lat="([^"]+)" lon="([^"]+)"\/>/g)].map((point) => [Number(point[2]), Number(point[1])]));
+    expect(segments).toEqual([a.coordinates, [...b.coordinates].reverse()]);
   });
   it('adds start and end waypoints and escapes XML', () => {
     expect(gpx.match(/<wpt /g)).toHaveLength(3);
     expect(gpx).toContain('Bana &amp; &quot;Ö&quot;');
+    const waypoints = [...gpx.matchAll(/<wpt lat="([^"]+)" lon="([^"]+)"><name>(.*?)<\/name><desc>(.*?)<\/desc><\/wpt>/g)]
+      .map((match) => ({ at: [Number(match[2]), Number(match[1])], name: match[3], desc: match[4] }));
+    expect(waypoints).toEqual([
+      { at: a.coordinates[0], name: 'A', desc: 'Start, 59' },
+      { at: a.coordinates[1], name: 'B', desc: '59' },
+      { at: b.coordinates[0], name: 'C', desc: '69' },
+    ]);
   });
   it('skips manual legs and makes a safe file name', () => {
     expect(courseToGpx(course([{ kind: 'manual', id: 'm', label: 'Bro', lengthM: 100 }, { kind: 'line', line: a, reversed: false }])).match(/<trkseg>/g)).toHaveLength(1);

@@ -27,13 +27,23 @@ describe('completion log', () => {
     expect(addEntry([a], b).map((e) => e.id)).toEqual(['b', 'a']);
     expect(mergeLog([a], [a, b]).map((e) => e.id)).toEqual(['b', 'a']);
     expect(removeEntry([b, a], 'b').map((e) => e.id)).toEqual(['a']);
-    const many = Array.from({ length: MAX_LOG + 5 }, (_, i) => makeEntry('completed', course, new Date(2026, 0, 1, 0, 0, i), `e${i}`));
-    expect(mergeLog(many, [])).toHaveLength(MAX_LOG);
+    const many = Array.from({ length: MAX_LOG + 5 }, (_, i) => makeEntry('completed', course, new Date(Date.UTC(2026, 0, 1, 0, 0, i)), `e${i}`));
+    const merged = mergeLog(many, []);
+    expect(merged.map((e) => e.id)).toEqual(many.slice(5).reverse().map((e) => e.id));
+    expect(merged.map((e) => e.at)).toEqual([...merged.map((e) => e.at)].sort().reverse());
+    const newest = makeEntry('completed', course, new Date('2027-01-01'), 'newest');
+    expect(addEntry(merged, newest).map((e) => e.id)).toEqual(['newest', ...merged.slice(0, MAX_LOG - 1).map((e) => e.id)]);
+    expect(addEntry(merged, a)).toEqual(merged);
   });
 
   it('rejects malformed entries', () => {
+    const entry = makeEntry('completed', course, new Date('2026-01-01'), 'valid');
     expect(isLogEntry({ id: 'x' })).toBe(false);
     expect(isLogEntry(null)).toBe(false);
-    expect(isLogEntry({ ...makeEntry('completed', course), kind: 'other' })).toBe(false);
+    expect(isLogEntry({ ...entry, kind: 'other' })).toBe(false);
+    expect(isLogEntry({ ...entry, id: '' })).toBe(false);
+    expect(isLogEntry({ ...entry, participants: [123] })).toBe(false);
+    expect(isLogEntry({ ...entry, distanceM: Infinity })).toBe(false);
+    expect(isLogEntry({ ...entry, distanceM: NaN })).toBe(false);
   });
 });
