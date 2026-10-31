@@ -112,7 +112,7 @@ Each phase ends with something usable. A phase is built only after the previous 
 7. **Stretch (done).** GPX export, see plan 025. Archiving renumbered line sets was dropped.
 8. **Language (done).** Browser-preferred language with Swedish, English and French, see plan 003. Preferably done right after Phase 3, before more strings pile up.
 
-Deliberately postponed: multi-tab write protection and anything else not needed to use the app yourselves. Add it when it proves necessary.
+Multi-tab write protection is addressed by [074](074-multi-tab-write-protection.md).
 
 ## Tests
 
@@ -192,6 +192,8 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [071 - Domain test contracts](071-domain-test-contracts.md): isolate validation guards and assert exact snapshots, geometry, status, history and share behavior.
 - [072 - Data test integrity](072-data-test-integrity.md): real storage transactions, coherent release races, named tile caches and isolated GTFS publication fixtures.
 - [073 - Local and CI test parity](073-local-ci-test-parity.md): shared validation command and exact Node version, with deterministic course-card timeout testing.
+
+- [074 - Conservative multi-tab write protection](074-multi-tab-write-protection.md): atomic revision checks for saved state and shared drafts, with explicit conflict recovery.
 
 ## Future todos
 

@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { pathToFileURL } from 'node:url';
 
-export const journeys = ['courses', 'editing', 'backup', 'share', 'gpx-share', 'card', 'filters', 'regional', 'ferries', 'category-data', 'links', 'update', 'people', 'history', 'status', 'progress', 'i18n', 'a11y', 'tiles', 'drafts', 'storage-failures', 'viewport'];
+export const journeys = ['courses', 'editing', 'backup', 'share', 'gpx-share', 'card', 'filters', 'regional', 'ferries', 'category-data', 'links', 'update', 'people', 'history', 'status', 'progress', 'i18n', 'a11y', 'tiles', 'drafts', 'multi-tab', 'storage-failures', 'viewport'];
 
 export function options(args, defaultWorkers = '2') {
   const workerArgs = args.filter((arg) => arg.startsWith('--workers='));

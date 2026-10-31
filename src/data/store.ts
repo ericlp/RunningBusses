@@ -1,6 +1,6 @@
 import type { Course, Leg } from '../domain/course';
-import { isLogEntry, type LogEntry } from '../domain/log';
-import { idbBatch, idbGet, idbSet } from './idb';
+import { isLogEntry } from '../domain/log';
+import { idbGet, idbRead, idbUpdate } from './idb';
 
 export interface Draft {
   name: string;
@@ -11,39 +11,61 @@ export interface Draft {
 
 export const DEFAULT_RADIUS_M = 500;
 
-export async function loadCourses(): Promise<Course[]> {
-  return (await idbGet<Course[]>('courses')) ?? [];
+interface Revision {
+  state: string | null;
+  draft: string | null;
 }
 
-/** Resolves only after the write has completed, so callers can show "saved" honestly. */
-export function saveCourses(courses: Course[]): Promise<void> {
-  return idbSet('courses', courses);
+export class WriteConflict extends Error {
+  constructor() { super('Saved data changed in another tab.'); }
 }
 
-export async function loadPeople(): Promise<string[]> {
-  const v = await idbGet<unknown>('people');
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
-}
+export class UserStore {
+  private revision: Revision = { state: null, draft: null };
+  private loaded = false;
+  private conflicted = false;
+  private queue: Promise<void> = Promise.resolve();
 
-export function savePeople(people: string[]): Promise<void> {
-  return idbSet('people', people);
-}
+  async load() {
+    const [courses, draft, people, log, revision] = await idbRead(['courses', 'draft', 'people', 'log', 'user.revision']);
+    if (revision !== undefined && (typeof revision !== 'object' || revision === null ||
+        !('state' in revision) || !('draft' in revision) ||
+        (revision.state !== null && typeof revision.state !== 'string') ||
+        (revision.draft !== null && typeof revision.draft !== 'string'))) {
+      throw new Error('Invalid saved user revision.');
+    }
+    this.revision = (revision as Revision | undefined) ?? { state: null, draft: null };
+    this.loaded = true;
+    return {
+      courses: (courses as Course[] | undefined) ?? [],
+      draft: (draft as Draft | undefined) ?? null,
+      people: Array.isArray(people) ? people.filter((x): x is string => typeof x === 'string') : [],
+      log: Array.isArray(log) ? log.filter(isLogEntry) : [],
+    };
+  }
 
-export async function loadLog(): Promise<LogEntry[]> {
-  const v = await idbGet<unknown>('log');
-  return Array.isArray(v) ? v.filter(isLogEntry) : [];
-}
-
-export function saveLog(log: LogEntry[]): Promise<void> {
-  return idbSet('log', log);
-}
-
-export async function loadDraft(): Promise<Draft | null> {
-  return (await idbGet<Draft>('draft')) ?? null;
-}
-
-export function saveDraft(draft: Draft | null): Promise<void> {
-  return idbSet('draft', draft);
+  save(entries: [string, unknown][], kind: 'state' | 'draft' = 'state'): Promise<void> {
+    const state = this.revision.state;
+    const write = this.queue.then(async () => {
+      if (!this.loaded) throw new Error('User data has not been loaded.');
+      if (this.conflicted) throw new WriteConflict();
+      const next: Revision = { ...this.revision, [kind]: crypto.randomUUID() };
+      try {
+        await idbUpdate<Revision>('user.revision', (previous) => {
+          const current = previous ?? { state: null, draft: null };
+          if (current.state !== this.revision.state || current.draft !== this.revision.draft ||
+              (kind === 'state' && state !== this.revision.state)) throw new WriteConflict();
+          return { value: next, entries };
+        });
+        this.revision = next;
+      } catch (error) {
+        if (error instanceof WriteConflict) this.conflicted = true;
+        throw error;
+      }
+    });
+    this.queue = write.catch(() => {});
+    return write;
+  }
 }
 
 export function loadRadius(): number {
@@ -63,12 +85,4 @@ export interface Recovery {
 /** The state from just before the last import, so a wrong import can be undone from a file. */
 export async function loadRecovery(): Promise<Recovery | null> {
   return (await idbGet<Recovery>('recovery')) ?? null;
-}
-
-export function saveRecovery(r: Recovery): Promise<void> {
-  return idbSet('recovery', r);
-}
-
-export function saveImport(recovery: Recovery, courses: Course[], people: string[], log: LogEntry[]): Promise<void> {
-  return idbBatch([['recovery', recovery], ['courses', courses], ['people', people], ['log', log]]);
 }

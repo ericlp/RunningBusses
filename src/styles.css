@@ -1193,3 +1193,26 @@ button {
 .legend .l-NotPlanned { border-top-width: 3px; border-color: var(--status-unplanned); }
 .legend .l-NotCompleted { border-top-width: 5px; border-top-style: dashed; border-color: var(--status-planned); }
 .legend .l-Completed { border-top-width: 5px; border-color: var(--status-done); }
+.app:has(.write-conflict) {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.write-conflict {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg);
+  border: 2px solid currentColor;
+  z-index: 1000;
+}
+
+.write-conflict span {
+  min-width: 0;
+}
+
+.write-conflict button {
+  flex-shrink: 0;
+  max-width: 40%;
+  white-space: normal;
+}

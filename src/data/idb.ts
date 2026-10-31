@@ -1,6 +1,13 @@
 const DB = 'running-busses';
 const STORE = 'kv';
 
+function abort(tx: IDBTransaction): void {
+  try { tx.abort(); }
+  catch (error) {
+    if (!(error instanceof DOMException && error.name === 'InvalidStateError')) throw error;
+  }
+}
+
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB, 1);
@@ -22,6 +29,21 @@ export async function idbGet<T>(key: string): Promise<T | undefined> {
   });
 }
 
+export async function idbRead(keys: string[]): Promise<unknown[]> {
+  const db = await open();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE);
+    const values: unknown[] = [];
+    tx.oncomplete = () => { db.close(); resolve(values); };
+    tx.onabort = () => { db.close(); reject(tx.error); };
+    tx.onerror = () => reject(tx.error);
+    keys.forEach((key, index) => {
+      const request = tx.objectStore(STORE).get(key);
+      request.onsuccess = () => { values[index] = request.result; };
+    });
+  });
+}
+
 export async function idbSet(key: string, value: unknown): Promise<void> {
   return idbBatch([[key, value]]);
 }
@@ -37,7 +59,7 @@ export async function idbBatch(entries: [string, unknown][], deletes: string[] =
     try {
       for (const [key, value] of entries) store.put(value, key);
       for (const key of deletes) store.delete(key);
-    } catch (e) { tx.abort(); reject(e); }
+    } catch (e) { abort(tx); reject(e); }
   });
 }
 
@@ -56,7 +78,7 @@ export async function idbUpdate<T>(key: string, update: (previous: T | undefined
         store.put(next.value, key);
         for (const [k, value] of next.entries ?? []) store.put(value, k);
         for (const k of next.deletes ?? []) store.delete(k);
-      } catch (e) { tx.abort(); reject(e); }
+      } catch (e) { abort(tx); reject(e); }
     };
   });
 }

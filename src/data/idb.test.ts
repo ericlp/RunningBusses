@@ -1,7 +1,7 @@
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { idbBatch, idbGet, idbUpdate } from './idb';
-import { saveImport, type Recovery } from './store';
+import { UserStore, type Recovery } from './store';
 import type { Course } from '../domain/course';
 import type { LogEntry } from '../domain/log';
 
@@ -63,6 +63,19 @@ describe('real IndexedDB transactions', () => {
     expect(await idbGet('sibling')).toBe('old');
   });
 
+  it('preserves the original failure when a sibling write already aborted the transaction', async () => {
+    await idbBatch([['counter', 7], ['sibling', 'old']]);
+    const error = new DOMException('Interrupted', 'AbortError');
+    const put = IDBObjectStore.prototype.put;
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (this: IDBObjectStore, value, key) {
+      if (key === 'sibling') { this.transaction.abort(); throw error; }
+      return put.call(this, value, key);
+    });
+    await expect(idbUpdate('counter', () => ({ value: 8, entries: [['sibling', 'new']] }))).rejects.toBe(error);
+    expect(await idbGet('counter')).toBe(7);
+    expect(await idbGet('sibling')).toBe('old');
+  });
+
   it.each(['batch', 'update'] as const)('resolves %s only after transaction completion, not request success', async (operation) => {
     let settled = false;
     let complete = false;
@@ -103,6 +116,8 @@ describe('real IndexedDB transactions', () => {
       recovery: { savedAt: 'old', courses: [] }, courses: [{ id: 'old-course' }], people: ['Old Person'], log: [{ id: 'old-event' }],
     };
     await idbBatch(Object.entries(before));
+    const session = new UserStore();
+    await session.load();
     const succeeded: IDBValidKey[] = [];
     onPut((store, request, key) => {
       request.addEventListener('success', () => {
@@ -111,9 +126,13 @@ describe('real IndexedDB transactions', () => {
       });
     });
     const recovery: Recovery = { savedAt: 'new', courses: [] };
-    await expect(saveImport(recovery, [{ id: 'new-course' }] as Course[], ['New Person'], [{ id: 'new-event' }] as LogEntry[]))
+    await expect(session.save([
+      ['recovery', recovery], ['courses', [{ id: 'new-course' }] as Course[]],
+      ['people', ['New Person']], ['log', [{ id: 'new-event' }] as LogEntry[]],
+    ]))
       .rejects.toBeNull();
-    expect(succeeded).toEqual(['recovery', 'courses', 'people', 'log']);
+    expect(succeeded).toEqual(['user.revision', 'recovery', 'courses', 'people', 'log']);
+    expect(await idbGet('user.revision')).toBeUndefined();
     for (const [key, value] of Object.entries(before)) expect(await idbGet(key)).toEqual(value);
   });
 });

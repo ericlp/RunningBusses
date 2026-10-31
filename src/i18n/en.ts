@@ -188,6 +188,9 @@ export const en: Dict = {
 
   'toast.loadCourses': 'Could not read the saved courses. Changes will not be saved until this works.',
   'toast.saveDraft': 'Could not save the draft.',
+  'storage.conflict': 'Another tab changed the saved data or draft. This tab cannot save. Your draft remains visible here but is not saved. Close other tabs before reloading.',
+  'storage.reload': 'Reload saved data',
+  'storage.reloadConfirm': 'Reload the latest saved data? Unsaved changes in this tab will be lost, including the visible draft.',
   'toast.save': 'Could not save. The change was not made.',
   'toast.courseGoneUnsaved': 'The course no longer exists or is completed. The changes were not saved.',
   'toast.courseGone': 'The course no longer exists or is completed.',

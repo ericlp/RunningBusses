@@ -187,6 +187,9 @@ export const sv = {
 
   'toast.loadCourses': 'Kunde inte läsa sparade banor. Ändringar sparas inte förrän det fungerar.',
   'toast.saveDraft': 'Kunde inte spara utkastet.',
+  'storage.conflict': 'En annan flik ändrade sparade data eller utkastet. Den här fliken kan inte spara. Ditt utkast finns kvar här men är inte sparat. Stäng andra flikar innan du laddar om.',
+  'storage.reload': 'Ladda om sparade data',
+  'storage.reloadConfirm': 'Ladda om de senaste sparade uppgifterna? Osparade ändringar i den här fliken försvinner, inklusive det synliga utkastet.',
   'toast.save': 'Kunde inte spara. Ändringen gjordes inte.',
   'toast.courseGoneUnsaved': 'Banan finns inte längre eller är genomförd. Ändringarna sparades inte.',
   'toast.courseGone': 'Banan finns inte längre eller är genomförd.',

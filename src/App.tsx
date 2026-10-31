@@ -6,7 +6,7 @@ import { sendShareLink } from './components/shareLink';
 import { CourseCard } from './components/CourseCard';
 import type { FileMessage } from './components/shareFile';
 import { loadDataset, type CategoryData, type DataState } from './data/dataset';
-import { DEFAULT_RADIUS_M, loadCourses, loadDraft, loadLog, loadPeople, loadRadius, loadRecovery, saveCourses, saveLog, savePeople, saveImport, saveDraft, saveRadius, type Draft } from './data/store';
+import { DEFAULT_RADIUS_M, UserStore, WriteConflict, loadRadius, loadRecovery, saveRadius, type Draft } from './data/store';
 import {
   courseStats,
   legEnd,
@@ -159,6 +159,9 @@ export function App() {
   const [progressCategories, setProgressCategories] = useState<Category[]>(loadProgressCategories);
   useEffect(() => saveProgressCategories(progressCategories), [progressCategories]);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const userStore = useRef(new UserStore());
+  const persistedDraft = useRef<Draft | null>(null);
+  const [writeConflict, setWriteConflict] = useState(false);
   const [ready, setReady] = useState(false);
   const [radiusM, setRadiusM] = useState(loadRadius);
   const [mode, setMode] = useState<Mode>(initialView.mode);
@@ -217,8 +220,10 @@ export function App() {
         if (!cancelled) setInitialResolved(true);
       })
       .catch((e) => setError(String(e.message ?? e)));
-    Promise.all([loadCourses(), loadDraft(), loadPeople().catch(() => [] as string[]), loadLog().catch(() => [] as LogEntry[])])
-      .then(([c, d, p, lg]) => {
+    userStore.current.load()
+      .then(({ courses: c, draft: d, people: p, log: lg }) => {
+        if (cancelled) return;
+        persistedDraft.current = d;
         setCourses(c);
         setLog(lg);
         setStoredPeople(p);
@@ -269,7 +274,11 @@ export function App() {
   useEffect(() => {
     if (!ready) return;
     const empty = !draft || (draft.legs.length === 0 && draft.name === '');
-    saveDraft(empty ? null : draft).catch(() => setToast(t('toast.saveDraft')));
+    const next = empty ? null : draft;
+    if (next === persistedDraft.current) return;
+    void userStore.current.save([['draft', next]], 'draft').then(() => {
+      persistedDraft.current = next;
+    }).catch((error) => reportSaveError(error, 'toast.saveDraft'));
   }, [draft, ready]);
 
   useEffect(() => {
@@ -286,25 +295,29 @@ export function App() {
   }, [undo]);
 
   const people = useMemo(() => knownPeople(storedPeople, courses), [storedPeople, courses]);
+  const reportSaveError = (error: unknown, key: Key = 'toast.save') => {
+    if (error instanceof WriteConflict) setWriteConflict(true);
+    else setToast(t(key));
+  };
   const addPersonName = async (name: string): Promise<string[]> => {
     const next = addPerson(people, name);
     if (next.length === people.length) return people;
     try {
-      await savePeople(next);
+      await userStore.current.save([['people', next]]);
       setStoredPeople(next);
       return next;
-    } catch {
-      setToast(t('toast.save'));
+    } catch (error) {
+      reportSaveError(error);
       return people;
     }
   };
   const removePersonName = async (name: string) => {
     const next = storedPeople.filter((p) => p.toLowerCase() !== name.toLowerCase());
     try {
-      await savePeople(next);
+      await userStore.current.save([['people', next]]);
       setStoredPeople(next);
-    } catch {
-      setToast(t('toast.save'));
+    } catch (error) {
+      reportSaveError(error);
     }
   };
 
@@ -345,16 +358,19 @@ export function App() {
 
   const fitTo = (coords: [number, number][], topInset = 70) => setFit({ coords, seq: (fit?.seq ?? 0) + 1, topInset });
 
-  const commit = async (next: Course[]): Promise<boolean> => {
+  const commit = async (next: Course[], nextLog?: LogEntry[]): Promise<boolean> => {
     courseWriteVersion.current++;
     setCourseWrites((n) => n + 1);
     try {
-      await saveCourses(next);
+      const entries: [string, unknown][] = [['courses', next]];
+      if (nextLog) entries.push(['log', nextLog]);
+      await userStore.current.save(entries);
       coursesRef.current = next;
       setCourses(next);
+      if (nextLog) setLog(nextLog);
       return true;
-    } catch {
-      setToast(t('toast.save'));
+    } catch (error) {
+      reportSaveError(error);
       return false;
     } finally { setCourseWrites((n) => n - 1); }
   };
@@ -575,9 +591,12 @@ export function App() {
     courseWriteVersion.current++;
     setCourseWrites((n) => n + 1);
     try {
-      await saveImport({ savedAt: new Date().toISOString(), courses }, next, nextPeople, nextLog);
-    } catch {
-      setToast(t('toast.save'));
+      await userStore.current.save([
+        ['recovery', { savedAt: new Date().toISOString(), courses }],
+        ['courses', next], ['people', nextPeople], ['log', nextLog],
+      ]);
+    } catch (error) {
+      reportSaveError(error);
       return false;
     } finally { setCourseWrites((n) => n - 1); }
     coursesRef.current = next;
@@ -623,17 +642,10 @@ export function App() {
     }
     if (!confirm(t('confirm.uncomplete', { name: c.name }))) return;
     const now = new Date().toISOString();
-    if (await commit(courses.map((x) => (x.id === c.id ? { ...x, status: 'NotCompleted', completedAt: null, pinned: true, updatedAt: now } : x)))) {
-      const entry = makeEntry('uncompleted', c);
-      writeLog(addEntry(log, entry));
+    const entry = makeEntry('uncompleted', c);
+    if (await commit(courses.map((x) => (x.id === c.id ? { ...x, status: 'NotCompleted', completedAt: null, pinned: true, updatedAt: now } : x)), addEntry(log, entry))) {
       setUndo({ text: t('toast.uncompleted', { name: c.name }), course: c, entryId: entry.id });
     }
-  };
-
-  // the log is history only: a failed write must not block completing a course
-  const writeLog = (next: LogEntry[]) => {
-    setLog(next);
-    saveLog(next).catch(() => undefined);
   };
 
   const editRun = (c: Course) => setCompleting({ course: c, date: c.completedAt?.slice(0, 10) || today(), participants: c.participants ?? [], newName: '', editOnly: true });
@@ -655,11 +667,10 @@ export function App() {
     const now = new Date().toISOString();
     const ordered = people.filter((p) => participants.includes(p));
     const done = (x: Course): Course => ({ ...x, status: 'Completed', completedAt: date || today(), pinned: undefined, participants: ordered.length ? ordered : undefined, updatedAt: now });
-    if (await commit(courses.map((x) => (x.id === c.id ? done(x) : x)))) {
+    const entry = editOnly ? null : makeEntry('completed', done(c), new Date(now));
+    if (await commit(courses.map((x) => (x.id === c.id ? done(x) : x)), entry ? addEntry(log, entry) : undefined)) {
       setCompleting(null);
-      if (!editOnly) {
-        const entry = makeEntry('completed', done(c), new Date(now));
-        writeLog(addEntry(log, entry));
+      if (entry) {
         setUndo({ text: t('toast.completed', { name: c.name }), course: c, entryId: entry.id });
       }
     }
@@ -668,8 +679,7 @@ export function App() {
   const undoLast = async () => {
     if (!undo) return;
     const { course, entryId } = undo;
-    setUndo(null);
-    if (await commit(courses.map((x) => (x.id === course.id ? course : x)))) writeLog(removeEntry(log, entryId));
+    if (await commit(courses.map((x) => (x.id === course.id ? course : x)), removeEntry(log, entryId))) setUndo(null);
   };
 
   const shareCourse = async (c: Course) => {
@@ -784,6 +794,14 @@ export function App() {
           </button>
         </div>
       </header>
+      {writeConflict && (
+        <div className="write-conflict" role="alert">
+          <span>{t('storage.conflict')}</span>
+          <button className="chip" onClick={() => {
+            if (confirm(t('storage.reloadConfirm'))) location.reload();
+          }}>{t('storage.reload')}</button>
+        </div>
+      )}
       <main className="main">
         {error && !dataset ? (
           <div className="status">

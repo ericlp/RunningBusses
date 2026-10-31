@@ -55,6 +55,13 @@ Publication includes a schema-2 `data/catalog-manifest.json`, a content-addresse
 
 Courses live in the browser (IndexedDB); filters and sort order are remembered in localStorage. Use ⚙ → Säkerhetskopia to share a link (courses only) or export a file, and open the link or import the file with merge or replace on another device. A copy from before the last import can be downloaded.
 
+Multiple tabs do not merge edits automatically. Saving checks a browser-local
+revision atomically, including the shared draft, people and completion history.
+A stale tab refuses writes and keeps its draft visible, with a persistent warning.
+Close other tabs, then use **Reload saved data** to load the latest saved state;
+the confirmation warns that unsaved edits in this tab will be lost. Tabs running
+an older app version must be reloaded to participate in this protection.
+
 The app loads the complete lightweight catalogue and only the geometry needed by your filters, route link or shared courses. New visits load city buses only. Search, route counts and progress cover the full catalogue even before geometry is downloaded. Planning waits for all selected categories rather than suggesting from an incomplete pool. Open, unpinned courses fetch their current categories after the initial view; saved historical snapshots remain usable without those downloads.
 
 Used categories are automatically saved in IndexedDB. Settings lists availability and offers **Download all categories** to install one complete offline release. Downloads can be retried; a failed or interrupted refresh preserves the previous installation. New online on-demand data does not automatically refresh a complete offline installation. Offline fallback uses one coherent saved release and identifies older data. Browser storage can be evicted, and downloading route data does not prefetch map tiles. Storage failures are reported even if fetched routes remain usable in memory.

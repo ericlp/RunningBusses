@@ -188,6 +188,9 @@ export const fr: Dict = {
 
   'toast.loadCourses': 'Impossible de lire les parcours enregistrés. Les modifications ne seront pas enregistrées tant que cela ne fonctionne pas.',
   'toast.saveDraft': 'Impossible d’enregistrer le brouillon.',
+  'storage.conflict': 'Un autre onglet a modifié les données enregistrées ou le brouillon. Cet onglet ne peut plus enregistrer. Votre brouillon reste visible ici, mais n’est pas enregistré. Fermez les autres onglets avant de recharger.',
+  'storage.reload': 'Recharger les données',
+  'storage.reloadConfirm': 'Recharger les dernières données enregistrées ? Les modifications non enregistrées dans cet onglet seront perdues, y compris le brouillon visible.',
   'toast.save': 'Enregistrement impossible. La modification n’a pas été effectuée.',
   'toast.courseGoneUnsaved': 'Le parcours n’existe plus ou est terminé. Les modifications n’ont pas été enregistrées.',
   'toast.courseGone': 'Le parcours n’existe plus ou est terminé.',
