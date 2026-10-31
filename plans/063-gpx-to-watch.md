@@ -18,6 +18,12 @@ Goal: on a phone, one tap hands the course GPX to Garmin Connect (or any other w
 - Applies equally to the runnable GPX from [064](064-runnable-gpx.md) when that exists.
 - Out of scope: Garmin Connect API or Courses API (needs a partner agreement and a backend), FIT files, other vendors' APIs.
 
+## Open questions (defaults assumed until answered)
+
+1. Which phones and watch apps should be tested: your iPhone/Android model, Garmin Connect only, or also Strava/Coros/Suunto?
+2. When sharing is available, should the share sheet replace the download as the main action (default yes), or sit beside it?
+3. If Garmin Connect mishandles several segments, is a single joined segment with straight lines across gaps acceptable for the watch variant (default yes)?
+
 ## Tests
 
 - Unit: the watch variant joins segments correctly and keeps the waypoints.

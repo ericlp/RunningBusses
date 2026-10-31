@@ -23,6 +23,13 @@ PLAN.md listed pedestrian routing as out of scope. This plan brings in only this
 - `MapView.tsx`: draws the runnable overlay and the deviation highlights.
 - i18n: button, progress, deviation note, failure and attribution text in sv/en/fr.
 
+## Open questions (defaults assumed until answered)
+
+1. Is using the public FOSSGIS Valhalla server (fair use, sends route coordinates only) acceptable, or should we go straight to self-hosted build-time matching?
+2. May we contact the Valhalla maintainers about the app (their policy asks public apps to), and what client id/contact should be used?
+3. Should the runnable line be shown on the map only on request (default) or whenever a course is selected?
+4. Deviation threshold for highlighting: 50 m (default)?
+
 ## Tests
 
 - Unit: chunking, joining, deviation detection, fallback per leg, GPX output.

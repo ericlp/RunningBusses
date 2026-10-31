@@ -22,6 +22,13 @@ Goal: an x/y chart of altitude against distance for a selected line and for a wh
 - `src/data/dataset.ts`: load elevation assets on demand with the same IndexedDB ownership and release coherence as the category payloads.
 - i18n: chart labels, climb/descent, "no profile" and attribution text in sv/en/fr.
 
+## Open questions (defaults assumed until answered)
+
+1. Do you have, or can you create, a Geotorget account for Lantmäteriet grid 1+ access? If not, is Copernicus GLO-30 (noisier) acceptable as the source?
+2. Is a larger data build acceptable (raster download cached in `.cache/`, longer CI refresh), or should profiles cover only the original Gothenburg categories first?
+3. Show the profile for single lines as well as courses (default yes), or courses only?
+4. Should hilliness also be a sort/filter option in the list (default no, later plan)?
+
 ## Tests
 
 - Unit: encoding round trip, reversal, joining with gaps and manual legs, hysteresis, bridge interpolation on a synthetic dip, steepness validation.

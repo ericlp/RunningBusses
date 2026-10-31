@@ -21,6 +21,13 @@ Goal: "Dela bild" on a course makes a Strava-style image of the course and share
 - Share or download handled next to `shareLink.ts`.
 - i18n: button label, share title, "shared", "downloaded", error and attribution text in sv/en/fr.
 
+## Open questions (defaults assumed until answered)
+
+1. Image format: 4:5 portrait 1080 × 1350 (default), 9:16 story, or 1:1 square?
+2. Background: OSM tiles with plain fallback (default), or always plain?
+3. Show runners' names on the card (default yes), or keep cards anonymous?
+4. Card theme: always light (default) or follow the app theme?
+
 ## Tests
 
 - Unit: projection and zoom choice, tile list, text model (manual leg "minst", completed vs not completed, long names).

@@ -25,6 +25,14 @@ Goal: from a course, show a few casual places to eat near where it ends, suited 
 - UI: a "Lunch nära målet" chip on the course row and line card that opens a sheet with the list; selecting a place shows it on the map (`MapView`).
 - i18n: all labels, the "casual places" explanation, attribution and errors in sv/en/fr.
 
+## Open questions (defaults assumed until answered)
+
+1. Radius: 800 m widening to 1.5 km (default), or something else?
+2. Which time to check opening hours against: now (default), or a planned run date/time on the course?
+3. Is the casual-places heuristic right? Anything to always include (e.g. specific chains) or exclude (e.g. pubs serving lunch)?
+4. Include the Open-Meteo rain hint (default yes), sending only the end coordinate?
+5. Should starred favourites travel in share links as well as backups (default backups only)?
+
 ## Tests
 
 - Unit: classification (fine dining excluded, everyday cuisines included), ranking with/without rain, opening hours at given times, widening the radius, favourites in backup round trip.
