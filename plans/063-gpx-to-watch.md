@@ -1,6 +1,6 @@
 # 063 – Send GPX to a watch app
 
-Status: investigated; implementation pending. End-to-end Garmin handoff requires real-device checks.
+Status: sharing UI implemented and automatically validated. End-to-end Garmin import still requires the deferred real-device checks.
 
 Goal: offer GPX sharing alongside download, allowing the user to choose Garmin Connect when the operating system offers it.
 
@@ -47,3 +47,16 @@ The fixture files live in the investigation session's `files/` directory as `gar
 - Unit: file construction preserves geometry, segment breaks and waypoints.
 - e2e: stub `navigator.canShare`/`navigator.share` and check that the file is shared with the right name and type; without them, check the download and hint.
 - Manual: Android Samsung Internet, iPhone Chrome and iPhone Safari with Garmin Connect, recorded in this plan when done.
+
+## Implementation
+
+- Prepared GPX files use the existing exporter, filenames and MIME type. Share
+  appears beside Export GPX only when the actual file passes capability checks.
+- Native sharing starts directly from the tap. Cancellation is silent; other
+  failures are logged and reported, with Download retained. Handoff/download
+  messages do not claim import, delivery or persistence.
+- Garmin guidance and file-action messages are translated in all three languages.
+- `shareFile.test.ts` covers file preparation/capabilities/handoff semantics;
+  `e2e/gpx-share.mjs` checks activation, snapshot geometry, reversed segments,
+  unsupported sharing and downloads after cancellation/failure.
+- Typecheck, all unit tests, build and the complete browser journey suite passed.

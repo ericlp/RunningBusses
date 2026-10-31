@@ -15,6 +15,7 @@ import {
   type RouteInfo,
 } from '../domain/course';
 import { Icon } from './Icon';
+import { GpxActions } from './GpxActions';
 import { courseStart, directionsUrl } from '../domain/navigate';
 import { missingLineKeys } from '../domain/reconcile';
 import { categoryLabel, formatKm, tagLabel } from '../domain/filter';
@@ -86,14 +87,14 @@ interface CourseListProps {
   onToggleComplete: (c: Course) => void;
   onDelete: (c: Course) => void;
   onRefresh: (c: Course) => void;
-  onExportGpx: (c: Course) => void;
+  onMessage: (message: string) => void;
   onShare: (c: Course) => void;
   onEditRun: (c: Course) => void;
   /** Line keys currently in the dataset, to warn about lines that have disappeared. */
   lines: LineMetadata[];
 }
 
-export function CourseList({ courses, lines, onRefresh, onExportGpx, onShare, onEditRun, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
+export function CourseList({ courses, lines, onRefresh, onMessage, onShare, onEditRun, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
   const editing = courses.find((c) => c.id === draftEditingId);
   return (
     <div>
@@ -166,10 +167,7 @@ export function CourseList({ courses, lines, onRefresh, onExportGpx, onShare, on
                       <Icon name="share" />
                       {t('courses.share')}
                     </button>
-                    <button className="chip" onClick={() => onExportGpx(c)}>
-                      <Icon name="download" />
-                      {t('courses.gpx')}
-                    </button>
+                    <GpxActions course={c} onMessage={onMessage} />
                     <button className={`chip${c.status === 'Completed' ? '' : ' success'}`} onClick={() => onToggleComplete(c)}>
                       <Icon name={c.status === 'Completed' ? 'undo' : 'check'} />
                       {c.status === 'Completed' ? t('courses.markUndone') : t('courses.markDone')}

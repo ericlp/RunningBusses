@@ -55,6 +55,15 @@ button {
   outline-offset: 2px;
 }
 
+.gpx-actions {
+  flex-basis: 100%;
+  min-width: 0;
+}
+
+.gpx-actions p {
+  margin: 8px 0;
+}
+
 .app {
   display: grid;
   grid-template-rows: auto 1fr;

@@ -31,7 +31,6 @@ import { previewRefresh, reconcileCourses, refreshLegs } from './domain/reconcil
 import { legStops, lineStops, type StopPoint } from './domain/stops';
 import { addEntry, makeEntry, removeEntry, type LogEntry } from './domain/log';
 import { addPerson, knownPeople, loadProgressCategories, saveProgressCategories, toggleProgressCategory } from './domain/stats';
-import { courseToGpx, gpxFileName } from './domain/gpx';
 import { REPO_URL, Tour, type TourStep } from './components/Tour';
 import { BackupSection } from './components/Backup';
 import { prepareShare, rebuildShare, payloadFromHash, type ShareError, type Shared } from './domain/share';
@@ -673,15 +672,6 @@ export function App() {
     if (msg) setToast(msg);
   };
 
-  const exportGpx = (c: Course) => {
-    const url = URL.createObjectURL(new Blob([courseToGpx(c)], { type: 'application/gpx+xml' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = gpxFileName(c);
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const deleteCourse = async (c: Course) => {
     if (!confirm(t(c.status === 'Completed' ? 'confirm.deleteDone' : 'confirm.deleteOpen', { name: c.name }))) return;
     if (await commit(courses.filter((x) => x.id !== c.id))) setSelectedCourseId(null);
@@ -1133,7 +1123,7 @@ export function App() {
                   onToggleComplete={toggleComplete}
                   onDelete={deleteCourse}
                   onRefresh={refreshCourse}
-                  onExportGpx={exportGpx}
+                  onMessage={setToast}
                   onShare={shareCourse}
                   onEditRun={editRun}
                   lines={catalogue}
