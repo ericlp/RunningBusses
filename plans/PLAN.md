@@ -185,5 +185,6 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 
 ## Future todos
 
+- [061 – Shareable course card](061-course-card.md): todo; image of a course to share or download.
 - [052 – Start run mode](052-start-run.md): todo, design agreed; needs Västtrafik API credentials to test.
 - [048 – Västtrafik navigation to start](048-vasttrafik-navigation.md): shelved until a prefill link or the Planera Resa API (052) is available.
