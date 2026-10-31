@@ -1,6 +1,6 @@
 # 064 – Runnable GPX
 
-Status: todo.
+Status: investigated; local build-time architecture confirmed. Implementation pending.
 
 Goal: a GPX that follows the bus route as closely as a runner legally and pleasantly can, on pavements, cycle/foot paths and crossings, avoiding motorways, bus-only tunnels and other places pedestrians may not go. The bus route itself stays the reference for courses, distances and completion.
 
@@ -8,29 +8,44 @@ PLAN.md listed pedestrian routing as out of scope. This plan brings in only this
 
 ## Decisions
 
-- **Engine: Valhalla map matching** (`trace_route`, `costing: pedestrian`, `shape_match: map_snap`) on OpenStreetMap data. It moves the trace to parallel footways where they are mapped and goes around sections closed to pedestrians.
-- **Where it runs:** the public FOSSGIS server `valhalla1.openstreetmap.de`, called from the browser (it allows CORS). It is fair-use only, so requests are made only when the user asks for a runnable GPX for one course. Never prefetch or batch every route. Requests carry `X-Client-Id` with the site name, and we tell the maintainers about the app as their policy asks. Only the public route coordinates are sent; nothing about the user.
-- **Per leg, cached:** each line leg is matched separately (long legs in chunks with overlap, within the server's trace limits) and cached in IndexedDB by route key + geometry hash + direction, so other courses reuse them and they work offline once fetched. Entries live in their own IndexedDB store, separate from user records and transit data.
-- **Review before export:** the map shows the runnable line next to the bus route, with stretches that differ by more than 50 m highlighted, and the runnable distance next to the bus distance. If matching fails for a leg, that leg falls back to the bus geometry and is flagged. The user then exports (or shares, 063) the runnable GPX.
+- **Engine:** local Valhalla pedestrian map matching on OSM. Use `trace_attributes` with `shape_match: map_snap` to obtain geometry, matched/interpolated/unmatched points, discontinuity flags and edge attributes. `trace_route` is useful for narrative output but can put disconnected continuations in alternate routes; never assume the first returned shape represents the complete input.
+- **Where it runs:** the user chose local build-time Valhalla, not the FOSSGIS demo service. Use a pinned container version/digest and a cached Geofabrik Sweden PBF, approximately 901 MB on the investigation date. Crop with osmium only with a generous connected corridor around all required routes and detours; per-route narrow crops can create false routing failures. Bound CPU/memory/concurrency, benchmark the covered region before adding the full build to monthly CI, and record PBF hash/date, engine and policy version. No running routing backend, API key, public-server notification or route-coordinate upload is needed in the deployed app.
+- **Both directions:** match each route direction independently. Pedestrian access/crossings and matching can produce different paths; reversing a generated forward path is not sufficient. Cache builds by reference geometry hash, PBF hash, engine/policy and direction.
+- **Pedestrian access policy:** favour footways/sidewalks, use explicit highway/ferry exclusions, and post-validate every edge. A low `use_ferry` value is only a preference, not a ban; even exclusion options may permit endpoint exceptions. Reject ferries, motorways and non-pedestrian/private or unsupported edges including at the endpoints. Inspect source OSM tags by returned way ID when normalised edge attributes are insufficient. Do not claim that a road-centreline match automatically models its sidewalk.
+- **Detours:** matching points inside a prohibited tunnel/highway can fail rather than discover the correct long detour. Generate a candidate pedestrian route between bracketing safe anchors for unmatched spans, then validate continuity, access and deviation against the reference. Keep unresolved spans explicitly unavailable; do not enlarge matching radii indefinitely or accept unrelated shortcuts merely to obtain a result.
+- **Publication/client:** use [062's optional route-extras sidecar](062-elevation-profile.md), with `extras/runnable/<category>.<hash>.json` assets and per-route/direction `available` or reasoned `unavailable` records. Load only when requested and promote manifest/payload availability atomically. Bind to exact snapshot geometry; do not use current generated geometry for historical legs with a different hash.
+- **Review before export:** the map shows the runnable line next to the bus route, with stretches that differ by more than 50 m highlighted, and the runnable distance next to the bus distance. If a leg cannot be routed for pedestrians, block runnable export and identify the failed leg; the original bus-reference GPX remains available as a separate action. Never label bus-geometry fallback as runnable. Mapped pedestrian access is not a safety guarantee; review remains necessary. Manual legs and ferry crossings must be reported explicitly rather than silently omitted from a supposedly complete runnable course.
 - **Course distance and completion are unchanged.** Runnable geometry is never stored in course snapshots, backups or share links.
-- **Attribution:** "© OpenStreetMap contributors (ODbL), routing by Valhalla/FOSSGIS" in the GPX metadata and in About.
-- **Fallback / later:** if the public server is unreliable or the policy does not fit, a later plan can precompute at data-build time with a local Valhalla and a Sweden OSM extract and publish runnable geometry as another on-demand asset. Not part of this plan.
+- **Inter-leg gaps:** per-line assets do not supply a verified pedestrian connection between course legs. Preserve those as track breaks and label them in the review, never draw/export invented straight-line connectors as runnable paths. Do not promise a continuous watch course until Garmin's multi-segment handling is established. Manual legs and ferry legs block a complete runnable-course export unless separately resolved.
+- **Attribution:** "© OpenStreetMap contributors, ODbL; routing by Valhalla" in GPX metadata, review and About. Include source/provenance and the ODbL obligations for published derived route data. Do not credit FOSSGIS for a locally generated result.
 
 ## Design sketch
 
-- `src/domain/runnable.ts` (pure): chunking with overlap, joining matched chunks, deviation detection against the bus route, distance, GPX writing (reuses `gpx.ts`).
-- `src/data/valhalla.ts`: thin client with mockable `fetch`, timeouts, one request at a time, cache.
+- `scripts/transit/runnable.ts`: local engine calls, source-edge validation, safe-anchor detour candidates, build cache and publication.
+- `src/domain/runnable.ts` (pure): direction/geometry identity, discontinuity and deviation validation, review distances and GPX assembly reusing `gpx.ts`.
+- `src/data/routeExtras.ts`: the shared optional loader from 062; no production browser Valhalla client.
 - `MapView.tsx`: draws the runnable overlay and the deviation highlights.
 - i18n: button, progress, deviation note, failure and attribution text in sv/en/fr.
 
-## Open questions (defaults assumed until answered)
+## Confirmed choices and technical checks
 
-1. Is using the public FOSSGIS Valhalla server (fair use, sends route coordinates only) acceptable, or should we go straight to self-hosted build-time matching?
-2. May we contact the Valhalla maintainers about the app (their policy asks public apps to), and what client id/contact should be used?
-3. Should the runnable line be shown on the map only on request (default) or whenever a course is selected?
-4. Deviation threshold for highlighting: 50 m (default)?
+- Confirmed after comparison: local build-time engine and published prepared routes.
+- Confirmed: any failed leg blocks runnable export; original GPX stays available.
+- Proposed first-version defaults: show the overlay on request and highlight deviations over 50 m.
+- A pinned Valhalla 3.9.1 container built a 1.83 MB Gothenburg OSM research extract and served a responsive local `/status`. Digest used: `sha256:4fd114eb1d26b8fc2f43bcb3df234c1b63a0bf13c277405e5943d5361dc575de` (recheck architecture/version when implementing).
+- Real line 18's 74-point central section matched with zero unmatched points and zero discontinuity flags in both directions. Outputs were approximately 1.984 km and 1.995 km, with maximum trace offset 12.91 m, using roads, footways, paths and pedestrian crossings; no motorway/ferry edges were returned. This proves a local candidate workflow, not whole-network or safety correctness.
+- An uncovered/distant trace returned explicit HTTP 400/error 172 ("Exceeded breakage distance"), confirming failure must be represented rather than replaced with bus geometry.
+- FOSSGIS comparison: its terms cap routing to one request/second, restrict high-traffic/commercial-core use, require public contact/attribution, and its project asks for notification plus `X-Client-Id`. No notification was sent. These constraints are irrelevant to the selected local runtime-free architecture.
+
+## Sources (checked 2026-10-31)
+
+- [Valhalla matching: discontinuities, matched points and edge attributes](https://valhalla.github.io/valhalla/api/map-matching/).
+- [Pedestrian options and exclusion endpoint caveats](https://valhalla.github.io/valhalla/api/route/api-reference/).
+- [Official container/build instructions](https://github.com/valhalla/valhalla/blob/3.9.1/docker/README.md).
+- [Sweden source extract](https://download.geofabrik.de/europe/sweden.html).
+- [FOSSGIS service terms, comparison only](https://www.fossgis.de/arbeitsgruppen/osm-server/nutzungsbedingungen/).
 
 ## Tests
 
-- Unit: chunking, joining, deviation detection, fallback per leg, GPX output.
-- e2e `e2e/runnable.mjs` with a mocked Valhalla response: overlay drawn, distances shown, export contains the matched points, offline uses cache, failure falls back and flags the leg. No real server calls in CI.
+- Unit/build: independent directions, matched/interpolated/unmatched inputs, alternate/disconnected output, access restrictions at endpoints, parallel sidewalks, long motorway/tunnel detours, stale cache identity, historical snapshots and explicit unavailable records. Include manual/ferry legs and gap-preserving GPX.
+- e2e `e2e/runnable.mjs` with static extra-asset fixtures: overlay, distances, exact exported points, offline cached results, a failed leg blocking runnable export while original GPX remains available, and no runtime routing requests. Fixture tests must not call public routing servers.

@@ -58,7 +58,7 @@ Sources: Scope list <https://sv.wikipedia.org/wiki/Busstrafik_i_G%C3%B6teborg#St
 
 ### Later and out of scope
 - Out of scope: archiving old line sets when Västtrafik renumbers; live bus positions or timetables, pedestrian routing, accounts, per-person completion, live sync between devices, offline map tiles.
-- Correction: later change plans brought per-person completion ([038](038-people.md)), viewed-tile offline caching ([041](041-offline-tiles.md)) and planned live bus positions ([052](052-start-run.md)) into scope.
+- Correction: later change plans brought per-person completion ([038](038-people.md)), viewed-tile offline caching ([041](041-offline-tiles.md)), planned live bus positions ([052](052-start-run.md)) and planned pedestrian GPX export ([064](064-runnable-gpx.md)) into scope. Free-form pedestrian routing remains out of scope.
 
 ## User experience
 
@@ -186,10 +186,10 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 
 ## Future todos
 
-- [061 – Shareable course card](061-course-card.md): todo; image of a course to share or download.
-- [062 – Elevation profile](062-elevation-profile.md): todo; build-time altitude profiles from Lantmäteriet's ground model, chart for lines and courses.
-- [063 – Send GPX to a watch app](063-gpx-to-watch.md): todo; share sheet hand-off to Garmin Connect, needs real-device testing.
-- [064 – Runnable GPX](064-runnable-gpx.md): todo; bus route snapped to the walking network with Valhalla for export.
-- [065 – Lunch after the run](065-lunch-after-run.md): todo; casual places to eat near the course end from OpenStreetMap.
+- [061 – Shareable course card](061-course-card.md): investigated, implementation pending; portrait PNG with viewed-map tiles or an explicit route-only fallback.
+- [062 – Elevation profile](062-elevation-profile.md): investigated, implementation pending; build-time 1 m CC BY terrain profiles for lines and courses; authorised access/sampling deferred.
+- [063 – Send GPX to a watch app](063-gpx-to-watch.md): investigated, implementation pending; capability-based Garmin file sharing/download; real-phone import checks deferred until the UI exists.
+- [064 – Runnable GPX](064-runnable-gpx.md): investigated, implementation pending; local build-time Valhalla, independently prepared directions and explicit unavailable legs; full-region validation still required.
+- [065 – Lunch after the run](065-lunch-after-run.md): investigated, implementation pending; live Private.coffee OSM queries with no billing and weekly-hours support; API delivery/CORS remain unverified.
 - [052 – Start run mode](052-start-run.md): todo, design agreed; needs Västtrafik API credentials to test.
 - [048 – Västtrafik navigation to start](048-vasttrafik-navigation.md): shelved until a prefill link or the Planera Resa API (052) is available.

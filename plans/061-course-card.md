@@ -1,34 +1,42 @@
 # 061 – Shareable course card
 
-Status: todo.
+Status: investigated; implementation pending. Design confirmed on 2026-10-31.
 
 Goal: "Dela bild" on a course makes a Strava-style image of the course and shares it (Web Share with files) or downloads it as a PNG. Works offline and without a backend.
 
 ## Decisions
 
 - **Content:** the course name, the route drawn over the map, total distance (with "minst" if a manual leg has no distance), line badges in running order, start and end stop names, status, completion date and runners for completed courses, and the app name. No personal data beyond what the user already put on the course.
-- **Format:** 1080 × 1350 PNG (4:5 portrait, fits feeds and stories), drawn on a `<canvas>` at that size whatever the screen. Light theme colours and the Västtrafik palette, so a card looks the same from every device.
-- **Map background:** OSM tiles for the course's bounding box at the largest zoom that fits, fetched with the same URL and `crossOrigin` as `MapView`, so the service worker usually serves them from cache and the canvas is not tainted. "© OpenStreetMap contributors" is drawn on the image. If any tile fails (offline, not cached) the card uses a plain background with the route only; never block on tiles. It is at most about 12 tiles per card, made only on explicit user action, which keeps within the OSM tile policy (no prefetch).
+- **Format:** 1080 × 1350 PNG (4:5 portrait), drawn on a `<canvas>` at that size whatever the screen. Follow the app's resolved light/dark theme and use the Västtrafik palette.
+- **Map background:** open a visible, interactive map preview fitted to the course snapshots. Use only the tiles actually loaded for this viewport; exporting must not fetch another area, zoom level or tile stack. A 540 × 400 logical-pixel map area can be scaled into the card's 1080 × 800 map area. At 256-pixel tile size this intersects at most 12 tiles. Draw readable "© OpenStreetMap contributors" attribution into the PNG; link to the copyright/licence page in the preview. The current OSM policy permits interactive viewport requests and cached revisits, but prohibits fetching unviewed tiles. This approach stays within that documented model without a second tile provider or API key.
+- **Fallback:** missing or unreadable tiles produce a clearly labelled route-only preview. Draw into a fresh canvas after a taint/export failure, rather than attempting to reuse a tainted canvas. Log the underlying failure and keep the route-only download usable.
 - **Route drawing:** each line leg is drawn in running direction (`orientedCoordinates`) in the line's colour (fixed tram colours, otherwise the app accent), with start and end markers. Gaps stay as breaks and manual legs are not drawn, as in GPX export (025).
-- **Sharing:** if `navigator.canShare({ files })` accepts the PNG, use `navigator.share({ files, title })`; otherwise download `<course-name>.png` (same file-name rule as `gpxFileName`). Cancelling the share sheet is not an error. Show "saved"/"shared" only after it succeeds.
-- **Where:** a "Dela bild" chip next to "Exportera GPX" on the course row, and in the line card's course actions (045). Disabled with a hint while the course's geometry categories are still loading (058).
+- **Sharing:** prepare the PNG and `File` in the preview, including waiting for fonts/images, then enable Share and Download actions. Invoke `navigator.share({ files, title })` directly from the later Share tap, with no preceding asynchronous work that could consume transient activation. Check `navigator.canShare({ files })` against the prepared file. Keep Download available and reuse the GPX filename stem. Cancelling is not an error; share resolution means handoff, not confirmed delivery to a destination app. A download action may say "download started", not claim that a file has been saved.
+- **Where:** a "Dela bild" chip next to "Exportera GPX" on the course row, and in the line card's course actions (045). Saved courses render from their immutable route snapshots, even if current dataset categories are unavailable or routes have changed. No rehydration of current geometry just to export an existing course.
 - Out of scope: choosing a template or theme, adding photos, elevation (see the separate profile idea), animated output.
 
 ## Design sketch
 
 - `src/domain/card.ts` (pure, tested): bounding box with padding, zoom choice for a given pixel size, Web Mercator projection to card pixels, tile list for the box, and the text model (title, distance string, badges, subtitle lines, truncation of long names and runner lists).
-- `src/components/courseCard.ts`: draws the model on a canvas (tiles, route, markers, text panel) and returns a `Blob`; the only browser-specific part. No Leaflet: projection comes from the domain code.
+- `src/components/courseCard.ts`: draws the model on a canvas (tiles, route, markers, text panel) and returns a `Blob`. `MapView.tsx` remains the sole Leaflet integration and exposes a typed snapshot of visible loaded tile images plus projection/bounds for the preview. No private Leaflet DOM traversal or DOM-screenshot dependency.
 - Share or download handled next to `shareLink.ts`.
-- i18n: button label, share title, "shared", "downloaded", error and attribution text in sv/en/fr.
+- i18n: preview/actions, share title, handoff/download-started messages, route-only fallback, errors and attribution text in sv/en/fr.
 
-## Open questions (defaults assumed until answered)
+## Confirmed choices and technical checks
 
-1. Image format: 4:5 portrait 1080 × 1350 (default), 9:16 story, or 1:1 square?
-2. Background: OSM tiles with plain fallback (default), or always plain?
-3. Show runners' names on the card (default yes), or keep cards anonymous?
-4. Card theme: always light (default) or follow the app theme?
+- Confirmed: 4:5 portrait, runners' names included, app theme, map background when permitted and available with route-only fallback.
+- Verified: the OSM policy permits viewed viewport requests/cached revisits, requires attribution and caching, and prohibits offline-area downloads and unviewed prefetch.
+- A HEAD probe of an existing standard tile returned `Access-Control-Allow-Origin: *` and image/cache headers. This is an observation, not a future availability guarantee.
+- A Chromium experiment produced an `image/png` with IHDR dimensions exactly 1080 × 1350. A CORS-readable mock tile exported successfully; a non-CORS image caused `SecurityError`, confirming the need for a fresh-canvas fallback.
+- Remaining acceptance check: real-phone PNG file sharing when the implementation exists. No secret/account is needed.
+
+## Sources (checked 2026-10-31)
+
+- [OSMF tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
+- [OSM attribution guidelines](https://osmfoundation.org/wiki/Licence/Attribution_Guidelines).
+- [Web Share specification: file validation and transient activation](https://www.w3.org/TR/web-share/).
 
 ## Tests
 
 - Unit: projection and zoom choice, tile list, text model (manual leg "minst", completed vs not completed, long names).
-- e2e `e2e/card.mjs` (added to `run.mjs`): create a course, press "Dela bild" with tile requests aborted, check that a PNG download of the expected size happens, and that the button is disabled while geometry is pending. Then with a stub tile route, check the image uses the tiles (pixel sample differs from the plain background).
+- e2e `e2e/card.mjs` (added to `run.mjs`): check exact PNG dimensions, both themes, attribution, names, manual-leg distance and historical snapshots without current geometry. Mock tile requests: verify capture does not request new tiles, an incomplete/tainted map falls back explicitly, and the fresh canvas exports. Check sharing uses a prepared file after a new tap, cancellation and failure retain Download, and regeneration invalidates the old file. No real OSM requests in CI.

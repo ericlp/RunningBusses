@@ -1,31 +1,49 @@
 # 063 – Send GPX to a watch app
 
-Status: todo. Needs testing on a real iPhone and Android phone with Garmin Connect installed.
+Status: investigated; implementation pending. End-to-end Garmin handoff requires real-device checks.
 
-Goal: on a phone, one tap hands the course GPX to Garmin Connect (or any other watch app) instead of downloading a file the user then has to find.
+Goal: offer GPX sharing alongside download, allowing the user to choose Garmin Connect when the operating system offers it.
 
 ## Findings
 
-- A web page cannot open Garmin Connect directly with a file; Garmin has no public URL scheme for importing courses. The supported route is the phone's share sheet or "open with": Garmin Connect accepts a GPX file shared to it and imports it as a course.
-- Web Share with files (`navigator.share({ files })`) is the only way a web page can reach the share sheet. Safari on iOS is expected to accept a `.gpx` file; Chrome on Android only allows a fixed list of file types (images, audio, video, PDF, plain text and a few more) and rejects `.gpx`. On Android the fallback is the normal download, then "Open" in the download notification, which offers Garmin Connect.
+- No documented public Garmin course-import deep link was found. Do not promise a direct launch/import or attempt an undocumented URL scheme. Garmin's import guidance describes opening/sharing an exported GPX file into Connect, choosing a course type and saving; the user still performs these steps.
+- File-sharing support and available target apps vary by browser, operating system and app version. Verify the actual GPX file with `navigator.canShare` and test real devices; do not assume support or rejection based on browser name.
+- Chromium's published Web Share extension/MIME allowlists omit `.gpx` and `application/gpx+xml`; PNG is included. This supports expecting a download fallback in Chromium-derived browsers, but does not establish Samsung Internet's or iPhone Chrome's actual behaviour. Do not rename GPX to `.txt` or spoof its MIME type to bypass an allowlist.
 
 ## Decisions
 
-- **Detect capability, not "phone".** No user-agent sniffing. If `navigator.canShare({ files: [gpxFile] })` is true, "Exportera GPX" becomes "Skicka till klockapp", opens the share sheet and keeps a small "Ladda ner fil" link for the plain download. Otherwise it downloads as today and, on touch devices, shows a one-line hint: "Öppna filen från nedladdningar och välj Garmin Connect."
+- **Detect capability, not "phone".** No user-agent sniffing. Keep Download GPX available and offer Share GPX beside it when `navigator.canShare({ files: [gpxFile] })` is true. Explain how to open the downloaded file in Garmin Connect, without promising it appears as a target.
 - The file is `application/gpx+xml` with the existing `gpxFileName`. Cancelling the share sheet is not an error.
-- **Garmin compatibility of the file.** Garmin Connect imports one track; check on a device how it handles several `trkseg` (current export, 025). If it joins them badly or drops all but the first, add a "watch" variant that writes one continuous segment, bridging gaps under `GAP_NOTE_THRESHOLD_M` and keeping larger gaps as straight lines marked in the waypoint descriptions. Keep the current multi-segment export as the download.
+- Generate the file before enabling Share; call `navigator.share` directly on a fresh tap. Keep Download available after cancellation/errors. Success means OS handoff, not Garmin import/save/sync. Explain that the standard export follows bus geometry and is not a verified running route.
+- **Garmin compatibility of the file.** Test handling of multiple `trkseg` (current export, 025). Do not silently join disconnected legs or invent traversable straight-line connectors. If a different format is needed, report findings and confirm that behaviour before changing export geometry.
 - Course type cannot be set from the file; Garmin asks for it on import. The hint text says to choose Running.
 - Applies equally to the runnable GPX from [064](064-runnable-gpx.md) when that exists.
 - Out of scope: Garmin Connect API or Courses API (needs a partner agreement and a backend), FIT files, other vendors' APIs.
 
-## Open questions (defaults assumed until answered)
+## Confirmed choices and technical checks
 
-1. Which phones and watch apps should be tested: your iPhone/Android model, Garmin Connect only, or also Strava/Coros/Suunto?
-2. When sharing is available, should the share sheet replace the download as the main action (default yes), or sit beside it?
-3. If Garmin Connect mishandles several segments, is a single joined segment with straight lines across gaps acceptable for the watch variant (default yes)?
+- Target app: Garmin Connect only.
+- Real-device matrix: Android Samsung Internet, iPhone Chrome and iPhone Safari.
+- Share GPX and Download GPX sit side by side.
+- Verify handoff, MIME acceptance, multi-segment handling and import results on each browser; browser automation cannot establish successful Garmin import.
+- No Garmin login/API secret is needed for file handoff. Do not request the user's Garmin password.
+- Investigation generated single- and two-segment reference files with the repository's actual `courseToGpx` exporter, not a substitute serializer. They are diagnostic bus-reference files, not safe-navigation advice.
+- The user chose to defer real-phone/import verification until the sharing UI exists. Keep that acceptance gate open; prepared files are not evidence of successful Garmin import.
+
+## Real-device acceptance matrix
+
+For Android Samsung Internet, iPhone Chrome and iPhone Safari record browser/OS/Connect versions, whether `canShare` accepts the actual file, whether Connect appears, import success, displayed distance, both leg shapes/direction and gap handling. Check download/open-with even when Share is unavailable. Send-to-watch is a separate user-controlled Garmin step.
+
+The fixture files live in the investigation session's `files/` directory as `garmin-single-segment.gpx` and `garmin-two-segments.gpx`; recreate them using the exporter if the session is unavailable. A supported browser API alone is not a passed Garmin test.
+
+## Sources (checked 2026-10-31)
+
+- [Garmin third-party course import support](https://support.garmin.com/en-GB/?faq=wKuZXCaZRP4mWPX5aRz5h5). Article identified via indexed support results; direct browser retrieval was blocked, so details still need device confirmation.
+- [Web Share specification](https://www.w3.org/TR/web-share/).
+- [Chromium's documented file-type allowlist](https://chromium.googlesource.com/chromium/src/+/main/third_party/blink/renderer/modules/webshare/FILE_TYPES.md).
 
 ## Tests
 
-- Unit: the watch variant joins segments correctly and keeps the waypoints.
+- Unit: file construction preserves geometry, segment breaks and waypoints.
 - e2e: stub `navigator.canShare`/`navigator.share` and check that the file is shared with the right name and type; without them, check the download and hint.
-- Manual: iOS Safari and Android Chrome with Garmin Connect, recorded in this plan when done.
+- Manual: Android Samsung Internet, iPhone Chrome and iPhone Safari with Garmin Connect, recorded in this plan when done.
