@@ -13,6 +13,27 @@ then run `mise exec -- npm run check` for the same validation pipeline as deploy
 Linux browser system dependencies may require administrator access. OS and hardware
 still differ between machines; test deadlines must not depend on their speed or clock alignment.
 
+### Development container
+
+With Docker and VS Code's **Dev Containers** extension installed, open this
+repository and choose **Dev Containers: Reopen in Container**. Setup installs
+the exact Node version from `mise.toml`, locked npm dependencies, Chromium and
+its Linux dependencies. Run `npm run check` in the container terminal, or
+`npm run dev -- --host 0.0.0.0` and open forwarded port 5173. Port 4173 is also
+forwarded, but must remain free when starting browser journeys.
+
+The container includes GitHub CLI, osmium and Docker-in-Docker for future
+local runnable-GPX preparation. It uses a dedicated nested Docker daemon,
+**not your host Docker socket**, but requires a privileged container and should
+only be opened for trusted code. Routing images, OSM downloads and route
+preparation are not started automatically. Secrets such as `.env` remain local
+workspace files; they are not copied into the image.
+
+Container `node_modules` lives in a separate named volume, so native packages
+do not interfere with host installs. The nested Docker feature also retains its
+own daemon volumes across rebuilds; deleting the container alone does not
+remove these caches.
+
 | Command | What |
 | --- | --- |
 | `npm run dev` | dev server |
@@ -27,7 +48,7 @@ Browser journeys run with **two isolated workers** by default and print
 per-journey durations. Use `npm run e2e -- --workers=1` for a serial run, or
 `npm run e2e -- courses backup` for selected journeys. `--workers=1..4` (or
 `E2E_WORKERS`) bounds concurrency. The runner starts its own preview on port
-4173, waits for readiness, rejects an occupied port and cleans up its processes.
+4173 on IPv4 loopback, waits for readiness, rejects an occupied port and cleans up its processes.
 Build first after changing application code. Ordinary UI journeys use small
 deterministic data and intercepted tiles; publication, offline and tile-cache
 journeys retain their specialized fixtures. Timer-specific journeys advance

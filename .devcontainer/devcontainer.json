@@ -1,0 +1,29 @@
+{
+  "name": "RunningBusses",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=runningbusses-node-modules-${devcontainerId},target=${containerWorkspaceFolder}/node_modules,type=volume"
+  ],
+  "runArgs": ["--shm-size=1g"],
+  "forwardPorts": [5173, 4173],
+  "portsAttributes": {
+    "5173": { "label": "Vite development" },
+    "4173": { "label": "Vite preview / browser journeys" }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}

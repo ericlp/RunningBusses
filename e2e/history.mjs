@@ -39,7 +39,12 @@ try {
   await page.click('.list li:has-text("Planerad") button');
   await page.waitForSelector('.line-card');
   await page.focus('.leaflet-container');
-  for (let n = 0; n < 6; n++) await page.keyboard.press('+');
+  for (let n = 0; n < 6; n++) {
+    await page.keyboard.press('+');
+    // Leaflet ignores another zoom until its 250 ms transition finishes.
+    await page.clock.runFor(300);
+    await page.locator('.leaflet-zoom-anim').waitFor({ state: 'detached' });
+  }
   await page.locator('.leaflet-tooltip.stop-label').first().waitFor();
   await page.click('.line-card button:text-is("Dela bana")');
   await page.waitForFunction(async () => (await navigator.clipboard.readText()).includes('#sync='));

@@ -51,7 +51,7 @@ async function main() {
   } catch (error) {
     if (error.name !== 'TypeError') throw error;
   }
-  const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', '4173', '--strictPort'], { stdio: ['ignore', 'ignore', 'inherit'] });
+  const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4173', '--strictPort'], { stdio: ['ignore', 'ignore', 'inherit'] });
   const children = new Set();
   let stopping = false;
   const stop = () => {

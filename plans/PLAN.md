@@ -194,6 +194,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [073 - Local and CI test parity](073-local-ci-test-parity.md): shared validation command and exact Node version, with deterministic course-card timeout testing.
 
 - [074 - Conservative multi-tab write protection](074-multi-tab-write-protection.md): atomic revision checks for saved state and shared drafts, with explicit conflict recovery.
+- [075 - Development container](075-devcontainer.md): mise-managed Node, Chromium, osmium and an isolated Docker-in-Docker daemon for app and runnable-GPX development.
 
 ## Future todos
 
