@@ -53,6 +53,12 @@ For reproducible loading measurements, build and start `npx vite preview --port 
 
 The address shows the current view: `#line=<key>` selects a line and zooms to it, `#mode=plan` opens the course list. Copy the address to share or bookmark it.
 
+## Course exports
+
+Course details keep **Export GPX** available and show **Share GPX** beside it when the browser accepts the actual file. Choose Garmin Connect if offered, or open the downloaded file with Connect; course type, import and watch sync are user-controlled Garmin steps. Browser sharing does not confirm Garmin import. Exports retain snapshot directions and segment breaks, not verified pedestrian routes.
+
+**Share image**, in course details or a line's course actions, prepares a 1080 × 1350 PNG in the app theme, including completed runners' names. Adjust the visible map preview first; capture uses only its loaded, visible tiles and embeds OSM attribution. Missing/unreadable tiles produce a labelled route-only image, including offline. Share or download the prepared PNG; changing the preview invalidates the old file.
+
 ## Plans
 
 Design and decisions are in [`plans/`](plans/PLAN.md), with one small plan per change.

@@ -6,6 +6,8 @@ import { linesNear } from '../domain/hit';
 import { splitByOverlap } from '../domain/overlap';
 import { boundsIntersect, pathBounds, type GeoBounds } from '../domain/geo';
 import { BORDER_PX, PAN_SECONDS, currentPanSpeed, useAppearance } from '../appearance';
+import { cardTiles, type CardPath, type CardViewport } from '../domain/card';
+import { t } from '../i18n';
 
 export type Tone = 'base' | 'planned' | 'done' | 'highlight' | 'candidate' | 'connector';
 
@@ -67,6 +69,106 @@ function rainbow(key: string, dark: boolean): string {
 }
 const RAINBOW_TONES: Tone[] = ['base', 'planned', 'done', 'candidate'];
 const toLatLngs = (c: [number, number][]) => c.map(([lon, lat]) => [lat, lon] as L.LatLngTuple);
+
+export interface CardMapSnapshot extends CardViewport {
+  tiles: { image: HTMLImageElement; x: number; y: number }[];
+  complete: boolean;
+  pending: boolean;
+  filter: string;
+}
+
+/** Only public tile events and currently intersecting tiles are used for export. */
+export function CourseMapPreview({ paths, start, end, onSnapshot }: {
+  paths: CardPath[];
+  start: [number, number] | null;
+  end: [number, number] | null;
+  onSnapshot: (snapshot: CardMapSnapshot | null) => void;
+}) {
+  const el = useRef<HTMLDivElement>(null);
+  const { resolved, mapStyle } = useAppearance();
+  useEffect(() => {
+    const m = L.map(el.current!, { zoomControl: true, attributionControl: true, fadeAnimation: false, zoomAnimation: false });
+    const coordinates = paths.flatMap((path) => path.coordinates);
+    if (!coordinates.length) {
+      onSnapshot({ width: 540, height: 400, zoom: 0, origin: [0, 0], tiles: [], complete: false, pending: false, filter: 'none' });
+      return () => m.remove();
+    }
+    m.fitBounds(L.latLngBounds(toLatLngs(coordinates)), { padding: [24, 24], maxZoom: 15, animate: false });
+    const layer = L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19, crossOrigin: true, keepBuffer: 0, updateWhenIdle: true });
+    const records = new Map<string, { image: HTMLImageElement; state: 'loading' | 'ready' | 'failed' }>();
+    const key = ({ x, y, z }: { x: number; y: number; z: number }) => `${z}/${x}/${y}`;
+    let moving = false;
+    let timedOut = false;
+    let deadline = 0;
+    const publish = () => {
+      if (moving) return;
+      const size = m.getSize();
+      if (!size.x || !size.y) { onSnapshot(null); return; }
+      const origin = m.getPixelOrigin().add(m.containerPointToLayerPoint([0, 0]));
+      const viewport: CardViewport = { width: size.x, height: size.y, zoom: m.getZoom(), origin: [origin.x, origin.y] };
+      const slots = cardTiles(viewport);
+      const tiles = slots.flatMap((slot) => {
+        const record = records.get(key(slot));
+        return record?.state === 'ready' && record.image.complete && record.image.naturalWidth
+          ? [{ image: record.image, x: slot.x * 256 - origin.x, y: slot.y * 256 - origin.y }] : [];
+      });
+      const pending = !timedOut && slots.some((slot) => !records.has(key(slot)) || records.get(key(slot))?.state === 'loading');
+      if (!pending) window.clearTimeout(deadline);
+      onSnapshot({
+        ...viewport, tiles, complete: tiles.length === slots.length,
+        pending,
+        filter: getComputedStyle(m.getPane('tilePane')!).filter,
+      });
+    };
+    const armDeadline = () => {
+      window.clearTimeout(deadline);
+      timedOut = false;
+      deadline = window.setTimeout(() => {
+        timedOut = true;
+        console.warn('Course card visible tile loading deadline reached');
+        publish();
+      }, 15000);
+    };
+    layer.on('tileloadstart', (event: L.TileEvent) => {
+      records.set(key(event.coords), { image: event.tile, state: 'loading' });
+      publish();
+    });
+    layer.on('tileload', (event: L.TileEvent) => {
+      records.set(key(event.coords), { image: event.tile, state: 'ready' });
+      publish();
+    });
+    layer.on('tileerror', (event: L.TileErrorEvent) => {
+      records.set(key(event.coords), { image: event.tile, state: 'failed' });
+      console.warn('Course card visible tile failed:', event.coords, event.error);
+      publish();
+    });
+    layer.on('tileunload', (event: L.TileEvent) => { records.delete(key(event.coords)); });
+    m.on('movestart zoomstart', () => { moving = true; onSnapshot(null); });
+    m.on('moveend', () => { moving = false; armDeadline(); publish(); });
+    for (const path of paths) {
+      if (path.color?.toLowerCase() === '#ffffff') L.polyline(toLatLngs(path.coordinates), { color: '#003f58', weight: 6, interactive: false }).addTo(m);
+      L.polyline(toLatLngs(path.coordinates), { color: path.color ?? css('--line'), weight: 4, interactive: false }).addTo(m);
+    }
+    for (const [point, color] of [[start, '#2e9e4f'], [end, '#d6342c']] as const) {
+      if (point) L.circleMarker([point[1], point[0]], { color: '#fff', weight: 2, radius: 6, fillColor: color, fillOpacity: 1, interactive: false }).addTo(m);
+    }
+    armDeadline();
+    layer.addTo(m);
+    publish();
+    const observer = new ResizeObserver(() => {
+      if (el.current?.clientWidth && (el.current.clientWidth !== m.getSize().x || el.current.clientHeight !== m.getSize().y)) m.invalidateSize({ animate: false, pan: false });
+    });
+    observer.observe(el.current!);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(deadline);
+      layer.off();
+      m.off();
+      m.remove();
+    };
+  }, [paths, start, end, onSnapshot, resolved, mapStyle]);
+  return <div className="course-card-map" ref={el} role="region" aria-label={t('courseCard.map')} />;
+}
 
 export function MapView({ layers, markers, stops, tappable, fit, onTap }: Props) {
   const el = useRef<HTMLDivElement>(null);

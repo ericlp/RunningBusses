@@ -1,6 +1,6 @@
 # 061 – Shareable course card
 
-Status: investigated; implementation pending. Design confirmed on 2026-10-31.
+Status: implemented and automatically validated. Native phone sharing remains a real-device acceptance check.
 
 Goal: "Dela bild" on a course makes a Strava-style image of the course and shares it (Web Share with files) or downloads it as a PNG. Works offline and without a backend.
 
@@ -18,7 +18,7 @@ Goal: "Dela bild" on a course makes a Strava-style image of the course and share
 ## Design sketch
 
 - `src/domain/card.ts` (pure, tested): bounding box with padding, zoom choice for a given pixel size, Web Mercator projection to card pixels, tile list for the box, and the text model (title, distance string, badges, subtitle lines, truncation of long names and runner lists).
-- `src/components/courseCard.ts`: draws the model on a canvas (tiles, route, markers, text panel) and returns a `Blob`. `MapView.tsx` remains the sole Leaflet integration and exposes a typed snapshot of visible loaded tile images plus projection/bounds for the preview. No private Leaflet DOM traversal or DOM-screenshot dependency.
+- `src/components/renderCourseCard.ts`: draws the model on a canvas (tiles, route, markers, text panel) and returns a `Blob`. `MapView.tsx` remains the sole Leaflet integration and exposes a typed snapshot of visible loaded tile images plus projection/bounds for the preview. No private Leaflet DOM traversal or DOM-screenshot dependency.
 - Share or download handled next to `shareLink.ts`.
 - i18n: preview/actions, share title, handoff/download-started messages, route-only fallback, errors and attribution text in sv/en/fr.
 
@@ -40,3 +40,25 @@ Goal: "Dela bild" on a course makes a Strava-style image of the course and share
 
 - Unit: projection and zoom choice, tile list, text model (manual leg "minst", completed vs not completed, long names).
 - e2e `e2e/card.mjs` (added to `run.mjs`): check exact PNG dimensions, both themes, attribution, names, manual-leg distance and historical snapshots without current geometry. Mock tile requests: verify capture does not request new tiles, an incomplete/tainted map falls back explicitly, and the fresh canvas exports. Check sharing uses a prepared file after a new tap, cancellation and failure retain Download, and regeneration invalidates the old file. No real OSM requests in CI.
+
+## Implementation
+
+- Course-list and line-card actions open a native modal dialog with keyboard/focus
+  handling. The visible map is fitted to snapshot legs; its responsive viewport
+  is at most 540 × 400 logical pixels. Only intersecting, loaded tiles from public
+  Leaflet events are captured, with no private map internals or additional fetch.
+- Preparing waits for fonts and the visible tile state. Tile loading has a
+  15-second bound; failures use an explicitly labelled route-only canvas. Security
+  errors retry on a fresh canvas; unrelated encoding errors remain errors with retry.
+- Map movement during preparation invalidates the result. Prepared PNGs replace
+  the interactive map, stopping further tile activity. Changing the preview
+  removes the old file before any new Share/Download action.
+- The 1080 × 1350 card keeps snapshot direction/colour, breaks, total-distance
+  semantics, completion date and names; white tram lines retain a dark outline.
+  Attribution is embedded and linked. PNG sharing reuses 063's prepared-file
+  helpers; filenames reuse the GPX stem and all labels are translated.
+- Automated journeys cover light/dark phone/desktop layouts, offline tile failure,
+  simulated canvas taint, encoder errors, absent file-sharing support, real PNG
+  dimensions, transient activation, cancellation/failure download fallback,
+  regeneration, both entry points and dialog accessibility.
+- Typecheck, 214 unit tests, production build and all 19 browser journeys passed.

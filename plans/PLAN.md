@@ -182,12 +182,12 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [058 - On-demand category data](058-on-demand-category-data.md): catalogue/category split, lazy geometry loading and explicit offline installation.
 - [059 - Tile cache reliability](059-tile-cache-reliability.md): local expiry metadata, stale HTTP/network fallback and storage-safe tile display.
 - [060 - Västtrafik ferries](060-vasttrafik-ferries.md): public static-feed ferries, on-demand geometry and optional progress, preserving older offline releases.
+- [061 – Shareable course card](061-course-card.md): snapshot-based portrait PNG, viewed-map capture with explicit route-only fallback, prepared sharing/download, names and app theme.
 - [063 – Send GPX to a watch app](063-gpx-to-watch.md): prepared capability-based file sharing beside download, with Garmin guidance; real-phone import acceptance remains pending.
 - [066 - Deterministic category retry journey](066-category-retry-journey.md): wait for failed loading before restoring the network and assert an explicit retry request.
 
 ## Future todos
 
-- [061 – Shareable course card](061-course-card.md): investigated, implementation pending; portrait PNG with viewed-map tiles or an explicit route-only fallback.
 - [062 – Elevation profile](062-elevation-profile.md): investigated, implementation pending; build-time 1 m CC BY terrain profiles for lines and courses; authorised access/sampling deferred.
 - [064 – Runnable GPX](064-runnable-gpx.md): investigated, implementation pending; local build-time Valhalla, independently prepared directions and explicit unavailable legs; full-region validation still required.
 - [065 – Lunch after the run](065-lunch-after-run.md): investigated, implementation pending; live Private.coffee OSM queries with no billing and weekly-hours support; API delivery/CORS remain unverified.

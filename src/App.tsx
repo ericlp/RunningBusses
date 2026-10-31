@@ -3,6 +3,7 @@ import { MapView, type Fit, type MapLayer, type MapMarker, type Tone } from './c
 import { BuilderPanel, BuilderStrip, CourseList, LineCard, SplitDialog } from './components/Courses';
 import { StatsPanel } from './components/Stats';
 import { sendShareLink } from './components/shareLink';
+import { CourseCard } from './components/CourseCard';
 import { loadDataset, type CategoryData, type DataState } from './data/dataset';
 import { DEFAULT_RADIUS_M, loadCourses, loadDraft, loadLog, loadPeople, loadRadius, loadRecovery, saveCourses, saveLog, savePeople, saveImport, saveDraft, saveRadius, type Draft } from './data/store';
 import {
@@ -169,6 +170,7 @@ export function App() {
   useEffect(() => saveSort(sortBy), [sortBy]);
   const [selectedKey, setSelectedKey] = useState<string | null>(initialView.line);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [cardCourseId, setCardCourseId] = useState<string | null>(null);
   const [chooser, setChooser] = useState<ChooserItem[] | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   useEffect(() => {
@@ -749,6 +751,7 @@ export function App() {
     setSyncTick((n) => n + 1);
   };
   const activeFilters = Number(!sameCategories(filters.categories, defaultFilters.categories)) + Number(filters.status !== defaultFilters.status) + filters.tags.length + Number(filters.minKm !== null || filters.maxKm !== null);
+  const cardCourse = courses.find((course) => course.id === cardCourseId);
 
   return (
     <div className="app">
@@ -1124,6 +1127,7 @@ export function App() {
                   onDelete={deleteCourse}
                   onRefresh={refreshCourse}
                   onMessage={setToast}
+                  onCourseCard={(course) => setCardCourseId(course.id)}
                   onShare={shareCourse}
                   onEditRun={editRun}
                   lines={catalogue}
@@ -1141,6 +1145,7 @@ export function App() {
                         const c = courses.find((x) => x.id === routeInfo(selected.key, courses).courseId);
                         if (c) void shareCourse(c);
                       }}
+                      onCourseCard={() => setCardCourseId(routeInfo(selected.key, courses).courseId)}
                     />}
                   <div className="field">
                     <input type="search" placeholder={t('search.placeholder')} aria-label={t('search.placeholder')} value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -1204,6 +1209,7 @@ export function App() {
         )}
         {tour && <Tour onStep={onTourStep} onClose={closeTour} />}
 
+        {cardCourse && <CourseCard course={cardCourse} onClose={() => setCardCourseId(null)} />}
         {showSettings && dataset && (
           <div className="modal-back" onClick={() => setShowSettings(false)}>
             <div className="modal" role="dialog" aria-modal="true" aria-label={t('settings.title')} onClick={(e) => e.stopPropagation()}>

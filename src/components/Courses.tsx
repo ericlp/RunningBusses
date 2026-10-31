@@ -24,7 +24,7 @@ import { badgeStyle } from '../domain/color';
 import type { Line, LineMetadata } from '../domain/types';
 import { useState } from 'react';
 
-export function LineCard({ line, info, onClose, onShareCourse }: { line: Line; info: RouteInfo; onClose: () => void; onShareCourse?: () => void }) {
+export function LineCard({ line, info, onClose, onShareCourse, onCourseCard }: { line: Line; info: RouteInfo; onClose: () => void; onShareCourse?: () => void; onCourseCard?: () => void }) {
   const [lon, lat] = line.coordinates[0];
   return (
     <article className="line-card" aria-label={t('card.aria', { label: lineLabel(line) })}>
@@ -69,6 +69,7 @@ export function LineCard({ line, info, onClose, onShareCourse }: { line: Line; i
             {t('courses.share')}
           </button>
         )}
+        {info.courseId && onCourseCard && <button className="chip" onClick={onCourseCard}>{t('courseCard.button')}</button>}
       </div>
       <p className="via">{t('card.via', { stops: line.via.filter((_, i) => i % Math.ceil(line.via.length / 6) === 0).join(', ') })}</p>
     </article>
@@ -88,13 +89,14 @@ interface CourseListProps {
   onDelete: (c: Course) => void;
   onRefresh: (c: Course) => void;
   onMessage: (message: string) => void;
+  onCourseCard: (course: Course) => void;
   onShare: (c: Course) => void;
   onEditRun: (c: Course) => void;
   /** Line keys currently in the dataset, to warn about lines that have disappeared. */
   lines: LineMetadata[];
 }
 
-export function CourseList({ courses, lines, onRefresh, onMessage, onShare, onEditRun, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
+export function CourseList({ courses, lines, onRefresh, onMessage, onCourseCard, onShare, onEditRun, selectedId, draftLegs, draftEditingId, onSelect, onCreate, onEdit, onToggleComplete, onDelete }: CourseListProps) {
   const editing = courses.find((c) => c.id === draftEditingId);
   return (
     <div>
@@ -168,6 +170,7 @@ export function CourseList({ courses, lines, onRefresh, onMessage, onShare, onEd
                       {t('courses.share')}
                     </button>
                     <GpxActions course={c} onMessage={onMessage} />
+                    <button className="chip" onClick={() => onCourseCard(c)}>{t('courseCard.button')}</button>
                     <button className={`chip${c.status === 'Completed' ? '' : ' success'}`} onClick={() => onToggleComplete(c)}>
                       <Icon name={c.status === 'Completed' ? 'undo' : 'check'} />
                       {c.status === 'Completed' ? t('courses.markUndone') : t('courses.markDone')}
