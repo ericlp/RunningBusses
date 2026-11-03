@@ -13,6 +13,7 @@ on:
 permissions:
   contents: write
   actions: write
+  issues: write
 
 concurrency:
   group: refresh-transit-data
@@ -31,13 +32,15 @@ jobs:
       - name: Remember the published data
         run: cp public/data/lines.json "$RUNNER_TEMP/previous-lines.json"
       - name: Download the feed and build the dataset
-        run: npm run data
+        shell: bash
+        run: npm run data 2>&1 | tee "$RUNNER_TEMP/transit-build.log"
         env:
           TRAFIKLAB_API_KEY: ${{ secrets.TRAFIKLAB_API_KEY }}
       - name: Build optional Copernicus elevation profiles
         run: npm run data:elevation
       - name: Validate (fails the job, and nothing is published, on errors)
-        run: npm run data:validate -- --previous="$RUNNER_TEMP/previous-lines.json"
+        shell: bash
+        run: npm run data:validate -- --previous="$RUNNER_TEMP/previous-lines.json" 2>&1 | tee "$RUNNER_TEMP/transit-validation.log"
         env:
           ALLOW_REMOVAL: ${{ inputs.allow_removal && '1' || '0' }}
       - name: Commit and deploy if the line data changed
@@ -56,3 +59,45 @@ jobs:
           git commit -m "Refresh transit data $(date -u +%Y-%m-%d)"
           git push
           gh workflow run deploy.yml --ref "${{ github.ref_name }}"
+      - name: Save review evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transit-refresh-review
+          include-hidden-files: true
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            .cache/route-audit.json
+            .cache/vt/feed_info.txt
+            .cache/vt/routes.txt
+            .cache/vt/trips.txt
+            .cache/vt/stops.txt
+            .cache/vt/stop_times.txt
+            .cache/vt/calendar.txt
+            .cache/vt/calendar_dates.txt
+            .cache/vt/shapes.txt
+            .cache/vt/frequencies.txt
+            .cache/vt/line-info.json
+            public/data/lines.json
+            ${{ runner.temp }}/previous-lines.json
+            ${{ runner.temp }}/transit-build.log
+            ${{ runner.temp }}/transit-validation.log
+      - name: Notify that the refresh needs review
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REVIEW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REVIEW_OWNER: ${{ github.repository_owner }}
+        run: |
+          title="Transit refresh needs review"
+          body="$RUNNER_TEMP/transit-review-notification.md"
+          printf '@%s: [Transit refresh failed](%s). Nothing was published by a failed build or validation.\n\nReview the failed step and job summary. Download the transit-refresh-review artifact for route, trip, stop, service-date and geometry evidence.\n\n- Unknown routes: confirm public eligibility from an official source before adding an exact auditedPublicBuses approval.\n- Removed keys: review missing routes and changed return variants; use allow_removal=true only after confirmation.\n- Other failures: inspect the job logs; no classification or removal guard should be bypassed.\n' "$REVIEW_OWNER" "$REVIEW_RUN_URL" > "$body"
+          number="$(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq 'map(select(.title == "Transit refresh needs review")) | .[0].number // empty')"
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body-file "$body"
+          else
+            gh issue create --title "$title" --body-file "$body"
+          fi

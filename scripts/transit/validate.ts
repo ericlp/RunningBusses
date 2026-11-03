@@ -72,3 +72,25 @@ export function formatReport(r: Report, next: Dataset): string {
   for (const w of r.warnings) out.push(`- ⚠️ ${w}`);
   return out.join('\n') + '\n';
 }
+
+export function formatRemovedRoutes(next: Dataset, previous: Dataset | null): string {
+  if (!previous) return '';
+  const after = new Set(next.lines.map((l) => l.key));
+  const removed = previous.lines.filter((l) => !after.has(l.key));
+  if (!removed.length) return '';
+  const cell = (value: string) => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;').replaceAll('|', '&#124;').replace(/[\r\n]/g, ' ');
+  return [
+    '## Removed route keys to review', '',
+    '| Key | Number | Previous endpoints | Remaining base route |',
+    '| --- | --- | --- | --- |',
+    ...removed.map((l) => {
+      const base = l.key.endsWith('r') ? l.key.slice(0, -1) : l.key;
+      const remaining = next.lines.find((n) => n.key === base || n.key === `${base}r`);
+      return `| ${cell(l.key)} | ${cell(l.number)} | ${cell(`${l.from} - ${l.to}`)} | ${remaining ? cell(`${remaining.key}: ${remaining.from} - ${remaining.to}`) : 'None'} |`;
+    }),
+    '',
+    'Review absent routes and changed return variants against the feed. If these removals are expected, manually dispatch **Refresh transit data** with **allow_removal=true**.',
+    'Existing courses retain their snapshots; accepting removal does not delete user history.', '',
+  ].join('\n');
+}

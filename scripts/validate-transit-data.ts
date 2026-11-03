@@ -1,6 +1,6 @@
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import type { Dataset } from '../src/domain/types';
-import { formatReport, validateDataset } from './transit/validate';
+import { formatRemovedRoutes, formatReport, validateDataset } from './transit/validate';
 import { dirname } from 'node:path';
 import { validateSplitAssets } from './transit/validate-split';
 import { validateElevationSidecar } from './transit/elevation';
@@ -24,7 +24,7 @@ if (existsSync(`${dirname(nextPath)}/route-extras-manifest.json`)) {
     report.errors.push(`Elevation sidecar: ${e instanceof Error ? e.message : e}`);
   }
 }
-const text = formatReport(report, next);
+const text = formatReport(report, next) + formatRemovedRoutes(next, previous);
 console.log(text);
 if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
 process.exit(report.errors.length ? 1 : 0);

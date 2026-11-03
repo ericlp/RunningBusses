@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Dataset, Line } from '../../src/domain/types';
-import { validateDataset } from './validate';
+import { formatRemovedRoutes, validateDataset } from './validate';
 import { pathLengthM } from '../../src/domain/geo';
 
 const line = (key: string, extra: Partial<Line> = {}): Line => ({
@@ -22,6 +22,20 @@ describe('validateDataset', () => {
     const prev = ds([line('1'), line('2')]);
     expect(validateDataset(ds([line('1')]), prev, opts).errors[0]).toMatch(/removed: 2/);
     expect(validateDataset(ds([line('1')]), prev, { ...opts, allowRemoval: true }).errors).toEqual([]);
+  });
+  it('reports removed keys with old endpoints and retained base routes without weakening the removal guard', () => {
+    const previous = ds([
+      line('vt.1'), line('vt.1r', { number: '1', from: 'Old return', to: 'Old terminus' }),
+      line('vt.2', { number: '2', from: 'Absent start', to: 'Absent end' }),
+    ]);
+    const next = ds([line('vt.1', { from: 'New start', to: 'New end' })]);
+    const text = formatRemovedRoutes(next, previous);
+    expect(text).toContain('| vt.1r | 1 | Old return - Old terminus | vt.1: New start - New end |');
+    expect(text).toContain('| vt.2 | 2 | Absent start - Absent end | None |');
+    expect(text).toContain('allow_removal=true');
+    expect(validateDataset(next, previous, opts).errors).toContainEqual(expect.stringMatching(/Lines removed/));
+    expect(formatRemovedRoutes(next, null)).toBe('');
+    expect(formatRemovedRoutes(next, next)).toBe('');
   });
   it('warns about moved ends', () => {
     const moved = line('1', { coordinates: [[11.91, 57.7], [11.91, 57.71]] });

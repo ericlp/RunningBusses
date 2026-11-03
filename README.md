@@ -75,6 +75,17 @@ precedence, including restrictions. The initial approvals cover the new Borås
 lines 9 and 10, announced for 1 April 2027. Their future-only service is included
 under the existing full-feed-period policy, not treated as service operating today.
 
+A failed monthly refresh saves a **transit-refresh-review** artifact for 30 days,
+including build/validation logs, the published and rebuilt aggregate, and only
+the listed public GTFS/registry files (never `.env` or the API key). Unknown buses
+and ferries get a structured `.cache/route-audit.json` with service dates, active
+trip counts, stop patterns and geometry evidence, plus a job-summary table.
+Removed keys are reported with old endpoints and any retained base route.
+Failures create or comment on the **Transit refresh needs review** GitHub issue,
+mentioning the repository owner and linking the run. Review is still required:
+classification approvals must cite official evidence, and `allow_removal=true`
+must not be used until the reported removals have been accepted.
+
 Existing route keys stay intact. Added lines use `vt.<route_id>` keys (plus `r` for a separate return route), so unrelated lines with the same displayed number do not merge. `config/route-aliases.json` contains verified normal/call-ordered pairings, sourced from matching numbers and descriptions in the official registry; aliases are rechecked on each build. Unverified pairings stay separate.
 
 One representative path is published per line/direction, not every timetable variant. Existing categories prefer the reference Wednesday; other buses, ferries and Wednesday-absent lines use patterns weighted by operating days throughout the feed. `npm run data -- --date=YYYYMMDD` overrides the preferred reference day. An eligible timetabled line without usable geometry stops the build before the dataset is written. Regional routes may exceed 60 km; they retain geometry/length checks with a 200 km upper sanity limit. Ferries allow short crossings down to 50 m (line 362 is approximately 151 m), while other categories retain the 300 m minimum and all geometry checks.
