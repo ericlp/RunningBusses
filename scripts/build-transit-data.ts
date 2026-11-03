@@ -6,18 +6,16 @@ import { pathToFileURL } from 'node:url';
 import { pathLengthM } from '../src/domain/geo';
 import type { Dataset, Line, Manifest } from '../src/domain/types';
 import { readCsv, readCsvRows } from './transit/csv';
-import { type CategoryConfig } from './transit/category';
 import { assertRoutableLines, planRoutes, type Pattern } from './transit/select';
 import { referenceWednesday, serviceDays, tripWeight } from './transit/calendar';
 import {
-  parsePublicLines, selectRoute, unclassifiedBusRoute, type SelectedRoute, type UnclassifiedBusRoute,
+  auditedPublicBus, isReplacementBus, parsePublicLines, selectRoute, unclassifiedRoute,
+  type RouteConfig, type SelectedRoute, type UnclassifiedRoute,
 } from './transit/routes';
 import { writeSplitAssets } from './transit/split';
+import { writeRouteAudit } from './transit/route-audit';
 
-interface Config {
-  routeIdPrefix: string;
-  agencyIdSuffix: string;
-  categories: CategoryConfig;
+interface Config extends RouteConfig {
   splitDirections: { lengthDifference: number };
 }
 
@@ -68,16 +66,23 @@ export async function buildTransitData(root = new URL('..', import.meta.url).pat
   if (![...days.values()].some((d) => d.has(referenceDate))) throw new Error(`No service on reference date ${referenceDate}`);
   console.log(`Feed ${feedVersion}, reference weekday ${referenceDate}`);
 
-  const unclassified: UnclassifiedBusRoute[] = [];
+  const unclassified: UnclassifiedRoute[] = [];
   for await (const r of readCsv(`${feedDir}/routes.txt`)) {
-    const issue = unclassifiedBusRoute(r, config, registry);
+    if (r.agency_id.endsWith(config.agencyIdSuffix) && isReplacementBus(r, registry)) {
+      console.log(`Excluded temporary replacement bus ${r.route_id} (${r.route_short_name})`);
+      continue;
+    }
+    const issue = unclassifiedRoute(r, config, registry);
     if (issue) unclassified.push(issue);
+    const audit = auditedPublicBus(r, config, registry);
+    if (audit) console.log(`Using audited public bus ${r.route_id} (${r.route_short_name}): ${audit.source}`);
   }
   if (unclassified.length) {
+    await writeRouteAudit(feedDir, `${cacheDir}/route-audit.json`, feedVersion, unclassified, days);
     throw new Error(
-      `Unclassified bus routes absent from the public line registry (${unclassified.length}). ` +
-      `Confirm their public status before adding an audited mapping; do not infer it from the route number.\n` +
-      JSON.stringify(unclassified, null, 2),
+      `Unclassified routes absent from the public line registry (${unclassified.length}). ` +
+      `Confirm their public status before adding an auditedPublicBuses entry in config/lines.json; do not infer it from the route number.\n` +
+      JSON.stringify(unclassified, null, 2) + `\nFull trip, stop, service and geometry audit: ${cacheDir}/route-audit.json`,
     );
   }
 

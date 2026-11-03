@@ -61,11 +61,19 @@ Copilot CLI loads this repository's Playwright MCP configuration from `.github/m
 
 Source: Trafiklab *GTFS Regional Static* (Västtrafik). Put your key in `.env` (`TRAFIKLAB_API_KEY`, see `.env.example`; never commit it). The GitHub Action `Refresh transit data` runs monthly with the repository secret of the same name, validates the result and redeploys only when the lines changed. A manual run can accept removed lines.
 
-The dataset includes public, timetabled Västtrafik buses across the feed's full service period: regional, night, weekend-only, seasonal, replacement and scheduled call-ordered services. Pupil-restricted school transport is excluded; public lines that run only on school days remain included. Existing Gothenburg categories and the default city-bus view are unchanged. Additional buses appear under **Other Västtrafik buses**; select it alongside the existing bus categories to see all buses. Trams remain separate.
+The dataset includes public, timetabled Västtrafik buses across the feed's full service period: regional, night, weekend-only, seasonal and scheduled call-ordered services. Temporary replacement buses are excluded, even if publicly registered or timetabled. Pupil-restricted school transport is excluded; public lines that run only on school days remain included. Existing Gothenburg categories and the default city-bus view are unchanged. Additional buses appear under **Other Västtrafik buses**; select it alongside the existing bus categories to see all buses. Trams remain separate.
 
 **Ferry** / **Färja** includes public timetabled Västtrafik ferries throughout the same feed period, including archipelago and regional services. Their actual GTFS water paths and stops are retained, not replaced with running routes. Ferries can be selected in filters and progress settings; their geometry loads only when needed. The current feed includes 15 ferry lines represented by 17 routes, with separate return paths where applicable.
 
-The builder checks public-service classification against Västtrafik's [official line registry](https://www.vasttrafik.se/api/timetables/lines). Registry data is cached with the feed in `.cache/vt/`; `npm run data -- --download` refreshes both. Unclassified routes must be reviewed rather than silently included, except explicitly described replacement buses. Mixed public/restricted registry versions or a new nonempty `frequencies.txt` require a timetable audit before publication.
+The builder checks public-service classification against Västtrafik's [official line registry](https://www.vasttrafik.se/api/timetables/lines). Registry data is cached with the feed in `.cache/vt/`; `npm run data -- --download` refreshes both. Unclassified routes must be reviewed rather than silently included. Replacement buses are identified from GTFS/registry descriptions or the explicit rail-replacement bus type, not their displayed number; ambiguous unclassified buses still stop publication. Mixed public/restricted registry versions or a new nonempty `frequencies.txt` require a timetable audit before publication.
+
+Public routes announced before they appear in the registry can be individually
+approved in `config/lines.json` under `auditedPublicBuses`, with an official source
+and the exact route ID, number, type and agency. The builder logs these approvals
+and fails if their identity changes; an official registry entry always takes
+precedence, including restrictions. The initial approvals cover the new Borås
+lines 9 and 10, announced for 1 April 2027. Their future-only service is included
+under the existing full-feed-period policy, not treated as service operating today.
 
 Existing route keys stay intact. Added lines use `vt.<route_id>` keys (plus `r` for a separate return route), so unrelated lines with the same displayed number do not merge. `config/route-aliases.json` contains verified normal/call-ordered pairings, sourced from matching numbers and descriptions in the official registry; aliases are rechecked on each build. Unverified pairings stay separate.
 

@@ -64,6 +64,115 @@ afterEach(() => {
 });
 
 describe('GTFS builder publication and service selection', () => {
+  it('never publishes temporary replacement buses while retaining unrelated lines with the same number', async () => {
+    const replacement = { id: '9011014115900000', number: '59', type: '700' };
+    fixture([city, replacement]);
+    csv('routes', ['route_id', 'route_short_name', 'route_type', 'agency_id', 'route_long_name', 'route_desc'], [
+      [city.id, '59', '700', '141010000000001418', '', ''],
+      [replacement.id, '59', '700', '141010000000001418', '59 Ersätter Västtåg', ''],
+    ]);
+    await buildTransitData(`${directory}/`, ['--date=20261007']);
+    const dataset: Dataset = JSON.parse(readFileSync(`${directory}/public/data/lines.json`, 'utf8'));
+    expect(dataset.lines.map((line) => line.key)).toEqual(['59']);
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining(`Excluded temporary replacement bus ${replacement.id}`));
+    await validateSplitAssets(dataset, `${directory}/public/data`);
+    const catalog = JSON.parse(readFileSync(`${directory}/public/data/catalog-manifest.json`, 'utf8'));
+    expect(catalog.categories['other-bus'].count).toBe(0);
+  });
+
+  it('publishes both audited Borås buses with future-only service and preserves existing route keys', async () => {
+    const boras = [
+      { id: '9011014200900000', number: '9', type: '700' },
+      { id: '9011014201000000', number: '10', type: '700' },
+    ];
+    fixture([city, ...boras]);
+    writeFileSync(`${directory}/.cache/vt/line-info.json`, JSON.stringify([
+      { gid: city.id, versions: [{ shortName: '59', directionName: 'A - B', isPublicTransport: true }] },
+    ]));
+    csv('calendar_dates', ['service_id', 'date', 'exception_type'], [
+      ['wed', '20261104', '1'], ['future', '20270401', '1'], ['future', '20270403', '1'],
+    ]);
+    csv('trips', ['route_id', 'trip_id', 'direction_id', 'shape_id', 'service_id'], [
+      [city.id, `${city.id}.wed`, '0', 'wed', 'wed'],
+      ...boras.map((route) => [route.id, `${route.id}.wed`, '0', 'wed', 'future']),
+    ]);
+    await buildTransitData(`${directory}/`, ['--date=20261104']);
+    const dataset: Dataset = JSON.parse(readFileSync(`${directory}/public/data/lines.json`, 'utf8'));
+    expect(dataset.lines.map((route) => route.key)).toEqual(['vt.9011014200900000', 'vt.9011014201000000', '59']);
+    for (const route of boras) {
+      expect(dataset.lines.find((line) => line.key === `vt.${route.id}`)).toMatchObject({
+        number: route.number, category: 'other-bus',
+        coordinates: [[11, 57], [11.01, 57.01]],
+      });
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining(`Using audited public bus ${route.id}`));
+    }
+    await validateSplitAssets(dataset, `${directory}/public/data`);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('still fails all unclassified buses before changing published output', async () => {
+    fixture();
+    await buildTransitData(`${directory}/`, ['--date=20261007']);
+    const before = outputSnapshot();
+    fixture([city, regional]);
+    writeFileSync(`${directory}/.cache/vt/line-info.json`, '[]');
+    await expect(buildTransitData(`${directory}/`, ['--date=20261007']))
+      .rejects.toThrow(/Unclassified routes.*\(2\)[\s\S]*9011014505900000[\s\S]*9011014405900000/);
+    expect(outputSnapshot()).toEqual(before);
+    const audit = JSON.parse(readFileSync(`${directory}/.cache/route-audit.json`, 'utf8'));
+    expect(audit.feedVersion).toBe('fixture');
+    expect(audit.routes).toHaveLength(2);
+    for (const route of audit.routes) {
+      expect(route).toMatchObject({
+        tripTemplates: 2, activeTripTemplates: 2, headsigns: [],
+        service: { firstDate: '20261007', lastDate: '20261011', dateCount: 3, dates: ['20261007', '20261010', '20261011'] },
+      });
+      expect(route.patterns).toEqual([
+        expect.objectContaining({
+          shapeId: 'weekend', tripTemplates: 1, serviceDayTrips: 2,
+          stops: [{ id: 'sa', name: 'Weekend A' }, { id: 'sb', name: 'Weekend B' }],
+          geometry: expect.objectContaining({ pointCount: 2, valid: true, lengthM: expect.any(Number), start: [12, 58], end: [12.01, 58.01] }),
+        }),
+        expect.objectContaining({
+          shapeId: 'wed', tripTemplates: 1, serviceDayTrips: 1,
+          stops: [{ id: 'wa', name: 'Wednesday A' }, { id: 'wb', name: 'Wednesday B' }],
+        }),
+      ]);
+    }
+  });
+
+  it('writes classification evidence to the job summary and explicitly reports missing geometry', async () => {
+    fixture([regional], { shapes: false });
+    writeFileSync(`${directory}/.cache/vt/line-info.json`, '[]');
+    const summaryPath = `${directory}/summary.md`;
+    vi.stubEnv('GITHUB_STEP_SUMMARY', summaryPath);
+    try {
+      await expect(buildTransitData(`${directory}/`, ['--date=20261007']))
+        .rejects.toThrow(/Full trip, stop, service and geometry audit/);
+      const report = JSON.parse(readFileSync(`${directory}/.cache/route-audit.json`, 'utf8'));
+      expect(report.routes[0].patterns.every((p: { geometry: unknown }) => p.geometry === null)).toBe(true);
+      const summary = readFileSync(summaryPath, 'utf8');
+      expect(summary).toContain('9011014405900000');
+      expect(summary).toContain('Weekend A - Weekend B');
+      expect(summary).toContain('20261007 - 20261011');
+      expect(summary).toContain('transit-refresh-review');
+      expect(summary).toContain('Nothing published');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('audits unclassified ferries too, without a replacement-bus exception', async () => {
+    fixture([ferry]);
+    writeFileSync(`${directory}/.cache/vt/line-info.json`, '[]');
+    await expect(buildTransitData(`${directory}/`, ['--date=20261007']))
+      .rejects.toThrow(/absent from the public line registry/);
+    const audit = JSON.parse(readFileSync(`${directory}/.cache/route-audit.json`, 'utf8'));
+    expect(audit.routes).toEqual([expect.objectContaining({
+      route_id: ferry.id, route_type: '1000', activeTripTemplates: 2,
+    })]);
+  });
+
   it('fails a timed route without geometry before modifying any published output', async () => {
     fixture();
     await buildTransitData(`${directory}/`, ['--date=20261007']);

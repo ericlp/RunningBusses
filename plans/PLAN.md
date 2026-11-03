@@ -196,6 +196,8 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 
 - [074 - Conservative multi-tab write protection](074-multi-tab-write-protection.md): atomic revision checks for saved state and shared drafts, with explicit conflict recovery.
 - [075 - Development container](075-devcontainer.md): mise-managed Node, Chromium, osmium and an isolated Docker-in-Docker daemon for app and runnable-GPX development.
+- [077 - Audited public Boras buses](077-audited-boras-buses.md): source-backed approvals for new public lines 9 and 10 ahead of registry publication, retaining exact identities and official classification precedence.
+- [079 - Exclude temporary replacement buses](079-exclude-replacement-buses.md): replacement-service exclusions take precedence over public classification; existing saved snapshots and ordinary same-number routes remain.
 
 ## Future todos
 

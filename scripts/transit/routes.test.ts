@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import aliases from '../../config/route-aliases.json';
-import { parsePublicLines, selectRoute, unclassifiedBusRoute, type PublicLine, type RouteConfig } from './routes';
+import publishedConfig from '../../config/lines.json';
+import { parsePublicLines, selectRoute, unclassifiedRoute, type PublicLine, type RouteConfig } from './routes';
 
 const config: RouteConfig = {
   routeIdPrefix: '90110145', agencyIdSuffix: '1418',
@@ -80,17 +81,73 @@ describe('regional route identity and eligibility', () => {
     expect(select(r, [line(r.route_id, '942', 'A - B', false)])).toBeUndefined();
   });
 
-  it('requires classification, with an explicit exception for described replacement buses', () => {
+  it('requires classification and excludes described replacement buses even if registered as public', () => {
     const r = row('9011014112000000', '20');
     expect(() => select(r, [])).toThrow(/Unclassified bus route/);
-    expect(select({ ...r, route_long_name: '20 Ersätter Västtåg' }, [])).toBeDefined();
+    for (const description of ['20 Ersätter Västtåg', 'Ersätter spårvagn', 'Ersättningsbuss', 'Rail replacement bus']) {
+      for (const field of ['route_long_name', 'route_desc']) {
+        const replacement = { ...r, [field]: description };
+        expect(select(replacement, [])).toBeUndefined();
+        expect(select(replacement)).toBeUndefined();
+        expect(unclassifiedRoute(replacement, config, new Map())).toBeUndefined();
+      }
+    }
+    expect(select(r, [line(r.route_id, '20', 'Ersätter Västtåg')])).toBeUndefined();
+    expect(select(row(r.route_id, '20', '714'))).toBeUndefined();
+    expect(select({ ...row(r.route_id, '20', '1501'), route_desc: 'Ersätter spårvagn' })).toBeUndefined();
     expect(select({ ...r, agency_id: 'other' })).toBeUndefined();
     expect(select(row(r.route_id, '20', '100'))).toBeUndefined();
   });
 
+  it.each([
+    ['9011014200900000', '9'],
+    ['9011014201000000', '10'],
+  ])('includes audited public Borås bus %s without inventing a registry entry or merging its key', (id, number) => {
+    const r = row(id, number);
+    const auditedConfig: RouteConfig = { ...config, auditedPublicBuses: publishedConfig.auditedPublicBuses };
+    const registry = new Map<string, PublicLine>();
+    expect(selectRoute(r, auditedConfig, registry, aliases)).toMatchObject({
+      key: `vt.${id}`, number, category: 'other-bus', callOrdered: false,
+    });
+    expect(unclassifiedRoute(r, auditedConfig, registry)).toBeUndefined();
+    expect(registry.size).toBe(0);
+    expect(() => selectRoute(row('9011014400900000', number), auditedConfig, registry, aliases))
+      .toThrow(/Unclassified bus route/);
+    for (const changed of [
+      { ...r, route_short_name: '99' },
+      { ...r, route_type: '1501' },
+      { ...r, agency_id: 'other1418' },
+    ]) expect(() => selectRoute(changed, auditedConfig, registry, aliases)).toThrow(/no longer matches/);
+    expect(() => selectRoute({ ...r, route_type: '1000' }, auditedConfig, registry, aliases))
+      .toThrow(/Unclassified ferry route/);
+  });
+
+  it('always gives official registry restrictions precedence over audited public buses', () => {
+    const r = row('9011014200900000', '9');
+    const auditedConfig: RouteConfig = { ...config, auditedPublicBuses: publishedConfig.auditedPublicBuses };
+    for (const restricted of [
+      line(r.route_id, '9', 'A - B', false),
+      line(r.route_id, '9', 'Stängd skoltrafik'),
+    ]) {
+      expect(selectRoute(r, auditedConfig, new Map([[r.route_id, restricted]]), aliases)).toBeUndefined();
+    }
+    const mixed = line(r.route_id, '9');
+    mixed.versions.push(line(r.route_id, '9', 'Stängd skoltrafik').versions[0]);
+    expect(() => selectRoute(r, auditedConfig, new Map([[r.route_id, mixed]]), aliases))
+      .toThrow(/Mixed public\/restricted/);
+    expect(selectRoute(r, auditedConfig, new Map([[r.route_id, line(r.route_id, '9')]]), aliases))
+      .toMatchObject({ key: `vt.${r.route_id}` });
+  });
+
+  it('cannot use an audited public approval to include a replacement bus', () => {
+    const r = { ...row('9011014200900000', '9'), route_desc: 'Ersätter spårvagn' };
+    const auditedConfig: RouteConfig = { ...config, auditedPublicBuses: publishedConfig.auditedPublicBuses };
+    expect(selectRoute(r, auditedConfig, new Map(), aliases)).toBeUndefined();
+  });
+
   it('reports all identity fields for ordinary bus routes missing from the public registry', () => {
     const r = { ...row('9011014112000000', '20'), route_long_name: 'Line 20', route_desc: 'A - B' };
-    expect(unclassifiedBusRoute(r, config, new Map())).toEqual({
+    expect(unclassifiedRoute(r, config, new Map())).toEqual({
       route_id: r.route_id,
       route_short_name: '20',
       route_type: '700',
@@ -98,10 +155,10 @@ describe('regional route identity and eligibility', () => {
       route_long_name: 'Line 20',
       route_desc: 'A - B',
     });
-    expect(unclassifiedBusRoute(r, config, new Map([[r.route_id, line(r.route_id)]]))).toBeUndefined();
-    expect(unclassifiedBusRoute({ ...r, route_long_name: 'Ersätter Västtåg' }, config, new Map())).toBeUndefined();
-    expect(unclassifiedBusRoute({ ...r, agency_id: 'other' }, config, new Map())).toBeUndefined();
-    expect(unclassifiedBusRoute({ ...r, route_type: '900' }, config, new Map())).toBeUndefined();
+    expect(unclassifiedRoute(r, config, new Map([[r.route_id, line(r.route_id)]]))).toBeUndefined();
+    expect(unclassifiedRoute({ ...r, route_long_name: 'Ersätter Västtåg' }, config, new Map())).toBeUndefined();
+    expect(unclassifiedRoute({ ...r, agency_id: 'other' }, config, new Map())).toBeUndefined();
+    expect(unclassifiedRoute({ ...r, route_type: '900' }, config, new Map())).toBeUndefined();
   });
 
   it('blocks mixed public/restricted versions rather than including restricted service dates', () => {

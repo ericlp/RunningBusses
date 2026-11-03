@@ -2,6 +2,20 @@
   "feed": "vt",
   "routeIdPrefix": "90110145",
   "agencyIdSuffix": "1418",
+  "auditedPublicBuses": {
+    "9011014200900000": {
+      "number": "9",
+      "routeType": "700",
+      "agencyId": "141010000000001418",
+      "source": "https://www.vasttrafik.se/info/utveckling-av-kollektivtrafiken-i-boras/"
+    },
+    "9011014201000000": {
+      "number": "10",
+      "routeType": "700",
+      "agencyId": "141010000000001418",
+      "source": "https://www.vasttrafik.se/info/utveckling-av-kollektivtrafiken-i-boras/"
+    }
+  },
   "categories": {
     "stadsbuss": { "numberRange": [22, 99], "exclude": [25] },
     "stombuss": { "numbers": [17, 18, 19, 21, 25] },
