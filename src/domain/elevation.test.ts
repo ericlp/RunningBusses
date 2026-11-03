@@ -8,9 +8,11 @@ import {
   orientedProfileSamples,
   parseElevationProfile,
   routeGeometryHash,
+  smoothProfileSamples,
   summarizeElevation,
   type ElevationPoint,
   type ElevationProfile,
+  type ElevationSample,
 } from './elevation';
 import type { Line } from './types';
 
@@ -120,6 +122,60 @@ describe('elevation summary', () => {
     expect(known.steepest200m).toEqual({ startM: 0, endM: 200, changeM: 20 });
     const broken = summarizeElevation([point(0, 0), point(100, null), point(300, 30)], 300, false);
     expect(broken.steepest200m).toBeNull();
+  });
+});
+
+describe('profile smoothing', () => {
+  const every25m = (heights: (number | null)[]): ElevationSample[] =>
+    heights.map((elevationM, i) => ({ distanceM: i * 25, elevationM, estimated: i === 3 }));
+  const heights = (samples: ElevationSample[]) => samples.map((s) => s.elevationM);
+
+  it('removes a building or tree spike beside the road', () => {
+    const smoothed = smoothProfileSamples(every25m([10, 10, 10, 10, 10, 22, 10, 10, 10, 10, 10]));
+    for (const h of heights(smoothed)) expect(h).toBeCloseTo(10, 6);
+  });
+
+  it('keeps a steady climb exactly, including its endpoints', () => {
+    const ramp = Array.from({ length: 41 }, (_, i) => i * 1.25);
+    const smoothed = smoothProfileSamples(every25m(ramp));
+    heights(smoothed).forEach((h, i) => expect(h).toBeCloseTo(ramp[i], 6));
+    const points = smoothed.map((s) => ({ ...s, courseDistanceM: s.distanceM }));
+    expect(summarizeElevation(points, 1000, false).ascentM).toBeCloseTo(50, 6);
+  });
+
+  it('evens out raster stair steps so they no longer count as climbs', () => {
+    const steps = every25m(Array.from({ length: 41 }, (_, i) => (i % 4 < 2 ? 10 : 12.5)));
+    const raw = summarizeElevation(steps.map((s) => ({ ...s, courseDistanceM: s.distanceM })), 1000, false);
+    const smooth = summarizeElevation(smoothProfileSamples(steps).map((s) => ({ ...s, courseDistanceM: s.distanceM })), 1000, false);
+    expect(raw.ascentM).toBeGreaterThan(10);
+    expect(smooth.ascentM).toBe(0);
+  });
+
+  it('never smooths across missing data and keeps distances and flags', () => {
+    const input = every25m([0, 0, 0, null, 50, 50, 50]);
+    const smoothed = smoothProfileSamples(input);
+    expect(smoothed[3].elevationM).toBeNull();
+    heights(smoothed).forEach((h, i) => { if (i !== 3) expect(h).toBeCloseTo(i < 3 ? 0 : 50, 9); });
+    expect(smoothed.map((s) => [s.distanceM, s.estimated])).toEqual(input.map((s) => [s.distanceM, s.estimated]));
+  });
+
+  it('gives the same profile whichever direction the route is run', () => {
+    const noisy = [3, 7, 4, 15, 6, 8, 9, 30, 11, 12, 10, 14, 13];
+    const route: ElevationProfile = {
+      schemaVersion: 1, routeKey: '1', geometryHash: 'a'.repeat(64), lengthM: 310,
+      samples: noisy.map((elevationM, i) => ({ distanceM: Math.min(i * 25, 310), elevationM, estimated: false })),
+    };
+    const forward = smoothProfileSamples(orientedProfileSamples(route, false));
+    const backward = smoothProfileSamples(orientedProfileSamples(route, true));
+    heights(forward).forEach((h, i) => expect(h).toBeCloseTo(heights(backward)[backward.length - 1 - i]!, 9));
+  });
+
+  it('is used when a course profile is assembled', async () => {
+    const route = line('1', [11.97, 57.7], 250);
+    const data = await profile(route, [10, 10, 10, 10, 10, 40, 10, 10, 10, 10, 10]);
+    const assembled = await buildCourseElevation(course([leg(route)]), new Map([[elevationProfileId('1', data.geometryHash), data]]));
+    expect(assembled.summary.highestM).toBeCloseTo(10, 6);
+    expect(assembled.summary.ascentM).toBeCloseTo(0, 6);
   });
 });
 

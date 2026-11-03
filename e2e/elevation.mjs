@@ -23,6 +23,7 @@ try {
   await page.waitForSelector('.elevation-chart');
   assert.match(await page.locator('.elevation-stats').innerText(), /10 m/, 'line profile shows measured ascent');
   assert.match(await page.locator('.elevation-source').innerText(), /Copernicus DEM test fixture/);
+  assert.match(await page.locator('.elevation-content').innerText(), /Profilen är utjämnad längs vägen/, 'smoothing is disclosed');
   const position = page.locator('.elevation-position input');
   const markerPaints = await page.evaluate(() => window.__elevationMarkerPaints);
   for (let step = 0; step < 20; step++) await position.press('ArrowRight');

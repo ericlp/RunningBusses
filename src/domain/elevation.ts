@@ -258,7 +258,7 @@ export async function buildCourseElevation(course: Pick<Course, 'legs'>, profile
       const geometryHash = await routeGeometryHash(leg.line.coordinates);
       const profile = profiles.get(elevationProfileId(leg.line.key, geometryHash));
       if (profile && profile.routeKey === leg.line.key && profile.geometryHash === geometryHash) {
-        const samples = orientedProfileSamples(profile, leg.reversed);
+        const samples = smoothProfileSamples(orientedProfileSamples(profile, leg.reversed));
         for (const sample of samples) {
           points.push({
             ...sample,
@@ -281,6 +281,81 @@ export async function buildCourseElevation(course: Pick<Course, 'legs'>, profile
     }
   }
   return { points, summary: summarizeElevation(points, offsetM, incomplete) };
+}
+
+export const SMOOTHING = { medianHalfWindowM: 50, gaussianSigmaM: 50 } as const;
+
+/** Splits samples into runs of consecutive measured heights; smoothing never crosses a gap. */
+function measuredRuns(samples: readonly ElevationSample[]): ElevationSample[][] {
+  const runs: ElevationSample[][] = [];
+  let run: ElevationSample[] = [];
+  for (const sample of samples) {
+    if (sample.elevationM === null) {
+      if (run.length) runs.push(run);
+      run = [];
+    } else run.push(sample);
+  }
+  if (run.length) runs.push(run);
+  return runs;
+}
+
+function median(values: number[]): number {
+  values.sort((a, b) => a - b);
+  const mid = values.length >> 1;
+  return values.length % 2 ? values[mid] : (values[mid - 1] + values[mid]) / 2;
+}
+
+/**
+ * Removes surface-model noise from a profile that a runner follows along the road.
+ * The median drops short buildings and trees beside the route; the Gaussian then
+ * evens out raster steps. Both windows are symmetric in distance, so the result is
+ * the same whichever direction the route is run.
+ */
+export function smoothProfileSamples(
+  samples: readonly ElevationSample[],
+  { medianHalfWindowM, gaussianSigmaM }: { medianHalfWindowM: number; gaussianSigmaM: number } = SMOOTHING,
+): ElevationSample[] {
+  const smoothed = new Map<ElevationSample, number>();
+  for (const run of measuredRuns(samples)) {
+    const heights = run.map((sample) => sample.elevationM!);
+    const window = (center: number, halfM: number) => {
+      // Shrinking the window near the ends keeps it symmetric, so steady climbs are not flattened.
+      const d = run[center].distanceM;
+      const reach = Math.min(halfM, d - run[0].distanceM, run[run.length - 1].distanceM - d);
+      let from = center;
+      let to = center;
+      while (from > 0 && d - run[from - 1].distanceM <= reach) from--;
+      while (to < run.length - 1 && run[to + 1].distanceM - d <= reach) to++;
+      return [from, to] as const;
+    };
+    const medians = run.map((_, i) => {
+      if (medianHalfWindowM <= 0) return heights[i];
+      const [from, to] = window(i, medianHalfWindowM);
+      return median(heights.slice(from, to + 1));
+    });
+    run.forEach((sample, i) => {
+      if (gaussianSigmaM <= 0) {
+        smoothed.set(sample, medians[i]);
+        return;
+      }
+      // Gaussian-weighted local linear fit: unlike a plain average it keeps steady grades
+      // exact even where the window is cut off at a run end.
+      let s0 = 0, s1 = 0, s2 = 0, t0 = 0, t1 = 0;
+      const reach = gaussianSigmaM * 3;
+      let from = i;
+      let to = i;
+      while (from > 0 && sample.distanceM - run[from - 1].distanceM <= reach) from--;
+      while (to < run.length - 1 && run[to + 1].distanceM - sample.distanceM <= reach) to++;
+      for (let j = from; j <= to; j++) {
+        const dx = run[j].distanceM - sample.distanceM;
+        const w = Math.exp(-0.5 * (dx / gaussianSigmaM) ** 2);
+        s0 += w; s1 += w * dx; s2 += w * dx * dx; t0 += w * medians[j]; t1 += w * dx * medians[j];
+      }
+      const det = s0 * s2 - s1 * s1;
+      smoothed.set(sample, det > 1e-9 * s0 * s2 ? (s2 * t0 - s1 * t1) / det : t0 / s0);
+    });
+  }
+  return samples.map((sample) => ({ ...sample, elevationM: smoothed.get(sample) ?? null }));
 }
 
 /** Reverses profile sample order and measures them in the running direction. */

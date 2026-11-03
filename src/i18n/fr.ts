@@ -110,6 +110,7 @@ export const fr: Dict = {
   'elevation.incomplete': 'Le dénivelé positif et négatif ne s’affiche que si toute la distance est couverte. Les écarts et étapes manuelles n’ont pas de profil.',
   'elevation.storageError': 'Le profil est affiché, mais n’a pas pu être enregistré hors ligne.',
   'elevation.noSource': 'Aucune information sur la source des données.',
+  'elevation.smoothed': 'Le profil est lissé le long de la route pour réduire les perturbations dues aux bâtiments et aux arbres.',
 
   'courses.create': 'Créer un parcours',
   'courses.resumeEdit': 'Continuer à modifier « {name} »',

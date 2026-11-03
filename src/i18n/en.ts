@@ -110,6 +110,7 @@ export const en: Dict = {
   'elevation.incomplete': 'Ascent and descent are shown only when elevation covers the whole distance. Gaps and manual legs have no profile.',
   'elevation.storageError': 'The profile is shown, but could not be saved for offline use.',
   'elevation.noSource': 'No data source information.',
+  'elevation.smoothed': 'The profile is smoothed along the road to reduce interference from buildings and trees.',
 
   'courses.create': 'Create course',
   'courses.resumeEdit': 'Continue editing "{name}"',

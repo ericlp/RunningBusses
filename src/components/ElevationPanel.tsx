@@ -140,6 +140,7 @@ export function ElevationPanel({ id, title, legs, manifest, catalog, onPosition 
                 <div><dt>{t('elevation.steepest')}</dt><dd>{data.summary.steepest200m ? `${data.summary.steepest200m.changeM > 0 ? '+' : ''}${Math.round(data.summary.steepest200m.changeM)} m / 200 m` : '—'}</dd></div>
               </dl>
               {data.summary.incomplete && <p className="muted">{t('elevation.incomplete')}</p>}
+              <p className="muted">{t('elevation.smoothed')}</p>
               {storageError && <p className="muted">{t('elevation.storageError')}</p>}
               {source && <p className="elevation-source">{source.attribution} {source.licence}. {source.note}</p>}
               {!source && <p className="elevation-source">{t('elevation.noSource')}</p>}

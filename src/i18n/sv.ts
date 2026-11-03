@@ -109,6 +109,7 @@ export const sv = {
   'elevation.incomplete': 'Stigning och nedför visas först när hela sträckan har höjddata. Glapp och manuella etapper saknar profil.',
   'elevation.storageError': 'Höjdprofilen visas, men kunde inte sparas för offlinebruk.',
   'elevation.noSource': 'Datakälla saknas.',
+  'elevation.smoothed': 'Profilen är utjämnad längs vägen för att minska störningar från byggnader och träd.',
 
   'courses.create': 'Skapa bana',
   'courses.resumeEdit': 'Fortsätt redigera "{name}"',
