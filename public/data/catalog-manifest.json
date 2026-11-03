@@ -1,58 +1,58 @@
 {
   "schemaVersion": 2,
-  "release": "2d2e4226e10fa5cb7f359ee4aee3653193dbfb30e54810ac6798a7227be99c1f",
-  "feedVersion": "2026-10-03",
-  "referenceDate": "20261014",
-  "generatedAt": "2026-10-08T16:49:48.817Z",
-  "lineCount": 822,
+  "release": "6ce83557cd7fa3e3500553645770db2610a4758f217684948db4c1d20850c6b5",
+  "feedVersion": "2026-11-03",
+  "referenceDate": "20261104",
+  "generatedAt": "2026-11-03T22:13:50.169Z",
+  "lineCount": 827,
   "catalog": {
-    "file": "catalog.432e49b4d5a070a9c5e2d0afac2eb3529a7e8317a0d4408be146739fc5c11e95.json",
-    "hash": "432e49b4d5a070a9c5e2d0afac2eb3529a7e8317a0d4408be146739fc5c11e95",
-    "count": 822,
-    "bytes": 420574
+    "file": "catalog.15ed7c7bad80c4f9e234dd748602f70e70c5f7451f7121ef1a53f958d156fea4.json",
+    "hash": "15ed7c7bad80c4f9e234dd748602f70e70c5f7451f7121ef1a53f958d156fea4",
+    "count": 827,
+    "bytes": 428562
   },
   "categories": {
     "stadsbuss": {
-      "file": "categories/stadsbuss.730a0de9d32323ec425b055b9deebcf7264ae4e471d4d134ff39de0d671e8d2c.json",
-      "hash": "730a0de9d32323ec425b055b9deebcf7264ae4e471d4d134ff39de0d671e8d2c",
+      "file": "categories/stadsbuss.24d5a8958c83ddb6cd8a13c2d71353419cc5039a633f4df59d8a9564119a018e.json",
+      "hash": "24d5a8958c83ddb6cd8a13c2d71353419cc5039a633f4df59d8a9564119a018e",
       "count": 51,
-      "bytes": 437420
+      "bytes": 437389
     },
     "stombuss": {
-      "file": "categories/stombuss.1f76c2d373eb21c2f425341cd5e620744edade63040fcdf86aa1c9bd2a5f85dc.json",
-      "hash": "1f76c2d373eb21c2f425341cd5e620744edade63040fcdf86aa1c9bd2a5f85dc",
+      "file": "categories/stombuss.26569a820b00271a7164f73088d717dff6893fa585422076071f42a6ed2fd701.json",
+      "hash": "26569a820b00271a7164f73088d717dff6893fa585422076071f42a6ed2fd701",
       "count": 5,
-      "bytes": 77888
+      "bytes": 77889
     },
     "express": {
-      "file": "categories/express.4b136f39060f0583b22264ad41fd3bb0a71482f92487b2f7da3e52144eeda393.json",
-      "hash": "4b136f39060f0583b22264ad41fd3bb0a71482f92487b2f7da3e52144eeda393",
-      "count": 11,
-      "bytes": 260643
+      "file": "categories/express.ffa97818189d23589318366f78c8b444ad58ad4b5052267961b5c723692d4a23.json",
+      "hash": "ffa97818189d23589318366f78c8b444ad58ad4b5052267961b5c723692d4a23",
+      "count": 12,
+      "bytes": 277768
     },
     "industri": {
-      "file": "categories/industri.217e61e6187d1a3e531f36f4c0cf3e9cd6cde02cc9ade8dedca5f91bed06baec.json",
-      "hash": "217e61e6187d1a3e531f36f4c0cf3e9cd6cde02cc9ade8dedca5f91bed06baec",
+      "file": "categories/industri.9f47f5c15baa5a2dda9ac8321aaf7808ea791bd43310156cb2d2c20a419be83c.json",
+      "hash": "9f47f5c15baa5a2dda9ac8321aaf7808ea791bd43310156cb2d2c20a419be83c",
       "count": 35,
-      "bytes": 399515
+      "bytes": 399671
     },
     "other-bus": {
-      "file": "categories/other-bus.74fc6ea42d5a16ca12c1a882a167f083a55c85f23e98c7eb6ecc0460cdc7aa69.json",
-      "hash": "74fc6ea42d5a16ca12c1a882a167f083a55c85f23e98c7eb6ecc0460cdc7aa69",
-      "count": 689,
-      "bytes": 12133140
+      "file": "categories/other-bus.c2ad9a6a2c409867232a0f3a660ce1525dae5903c446730aea8b767f8bf44de4.json",
+      "hash": "c2ad9a6a2c409867232a0f3a660ce1525dae5903c446730aea8b767f8bf44de4",
+      "count": 692,
+      "bytes": 12070050
     },
     "tram": {
-      "file": "categories/tram.d80a52327c7385d1c3f5b24357d91a72c7256cdec04fefd6d13a46f14d46fe45.json",
-      "hash": "d80a52327c7385d1c3f5b24357d91a72c7256cdec04fefd6d13a46f14d46fe45",
+      "file": "categories/tram.be2a21c6b660db3b3045ec80b188a11a5160f024ab32003afc3fced1ff49266c.json",
+      "hash": "be2a21c6b660db3b3045ec80b188a11a5160f024ab32003afc3fced1ff49266c",
       "count": 14,
-      "bytes": 152615
+      "bytes": 151686
     },
     "ferry": {
-      "file": "categories/ferry.92d73c3fcd83386ac3704a570e5554dc4f2d3a480a6b89a2df61f6d0bda88c77.json",
-      "hash": "92d73c3fcd83386ac3704a570e5554dc4f2d3a480a6b89a2df61f6d0bda88c77",
-      "count": 17,
-      "bytes": 16852
+      "file": "categories/ferry.d499af9dfa272cf35fb3cdbcd71a934c1e1f10f733395f8be75b4022b595af94.json",
+      "hash": "d499af9dfa272cf35fb3cdbcd71a934c1e1f10f733395f8be75b4022b595af94",
+      "count": 18,
+      "bytes": 18175
     }
   }
 }

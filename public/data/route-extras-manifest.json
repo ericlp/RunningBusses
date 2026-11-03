@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "transitRelease": "2d2e4226e10fa5cb7f359ee4aee3653193dbfb30e54810ac6798a7227be99c1f",
+  "transitRelease": "6ce83557cd7fa3e3500553645770db2610a4758f217684948db4c1d20850c6b5",
   "buildVersion": "cop-dem-glo30-v1",
   "source": {
     "name": "Copernicus DEM GLO-30 Public (digital surface model)",
@@ -10,34 +10,34 @@
   },
   "elevation": {
     "stadsbuss": {
-      "file": "extras/elevation/stadsbuss.4af90d807932d6570ef2f6f9b7f7b51dcc2155b6767ba23bd34f72dd3620d805.json",
-      "hash": "4af90d807932d6570ef2f6f9b7f7b51dcc2155b6767ba23bd34f72dd3620d805",
+      "file": "extras/elevation/stadsbuss.bdc882f5e3e2c7374351742e3eecda653587572d82a20099bb2d662894ab0d53.json",
+      "hash": "bdc882f5e3e2c7374351742e3eecda653587572d82a20099bb2d662894ab0d53",
       "count": 51,
-      "bytes": 1090131
+      "bytes": 1091295
     },
     "stombuss": {
-      "file": "extras/elevation/stombuss.2409f8acc31aeebc4486f5d15b830f9036f0bf67dfb0c21b9aa41079ba7caa04.json",
-      "hash": "2409f8acc31aeebc4486f5d15b830f9036f0bf67dfb0c21b9aa41079ba7caa04",
+      "file": "extras/elevation/stombuss.5a52ace4254d1288ad709edf18351d5ee26771fd8c0e4f21d9eb3bad3d075113.json",
+      "hash": "5a52ace4254d1288ad709edf18351d5ee26771fd8c0e4f21d9eb3bad3d075113",
       "count": 5,
-      "bytes": 198504
+      "bytes": 198453
     },
     "express": {
-      "file": "extras/elevation/express.958fd78b00d81a9e3f2b54713be5fe44b9ec831d5bf85de02cee69d18332ab9a.json",
-      "hash": "958fd78b00d81a9e3f2b54713be5fe44b9ec831d5bf85de02cee69d18332ab9a",
-      "count": 11,
-      "bytes": 770215
+      "file": "extras/elevation/express.b7d945efa9245aa876c37acfdc1bbebf4fb8d8f33c6ffed321a68af094d090ee.json",
+      "hash": "b7d945efa9245aa876c37acfdc1bbebf4fb8d8f33c6ffed321a68af094d090ee",
+      "count": 12,
+      "bytes": 844321
     },
     "industri": {
-      "file": "extras/elevation/industri.ab3e142a8ff32e5e96c23284afceb96b14240bc92564e3523d143fc328bb0af4.json",
-      "hash": "ab3e142a8ff32e5e96c23284afceb96b14240bc92564e3523d143fc328bb0af4",
+      "file": "extras/elevation/industri.536ad2b4df579006d2df83180ee71d92a1dd2f65ce9ff28ff0563855849a7ac2.json",
+      "hash": "536ad2b4df579006d2df83180ee71d92a1dd2f65ce9ff28ff0563855849a7ac2",
       "count": 35,
-      "bytes": 1297700
+      "bytes": 1297658
     },
     "tram": {
-      "file": "extras/elevation/tram.11db213a082acd88675af39300731f898dca9f2fea93ec9235da6bd796f12ed5.json",
-      "hash": "11db213a082acd88675af39300731f898dca9f2fea93ec9235da6bd796f12ed5",
+      "file": "extras/elevation/tram.e85ac576664a10fd0af70337e214ba1eaf362782a4b251079a294e9b73dfcba9.json",
+      "hash": "e85ac576664a10fd0af70337e214ba1eaf362782a4b251079a294e9b73dfcba9",
       "count": 14,
-      "bytes": 487452
+      "bytes": 478897
     }
   }
 }
