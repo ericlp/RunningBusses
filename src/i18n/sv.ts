@@ -104,6 +104,7 @@ export const sv = {
   'elevation.coverage': 'Täckt höjddata: {covered} av {total}',
   'elevation.ascent': 'Stigning',
   'elevation.descent': 'Nedför',
+  'elevation.totalsAria': 'Total stigning {ascent}, totalt nedför {descent}',
   'elevation.lowHigh': 'Lägst–högst',
   'elevation.steepest': 'Största förändring på 200 m',
   'elevation.incomplete': 'Stigning och nedför visas först när hela sträckan har höjddata. Glapp och manuella etapper saknar profil.',

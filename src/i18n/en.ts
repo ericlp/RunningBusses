@@ -105,6 +105,7 @@ export const en: Dict = {
   'elevation.coverage': 'Elevation coverage: {covered} of {total}',
   'elevation.ascent': 'Ascent',
   'elevation.descent': 'Descent',
+  'elevation.totalsAria': 'Total ascent {ascent}, total descent {descent}',
   'elevation.lowHigh': 'Lowest–highest',
   'elevation.steepest': 'Largest change over 200 m',
   'elevation.incomplete': 'Ascent and descent are shown only when elevation covers the whole distance. Gaps and manual legs have no profile.',

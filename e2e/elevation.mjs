@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import AxeBuilder from '@axe-core/playwright';
 import { chromium } from 'playwright';
 import { checkPageErrors, fixture, prepareContext, waitLegs } from './setup.mjs';
 
@@ -21,7 +22,12 @@ try {
   await page.waitForSelector('.line-card');
   await page.getByRole('button', { name: 'Visa höjdprofil' }).click();
   await page.waitForSelector('.elevation-chart');
-  assert.match(await page.locator('.elevation-stats').innerText(), /10 m/, 'line profile shows measured ascent');
+  const totals = page.getByRole('img', { name: 'Total stigning 10 m, totalt nedför 0 m' });
+  assert.equal(await totals.innerText(), '↑ 10 m\n↓ 0 m', 'chart shows total ascent and descent');
+  const [badge, chart] = await Promise.all([totals.boundingBox(), page.locator('.elevation-chart').boundingBox()]);
+  assert.ok(badge.y >= chart.y && badge.y + badge.height <= chart.y + chart.height, 'totals are drawn on the chart');
+  const axe = await new AxeBuilder({ page }).include('.elevation-panel').analyze();
+  assert.deepEqual(axe.violations.map((v) => v.id), [], 'elevation panel has no axe violations');
   assert.match(await page.locator('.elevation-source').innerText(), /Copernicus DEM test fixture/);
   assert.match(await page.locator('.elevation-content').innerText(), /Profilen är utjämnad längs vägen/, 'smoothing is disclosed');
   const position = page.locator('.elevation-position input');
@@ -42,7 +48,7 @@ try {
   await page.waitForSelector('.course .details');
   await page.getByRole('button', { name: 'Visa höjdprofil' }).click();
   await page.waitForSelector('.course .elevation-chart');
-  assert.match(await page.locator('.course .elevation-stats').innerText(), /10 m/, 'course profile uses the saved route snapshot');
+  assert.equal(await page.locator('.course .elevation-totals').innerText(), '↑ 10 m\n↓ 0 m', 'course chart totals use the saved route snapshot');
   assert.equal(await page.locator('.course .elevation-source').count(), 1);
   checkErrors();
   await context.close();

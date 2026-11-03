@@ -105,6 +105,7 @@ export const fr: Dict = {
   'elevation.coverage': 'Couverture des altitudes : {covered} sur {total}',
   'elevation.ascent': 'Montée',
   'elevation.descent': 'Descente',
+  'elevation.totalsAria': 'Dénivelé positif total {ascent}, dénivelé négatif total {descent}',
   'elevation.lowHigh': 'Minimum–maximum',
   'elevation.steepest': 'Plus forte variation sur 200 m',
   'elevation.incomplete': 'Le dénivelé positif et négatif ne s’affiche que si toute la distance est couverte. Les écarts et étapes manuelles n’ont pas de profil.',

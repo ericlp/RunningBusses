@@ -14,15 +14,21 @@ interface Props {
   onPosition: (point: [number, number] | null) => void;
 }
 
-function chartSegments(data: CourseElevation, width: number, height: number): string[] {
+// The top band is left free for the ascent/descent totals drawn over the chart.
+const CHART = { width: 320, height: 110, top: 26, bottom: 8 } as const;
+
+function chartY(elevationM: number, minimum: number, maximum: number): number {
+  const ratio = (elevationM - minimum) / Math.max(1, maximum - minimum);
+  return CHART.height - CHART.bottom - ratio * (CHART.height - CHART.top - CHART.bottom);
+}
+
+function chartSegments(data: CourseElevation): string[] {
   const { points, summary } = data;
   if (summary.totalM <= 0) return [];
   const heights = points.flatMap((point) => point.elevationM === null ? [] : [point.elevationM]);
   if (!heights.length) return [];
   const minimum = Math.min(...heights);
   const maximum = Math.max(...heights);
-  const range = Math.max(1, maximum - minimum);
-  const padding = 8;
   const segments: string[] = [];
   let segment: string[] = [];
   for (const point of points) {
@@ -31,13 +37,15 @@ function chartSegments(data: CourseElevation, width: number, height: number): st
       segment = [];
       continue;
     }
-    const x = (point.courseDistanceM / summary.totalM) * width;
-    const y = height - padding - ((point.elevationM - minimum) / range) * (height - padding * 2);
+    const x = (point.courseDistanceM / summary.totalM) * CHART.width;
+    const y = chartY(point.elevationM, minimum, maximum);
     segment.push(`${x.toFixed(1)},${y.toFixed(1)}`);
   }
   if (segment.length > 1) segments.push(segment.join(' '));
   return segments;
 }
+
+const metres = (value: number | null) => value === null ? '—' : `${Math.round(value)} m`;
 
 export function ElevationPanel({ id, title, legs, manifest, catalog, onPosition }: Props) {
   const [open, setOpen] = useState(false);
@@ -103,8 +111,13 @@ export function ElevationPanel({ id, title, legs, manifest, catalog, onPosition 
           {data && (
             <>
               {data.summary.coveredM === 0 && <p className="muted">{t('elevation.none')}</p>}
-              <svg className="elevation-chart" viewBox="0 0 320 110" role="img" aria-label={t('elevation.chartAria', { name: title })}>
-                {chartSegments(data, 320, 110).map((segment, index) => (
+              <div className="elevation-figure">
+              <p className="elevation-totals" role="img" aria-label={t('elevation.totalsAria', { ascent: metres(data.summary.ascentM), descent: metres(data.summary.descentM) })}>
+                <span title={t('elevation.ascent')}>↑ {metres(data.summary.ascentM)}</span>
+                <span title={t('elevation.descent')}>↓ {metres(data.summary.descentM)}</span>
+              </p>
+              <svg className="elevation-chart" viewBox={`0 0 ${CHART.width} ${CHART.height}`} role="img" aria-label={t('elevation.chartAria', { name: title })}>
+                {chartSegments(data).map((segment, index) => (
                   <polyline key={index} points={segment} fill="none" stroke="var(--vt-blue-strong)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
                 ))}
                 {(() => {
@@ -113,10 +126,10 @@ export function ElevationPanel({ id, title, legs, manifest, catalog, onPosition 
                   if (!point || heights.length === 0) return null;
                   const min = Math.min(...heights);
                   const max = Math.max(...heights);
-                  const y = 102 - ((point.elevationM! - min) / Math.max(1, max - min)) * 94;
-                  return <circle cx={(point.courseDistanceM / Math.max(1, data.summary.totalM)) * 320} cy={y} r="4" fill="var(--status-done)" />;
+                  return <circle cx={(point.courseDistanceM / Math.max(1, data.summary.totalM)) * CHART.width} cy={chartY(point.elevationM!, min, max)} r="4" fill="var(--status-done)" />;
                 })()}
               </svg>
+              </div>
               <label className="elevation-position">
                 <span>{t('elevation.position')}</span>
                 <input
@@ -134,8 +147,6 @@ export function ElevationPanel({ id, title, legs, manifest, catalog, onPosition 
                 total: formatDistance(data.summary.totalM),
               })}</p>
               <dl className="elevation-stats">
-                <div><dt>{t('elevation.ascent')}</dt><dd>{data.summary.ascentM === null ? '—' : formatDistance(data.summary.ascentM)}</dd></div>
-                <div><dt>{t('elevation.descent')}</dt><dd>{data.summary.descentM === null ? '—' : formatDistance(data.summary.descentM)}</dd></div>
                 <div><dt>{t('elevation.lowHigh')}</dt><dd>{data.summary.lowestM === null || data.summary.highestM === null ? '—' : `${Math.round(data.summary.lowestM)}–${Math.round(data.summary.highestM)} m`}</dd></div>
                 <div><dt>{t('elevation.steepest')}</dt><dd>{data.summary.steepest200m ? `${data.summary.steepest200m.changeM > 0 ? '+' : ''}${Math.round(data.summary.steepest200m.changeM)} m / 200 m` : '—'}</dd></div>
               </dl>
