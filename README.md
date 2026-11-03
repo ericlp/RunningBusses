@@ -42,6 +42,7 @@ remove these caches.
 | `npm run build` | typecheck and production build |
 | `npm run e2e` | browser journeys at phone and desktop widths (needs `npm run build` and `npx playwright install chromium`) |
 | `npm run data` | rebuild `public/data` from the Trafiklab feed |
+| `npm run data:elevation` | build optional Copernicus GLO-30 profiles after `npm run data` |
 | `npm run data:validate -- --previous=old-lines.json` | check a rebuilt dataset |
 
 Browser journeys run with **two isolated workers** by default and print
@@ -71,6 +72,8 @@ Existing route keys stay intact. Added lines use `vt.<route_id>` keys (plus `r` 
 One representative path is published per line/direction, not every timetable variant. Existing categories prefer the reference Wednesday; other buses, ferries and Wednesday-absent lines use patterns weighted by operating days throughout the feed. `npm run data -- --date=YYYYMMDD` overrides the preferred reference day. An eligible timetabled line without usable geometry stops the build before the dataset is written. Regional routes may exceed 60 km; they retain geometry/length checks with a 200 km upper sanity limit. Ferries allow short crossings down to 50 m (line 362 is approximately 151 m), while other categories retain the 300 m minimum and all geometry checks.
 
 Publication includes a schema-2 `data/catalog-manifest.json`, a content-addressed complete lightweight catalogue, and one content-addressed geometry file per category in `data/categories/`. SHA-256 descriptors include route counts and byte sizes; the stable release hash excludes generation timestamps. `lines.json` and the schema-1 `manifest.json` remain for existing clients and aggregate validation. Validation checks every split asset and exact aggregate reconstruction, including optional fields and property order. Builds remove only obsolete owned content-addressed files.
+
+Elevation profiles use the public Copernicus DEM GLO-30 Public surface model; they are approximate and may include building or vegetation heights. After rebuilding transit data, `npm run data:elevation` samples the public cloud-optimized GeoTIFFs at build time and writes optional, content-addressed assets under `data/extras/elevation/`. It needs no credentials. The app loads profiles only when requested, validates them against the exact route snapshot, and keeps missing spans unknown. The source and Copernicus DEM licence are shown with each profile; these heights are not mixed with other elevation sources.
 
 ## Data on your device
 

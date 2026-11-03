@@ -27,8 +27,49 @@ export function splitFixture(dataset) {
   return { manifest, files };
 }
 
-export async function serveFixture(context, dataset) {
+function elevationFixture(dataset, transitRelease) {
+  const files = new Map();
+  const elevation = {};
+  for (const category of ['stadsbuss', 'stombuss', 'express', 'industri', 'tram']) {
+    const profiles = dataset.lines.filter((line) => line.category === category).map((line) => ({
+      schemaVersion: 1,
+      routeKey: line.key,
+      geometryHash: hash(JSON.stringify(line.coordinates)),
+      lengthM: line.lengthM,
+      samples: [
+        { distanceM: 0, elevationM: 5, estimated: false },
+        { distanceM: line.lengthM / 2, elevationM: 10, estimated: false },
+        { distanceM: line.lengthM, elevationM: 15, estimated: false },
+      ],
+    }));
+    if (!profiles.length) continue;
+    const text = JSON.stringify({ schemaVersion: 1, category, profiles });
+    const digest = hash(text);
+    const file = `extras/elevation/${category}.${digest}.json`;
+    files.set(file, text);
+    elevation[category] = { file, hash: digest, count: profiles.length, bytes: Buffer.byteLength(text) };
+  }
+  const manifest = {
+    schemaVersion: 1,
+    transitRelease,
+    buildVersion: 'browser-test',
+    source: {
+      name: 'Copernicus DEM GLO-30 Public (digital surface model)',
+      attribution: 'Copernicus DEM test fixture.',
+      licence: 'Copernicus DEM Licence',
+      note: 'Fixture values are synthetic tests, not published terrain measurements.',
+    },
+    elevation,
+  };
+  files.set('route-extras-manifest.json', JSON.stringify(manifest));
+  return files;
+}
+
+export async function serveFixture(context, dataset, { elevation = false } = {}) {
   const split = splitFixture(dataset);
+  if (elevation) {
+    for (const [file, text] of elevationFixture(dataset, split.manifest.release)) split.files.set(file, text);
+  }
   await context.route('**/data/**', (route) => {
     const file = new URL(route.request().url()).pathname.split('/data/')[1];
     return split.files.has(file) ? route.fulfill({ contentType: 'application/json', body: split.files.get(file) }) : route.abort();

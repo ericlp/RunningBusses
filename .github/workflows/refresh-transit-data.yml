@@ -34,6 +34,8 @@ jobs:
         run: npm run data
         env:
           TRAFIKLAB_API_KEY: ${{ secrets.TRAFIKLAB_API_KEY }}
+      - name: Build optional Copernicus elevation profiles
+        run: npm run data:elevation
       - name: Validate (fails the job, and nothing is published, on errors)
         run: npm run data:validate -- --previous="$RUNNER_TEMP/previous-lines.json"
         env:

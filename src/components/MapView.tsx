@@ -29,7 +29,7 @@ export interface MapLayer {
 export interface MapMarker {
   /** [lon, lat] */
   at: [number, number];
-  color: 'start' | 'end';
+  color: 'start' | 'end' | 'elevation';
 }
 
 export interface Fit {
@@ -378,7 +378,7 @@ export function MapView({ layers, markers, stops, tappable, fit, onTap }: Props)
         radius: 8,
         color: '#fff',
         weight: 3,
-        fillColor: mk.color === 'start' ? '#2e9e4f' : '#d6342c',
+        fillColor: mk.color === 'start' ? '#2e9e4f' : mk.color === 'end' ? '#d6342c' : '#8237a5',
         fillOpacity: 1,
         interactive: false,
       }).addTo(g);

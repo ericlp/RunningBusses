@@ -633,6 +633,67 @@ button {
   padding-bottom: 10px;
 }
 
+.elevation-panel {
+  margin: 10px 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.elevation-content {
+  margin-top: 8px;
+}
+
+.elevation-chart {
+  display: block;
+  width: 100%;
+  height: 110px;
+  overflow: visible;
+  background: var(--surface);
+  border-radius: 8px;
+}
+
+.elevation-position {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 0.85rem;
+}
+
+.elevation-position input {
+  width: 100%;
+  min-height: 36px;
+  accent-color: var(--vt-blue-strong);
+}
+
+.elevation-coverage,
+.elevation-source {
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.elevation-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.elevation-stats div {
+  min-width: 0;
+}
+
+.elevation-stats dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.elevation-stats dd {
+  margin: 2px 0 0;
+  font-weight: 700;
+}
+
 .legs {
   margin: 0 0 8px;
   padding-left: 20px;

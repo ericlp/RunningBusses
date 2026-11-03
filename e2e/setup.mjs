@@ -22,8 +22,8 @@ export const fixture = {
 
 const tile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
 
-export async function prepareContext(context, dataset = fixture) {
-  await serveFixture(context, dataset);
+export async function prepareContext(context, dataset = fixture, options = {}) {
+  await serveFixture(context, dataset, options);
   await context.route('https://tile.openstreetmap.org/**', (route) =>
     route.fulfill({ contentType: 'image/png', body: tile }));
   await context.addInitScript(() => localStorage.setItem('rb.panSpeed', 'off'));

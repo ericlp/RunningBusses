@@ -199,7 +199,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 
 ## Future todos
 
-- [062 – Elevation profile](062-elevation-profile.md): investigated, implementation pending; build-time 1 m CC BY terrain profiles for lines and courses; authorised access/sampling deferred.
+- [062 – Elevation profile](062-elevation-profile.md): build-time Copernicus GLO-30 surface-model profiles for lines and courses, loaded on demand and bound to exact route snapshots.
 - [064 – Runnable GPX](064-runnable-gpx.md): started, paused with unfinished foundations stashed on 2026-11-01; Gothenburg categories first, local build-time Valhalla, independent directions and connectors within 500 m plus configured longer pairs. UI, publication and validation remain pending; checkpoint and stash reference are in the plan.
 - [052 – Start run mode](052-start-run.md): todo, design agreed; needs Västtrafik API credentials to test.
 - [048 – Västtrafik navigation to start](048-vasttrafik-navigation.md): shelved until a prefill link or the Planera Resa API (052) is available.

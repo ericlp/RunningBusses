@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "transitRelease": "2d2e4226e10fa5cb7f359ee4aee3653193dbfb30e54810ac6798a7227be99c1f",
+  "buildVersion": "cop-dem-glo30-v1",
+  "source": {
+    "name": "Copernicus DEM GLO-30 Public (digital surface model)",
+    "attribution": "Copernicus Digital Elevation Model (DEM) was accessed on 2026-11-03 from https://registry.opendata.aws/copernicus-dem.",
+    "licence": "Copernicus DEM Licence",
+    "note": "Approximate surface elevations sampled at about 25 m intervals from the Copernicus DEM 2021 release. Buildings and vegetation may affect heights; bridges and tunnels are not corrected. Heights use the Copernicus vertical reference and are not mixed with other elevation sources."
+  },
+  "elevation": {
+    "stadsbuss": {
+      "file": "extras/elevation/stadsbuss.4af90d807932d6570ef2f6f9b7f7b51dcc2155b6767ba23bd34f72dd3620d805.json",
+      "hash": "4af90d807932d6570ef2f6f9b7f7b51dcc2155b6767ba23bd34f72dd3620d805",
+      "count": 51,
+      "bytes": 1090131
+    },
+    "stombuss": {
+      "file": "extras/elevation/stombuss.2409f8acc31aeebc4486f5d15b830f9036f0bf67dfb0c21b9aa41079ba7caa04.json",
+      "hash": "2409f8acc31aeebc4486f5d15b830f9036f0bf67dfb0c21b9aa41079ba7caa04",
+      "count": 5,
+      "bytes": 198504
+    },
+    "express": {
+      "file": "extras/elevation/express.958fd78b00d81a9e3f2b54713be5fe44b9ec831d5bf85de02cee69d18332ab9a.json",
+      "hash": "958fd78b00d81a9e3f2b54713be5fe44b9ec831d5bf85de02cee69d18332ab9a",
+      "count": 11,
+      "bytes": 770215
+    },
+    "industri": {
+      "file": "extras/elevation/industri.ab3e142a8ff32e5e96c23284afceb96b14240bc92564e3523d143fc328bb0af4.json",
+      "hash": "ab3e142a8ff32e5e96c23284afceb96b14240bc92564e3523d143fc328bb0af4",
+      "count": 35,
+      "bytes": 1297700
+    },
+    "tram": {
+      "file": "extras/elevation/tram.11db213a082acd88675af39300731f898dca9f2fea93ec9235da6bd796f12ed5.json",
+      "hash": "11db213a082acd88675af39300731f898dca9f2fea93ec9235da6bd796f12ed5",
+      "count": 14,
+      "bytes": 487452
+    }
+  }
+}

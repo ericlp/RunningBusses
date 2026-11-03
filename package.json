@@ -12,6 +12,7 @@
     "check": "npm run typecheck && npm test && npm run data:validate && npm run build && npm run e2e -- --workers=2",
     "test": "vitest run",
     "data": "tsx scripts/build-transit-data.ts",
+    "data:elevation": "tsx scripts/build-elevation-data.ts",
     "data:validate": "tsx scripts/validate-transit-data.ts"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "fake-indexeddb": "^6.2.7",
+    "geotiff": "^3.0.5",
     "playwright": "^1.63.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

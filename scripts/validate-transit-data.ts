@@ -3,6 +3,7 @@ import type { Dataset } from '../src/domain/types';
 import { formatReport, validateDataset } from './transit/validate';
 import { dirname } from 'node:path';
 import { validateSplitAssets } from './transit/validate-split';
+import { validateElevationSidecar } from './transit/elevation';
 
 const arg = (n: string) => process.argv.find((a) => a.startsWith(`--${n}=`))?.split('=')[1];
 const nextPath = arg('next') ?? 'public/data/lines.json';
@@ -15,6 +16,13 @@ try {
   await validateSplitAssets(next, dirname(nextPath));
 } catch (e) {
   report.errors.push(`Split assets: ${e instanceof Error ? e.message : e}`);
+}
+if (existsSync(`${dirname(nextPath)}/route-extras-manifest.json`)) {
+  try {
+    await validateElevationSidecar(next, dirname(nextPath));
+  } catch (e) {
+    report.errors.push(`Elevation sidecar: ${e instanceof Error ? e.message : e}`);
+  }
 }
 const text = formatReport(report, next);
 console.log(text);

@@ -174,6 +174,8 @@ export function App() {
   useEffect(() => saveSort(sortBy), [sortBy]);
   const [selectedKey, setSelectedKey] = useState<string | null>(initialView.line);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [elevationPosition, setElevationPosition] = useState<[number, number] | null>(null);
+  const showElevationPosition = useCallback((point: [number, number] | null) => setElevationPosition(point), []);
   const [cardCourseId, setCardCourseId] = useState<string | null>(null);
   const [chooser, setChooser] = useState<ChooserItem[] | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -749,9 +751,10 @@ export function App() {
         }
       }
     }
+    if (elevationPosition) markers.push({ at: elevationPosition, color: 'elevation' });
     return { layers, markers, stops, tappable };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, dataset, visible, selected, selectedKey, selectedCourse, courses, others, legs, options, filters]);
+  }, [mode, dataset, visible, selected, selectedKey, selectedCourse, courses, others, legs, options, filters, elevationPosition]);
 
   useEffect(() => {
     if (selectedKey) document.querySelector('.list [aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
@@ -1153,6 +1156,9 @@ export function App() {
                   onShare={shareCourse}
                   onEditRun={editRun}
                   lines={catalogue}
+                  manifest={dataState?.manifest ?? null}
+                  catalog={dataState?.catalog ?? null}
+                  onElevationPosition={showElevationPosition}
                 />
                 </>
               )}
@@ -1168,6 +1174,9 @@ export function App() {
                         if (c) void shareCourse(c);
                       }}
                       onCourseCard={() => setCardCourseId(routeInfo(selected.key, courses).courseId)}
+                      manifest={dataState?.manifest ?? null}
+                      catalog={dataState?.catalog ?? null}
+                      onElevationPosition={showElevationPosition}
                     />}
                   <div className="field">
                     <input type="search" placeholder={t('search.placeholder')} aria-label={t('search.placeholder')} value={query} onChange={(e) => setQuery(e.target.value)} />

@@ -267,7 +267,14 @@ describe('shipped service worker tile caching', () => {
     expect(h.claim).toHaveBeenCalledOnce();
   });
 
-  it.each(['catalog-manifest.json', 'catalog.ab12.json', 'categories/other-bus.ab12.json', 'categories/ferry.ab12.json'])('leaves split asset %s to the IndexedDB loader', (file) => {
+  it.each([
+    'catalog-manifest.json',
+    'catalog.ab12.json',
+    'categories/other-bus.ab12.json',
+    'categories/ferry.ab12.json',
+    'route-extras-manifest.json',
+    `extras/elevation/stadsbuss.${'a'.repeat(64)}.json`,
+  ])('leaves split asset %s to the IndexedDB loader', (file) => {
     const h = harness();
     const dispatched = h.dispatch(new Request(`https://example.test/RunningBusses/data/${file}`));
     expect(dispatched.response).toBeUndefined();
