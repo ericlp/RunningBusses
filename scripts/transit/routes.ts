@@ -48,6 +48,32 @@ export interface SelectedRoute {
   tram: boolean;
 }
 
+export interface UnclassifiedBusRoute {
+  route_id: string;
+  route_short_name: string;
+  route_type: string;
+  agency_id: string;
+  route_long_name: string;
+  route_desc: string;
+}
+
+export function unclassifiedBusRoute(
+  row: Record<string, string>, config: RouteConfig, registry: Map<string, PublicLine>,
+): UnclassifiedBusRoute | undefined {
+  if (!row.agency_id.endsWith(config.agencyIdSuffix) ||
+      (row.route_type !== '700' && row.route_type !== '1501') ||
+      registry.has(row.route_id) ||
+      /ersätter/i.test(`${row.route_long_name} ${row.route_desc}`)) return undefined;
+  return {
+    route_id: row.route_id,
+    route_short_name: row.route_short_name,
+    route_type: row.route_type,
+    agency_id: row.agency_id,
+    route_long_name: row.route_long_name,
+    route_desc: row.route_desc,
+  };
+}
+
 export function selectRoute(
   row: Record<string, string>, config: RouteConfig, registry: Map<string, PublicLine>, aliases: Record<string, string>,
 ): SelectedRoute | undefined {

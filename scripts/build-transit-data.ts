@@ -9,7 +9,9 @@ import { readCsv, readCsvRows } from './transit/csv';
 import { type CategoryConfig } from './transit/category';
 import { assertRoutableLines, planRoutes, type Pattern } from './transit/select';
 import { referenceWednesday, serviceDays, tripWeight } from './transit/calendar';
-import { parsePublicLines, selectRoute, type SelectedRoute } from './transit/routes';
+import {
+  parsePublicLines, selectRoute, unclassifiedBusRoute, type SelectedRoute, type UnclassifiedBusRoute,
+} from './transit/routes';
 import { writeSplitAssets } from './transit/split';
 
 interface Config {
@@ -65,6 +67,19 @@ export async function buildTransitData(root = new URL('..', import.meta.url).pat
   const referenceDate = argValue('date') ?? referenceWednesday(days);
   if (![...days.values()].some((d) => d.has(referenceDate))) throw new Error(`No service on reference date ${referenceDate}`);
   console.log(`Feed ${feedVersion}, reference weekday ${referenceDate}`);
+
+  const unclassified: UnclassifiedBusRoute[] = [];
+  for await (const r of readCsv(`${feedDir}/routes.txt`)) {
+    const issue = unclassifiedBusRoute(r, config, registry);
+    if (issue) unclassified.push(issue);
+  }
+  if (unclassified.length) {
+    throw new Error(
+      `Unclassified bus routes absent from the public line registry (${unclassified.length}). ` +
+      `Confirm their public status before adding an audited mapping; do not infer it from the route number.\n` +
+      JSON.stringify(unclassified, null, 2),
+    );
+  }
 
   const routes = new Map<string, SelectedRoute>();
   for await (const r of readCsv(`${feedDir}/routes.txt`)) {

@@ -192,6 +192,7 @@ Phase 0 has been done and building starts with Phase 1; this file is now frozen 
 - [071 - Domain test contracts](071-domain-test-contracts.md): isolate validation guards and assert exact snapshots, geometry, status, history and share behavior.
 - [072 - Data test integrity](072-data-test-integrity.md): real storage transactions, coherent release races, named tile caches and isolated GTFS publication fixtures.
 - [073 - Local and CI test parity](073-local-ci-test-parity.md): shared validation command and exact Node version, with deterministic course-card timeout testing.
+- [076 - Actionable diagnostics for unclassified routes](076-unclassified-route-diagnostics.md): report every registry-missing bus with its GTFS identity and descriptive fields while preserving fail-closed publication.
 
 - [074 - Conservative multi-tab write protection](074-multi-tab-write-protection.md): atomic revision checks for saved state and shared drafts, with explicit conflict recovery.
 - [075 - Development container](075-devcontainer.md): mise-managed Node, Chromium, osmium and an isolated Docker-in-Docker daemon for app and runnable-GPX development.

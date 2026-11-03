@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import aliases from '../../config/route-aliases.json';
-import { parsePublicLines, selectRoute, type PublicLine, type RouteConfig } from './routes';
+import { parsePublicLines, selectRoute, unclassifiedBusRoute, type PublicLine, type RouteConfig } from './routes';
 
 const config: RouteConfig = {
   routeIdPrefix: '90110145', agencyIdSuffix: '1418',
@@ -86,6 +86,22 @@ describe('regional route identity and eligibility', () => {
     expect(select({ ...r, route_long_name: '20 Ersätter Västtåg' }, [])).toBeDefined();
     expect(select({ ...r, agency_id: 'other' })).toBeUndefined();
     expect(select(row(r.route_id, '20', '100'))).toBeUndefined();
+  });
+
+  it('reports all identity fields for ordinary bus routes missing from the public registry', () => {
+    const r = { ...row('9011014112000000', '20'), route_long_name: 'Line 20', route_desc: 'A - B' };
+    expect(unclassifiedBusRoute(r, config, new Map())).toEqual({
+      route_id: r.route_id,
+      route_short_name: '20',
+      route_type: '700',
+      agency_id: r.agency_id,
+      route_long_name: 'Line 20',
+      route_desc: 'A - B',
+    });
+    expect(unclassifiedBusRoute(r, config, new Map([[r.route_id, line(r.route_id)]]))).toBeUndefined();
+    expect(unclassifiedBusRoute({ ...r, route_long_name: 'Ersätter Västtåg' }, config, new Map())).toBeUndefined();
+    expect(unclassifiedBusRoute({ ...r, agency_id: 'other' }, config, new Map())).toBeUndefined();
+    expect(unclassifiedBusRoute({ ...r, route_type: '900' }, config, new Map())).toBeUndefined();
   });
 
   it('blocks mixed public/restricted versions rather than including restricted service dates', () => {
